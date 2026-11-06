@@ -19,7 +19,7 @@ interface SituationState {
   country: string | null;
   tab: RailTab;
   cinema: boolean;
-  layers: { incidents: boolean; countries: boolean; outages: boolean; arcs: boolean };
+  layers: { incidents: boolean; countries: boolean; outages: boolean; arcs: boolean; cables: boolean; ballistics: boolean };
   railOpen: boolean;
   select: (id: string | null) => void;
   selectCve: (cve: string | null) => void;
@@ -44,7 +44,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   // Vulnerabilities first: what to patch is the question most visitors arrive with.
   tab: "exploited",
   cinema: false,
-  layers: { incidents: true, countries: true, outages: true, arcs: true },
+  layers: { incidents: true, countries: true, outages: true, arcs: true, cables: true, ballistics: true },
   railOpen: true,
   // Opening a dossier checks the free allowance: a few a day without an account, then Global Hack Map asks for a Valyu sign-in.
   select: (id) => {

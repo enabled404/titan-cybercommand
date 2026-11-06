@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Crosshair, Play, Stop, X } from "@phosphor-icons/react";
+import { Crosshair, Play, ShieldCheck, Stop, X } from "@phosphor-icons/react";
 import { soundEngine } from "@/lib/audio/sound-engine";
 import { useMapInstance } from "@/components/map/map-instance";
 import { cn } from "@/lib/utils";
@@ -93,11 +93,13 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
   const [selectedScenario, setSelectedScenario] = useState<Scenario>(SCENARIOS[0]);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [simStep, setSimStep] = useState<number>(0);
+  const [mitigated, setMitigated] = useState<boolean>(false);
   const map = useMapInstance((s) => s.map);
 
   const handleClose = () => {
     setIsSimulating(false);
     setSimStep(0);
+    setMitigated(false);
     soundEngine.playClick();
     onClose();
   };
@@ -121,6 +123,8 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
   const handleStartSimulation = () => {
     setIsSimulating(true);
     setSimStep(0);
+    setMitigated(false);
+    soundEngine.playLaser();
     soundEngine.playAlert();
 
     if (map) {
@@ -134,9 +138,16 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
     }
   };
 
+  const handleMitigate = () => {
+    setMitigated(true);
+    soundEngine.playImpact();
+    soundEngine.playAlert();
+  };
+
   const handleStopSimulation = () => {
     setIsSimulating(false);
     setSimStep(0);
+    setMitigated(false);
     soundEngine.playClick();
   };
 
@@ -287,24 +298,45 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3 pt-3">
-              {!isSimulating ? (
-                <button
-                  onClick={handleStartSimulation}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-confirmed py-3 font-mono text-xs font-bold uppercase tracking-wider text-white shadow-lg transition-all hover:bg-confirmed/90 active:scale-[0.99]"
-                >
-                  <Play size={16} weight="fill" />
-                  INITIATE WARGAME CASCADE
-                </button>
-              ) : (
-                <button
-                  onClick={handleStopSimulation}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/20 py-3 font-mono text-xs font-bold uppercase tracking-wider text-red-300 transition-all hover:bg-red-500/30 active:scale-[0.99]"
-                >
-                  <Stop size={16} weight="fill" />
-                  ABORT SIMULATION & PURGE
-                </button>
+            <div className="flex flex-col gap-2 pt-3">
+              {mitigated && (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 font-mono text-xs text-emerald-300">
+                  <ShieldCheck size={18} weight="bold" />
+                  <span>COUNTERMEASURE ENGAGED: Infiltration vectors arrested and routed to tactical sinkholes.</span>
+                </div>
               )}
+              <div className="flex items-center gap-3">
+                {!isSimulating ? (
+                  <button
+                    onClick={handleStartSimulation}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-confirmed py-3 font-mono text-xs font-bold uppercase tracking-wider text-white shadow-lg transition-all hover:bg-confirmed/90 active:scale-[0.99]"
+                  >
+                    <Play size={16} weight="fill" />
+                    INITIATE WARGAME CASCADE
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleMitigate}
+                      disabled={mitigated}
+                      className={cn(
+                        "flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-mono text-xs font-bold uppercase tracking-wider text-white shadow-lg transition-all active:scale-[0.99]",
+                        mitigated ? "bg-emerald-600/50 cursor-default" : "bg-emerald-600 hover:bg-emerald-500",
+                      )}
+                    >
+                      <ShieldCheck size={16} weight="bold" />
+                      {mitigated ? "DEFENSE ACTIVE" : "DEPLOY COUNTERMEASURE"}
+                    </button>
+                    <button
+                      onClick={handleStopSimulation}
+                      className="flex items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/20 px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider text-red-300 transition-all hover:bg-red-500/30 active:scale-[0.99]"
+                    >
+                      <Stop size={16} weight="fill" />
+                      ABORT
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

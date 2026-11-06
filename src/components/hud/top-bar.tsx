@@ -7,6 +7,7 @@ import { Crosshair, MagnifyingGlass } from "@phosphor-icons/react";
 
 import { AuthButton } from "@/components/auth/auth-button";
 import { AudioButton } from "@/components/hud/audio-button";
+import { DefconBadge } from "@/components/hud/defcon-badge";
 import { RecordDemoButton } from "@/components/hud/record-demo";
 import { BrandMark, GithubIcon, ValyuMark } from "@/components/icons/agents";
 import { ACCOUNTS } from "@/lib/mode";
@@ -59,10 +60,12 @@ export function TopBar({
   ticker,
   onOpenWargames,
   onOpenRecon,
+  onOpenShortcuts,
 }: {
   ticker?: React.ReactNode;
   onOpenWargames?: () => void;
   onOpenRecon?: () => void;
+  onOpenShortcuts?: () => void;
 }) {
   return (
     <header className="pointer-events-auto flex min-h-[68px] flex-wrap items-center gap-x-2 bg-space pb-3.5 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.875rem,env(safe-area-inset-top))] sm:gap-x-4 sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]">
@@ -93,6 +96,8 @@ export function TopBar({
       {ticker ? <div className="order-last mt-2.5 w-full min-w-0 md:hidden lg:order-none lg:mx-2 lg:mt-0 lg:block lg:w-auto lg:flex-1">{ticker}</div> : null}
 
       <div className="ml-auto flex items-center gap-1.5">
+        <DefconBadge />
+
         {/* Tactical Interactive Action Triggers */}
         {onOpenRecon && (
           <button
@@ -125,6 +130,20 @@ export function TopBar({
         <RecordDemoButton />
 
         <AudioButton />
+
+        {onOpenShortcuts && (
+          <button
+            onClick={() => {
+              soundEngine.playClick();
+              onOpenShortcuts();
+            }}
+            className="press glass-pill hidden size-8 items-center justify-center rounded-full font-mono text-[13px] font-bold text-ink-3 transition-colors hover:bg-white/10 hover:text-ink md:flex"
+            title="Keyboard shortcuts (?)"
+            aria-label="Keyboard shortcuts"
+          >
+            ?
+          </button>
+        )}
 
         <nav className="glass-pill flex items-center gap-0.5 rounded-full p-1">
           <Suspense fallback={<NavLinks pathname={null} />}>

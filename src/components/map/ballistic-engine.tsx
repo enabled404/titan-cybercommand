@@ -61,6 +61,7 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
   const map = useMapInstance((s) => s.map);
   const ready = useMapInstance((s) => s.ready);
   const selectedId = useSituation((s) => s.selectedId);
+  const layers = useSituation((s) => s.layers);
   const selectedIncident = incidents.find((i) => i.id === selectedId);
 
   const attacksRef = useRef<BallisticAttack[]>([]);
@@ -71,7 +72,11 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
 
   // Spawn attacks continuously
   useEffect(() => {
-    if (!ready || !map || incidents.length === 0) return;
+    if (!ready || !map || incidents.length === 0 || !layers.ballistics) {
+      attacksRef.current = [];
+      shockwavesRef.current = [];
+      return;
+    }
 
     const spawnAttack = (forcedTarget?: Incident) => {
       const target = forcedTarget ?? incidents[Math.floor(Math.random() * incidents.length)];
@@ -103,7 +108,7 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
       const timer = window.setTimeout(() => spawnAttack(selectedIncident), 800);
       return () => window.clearTimeout(timer);
     }
-  }, [ready, map, incidents, selectedIncident]);
+  }, [ready, map, incidents, selectedIncident, layers.ballistics]);
 
   // Main rendering loop synchronized with requestAnimationFrame
   useEffect(() => {
@@ -306,14 +311,18 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
     return () => {
       running = false;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        ctx?.clearRect(0, 0, canvas.width, canvas.height);
+      }
     };
-  }, [ready, map, incidents]);
+  }, [ready, map, incidents, layers.ballistics]);
 
   return (
     <>
       <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-10" />
       {/* Live Ballistic Missile HUD telemetry indicator */}
-      {ready && (
+      {ready && layers.ballistics && (
         <div className="pointer-events-none absolute bottom-4 left-4 z-20 hidden items-center gap-2 rounded-full border border-white/[0.08] bg-surface-2/80 px-3 py-1 font-mono text-[10px] tracking-wider text-ink-3 backdrop-blur md:flex">
           <span className="size-1.5 animate-pulse rounded-full bg-confirmed" />
           <span>BALLISTIC THREAT FEED:</span>

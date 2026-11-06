@@ -15,6 +15,8 @@ const LAYERS = [
   { id: "countries", label: "Country shading" },
   { id: "outages", label: "Connectivity drops" },
   { id: "arcs", label: "Links between victims of the same gang" },
+  { id: "cables", label: "Subsea fiber optic cables" },
+  { id: "ballistics", label: "Kinetic ballistic laser tracers" },
 ] as const;
 
 /** Map layers and the key to the map's marks. The status split itself lives in the left panel. */

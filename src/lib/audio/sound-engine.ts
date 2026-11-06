@@ -111,6 +111,10 @@ class SoundEngine {
     }
   }
 
+  public playLaser(originLongitude: number = 0) {
+    this.playAttackLaunch(originLongitude);
+  }
+
   /**
    * Attack launch sound: high-speed frequency swoop panned in stereo
    */

@@ -713,6 +713,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
       set(["country-heat", "country-heat-line"], layers.countries);
       set(["country-outage", "outage-ring"], layers.outages);
       set(["arcs"], layers.arcs);
+      set(["submarine-cables-glow", "submarine-cables-line"], layers.cables);
     });
   }, [layers, ready]);
 

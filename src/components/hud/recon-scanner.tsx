@@ -26,9 +26,8 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
   const [error, setError] = useState<string | null>(null);
   const map = useMapInstance((s) => s.map);
 
-  const handleScan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanDomain = domainInput.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const executeScan = async (targetDomain: string) => {
+    const cleanDomain = targetDomain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
     if (!cleanDomain || cleanDomain.length < 3) return;
 
     setLoading(true);
@@ -138,6 +137,11 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
     }
   };
 
+  const handleScan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await executeScan(domainInput);
+  };
+
   if (!open) return null;
 
   return (
@@ -198,6 +202,25 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
                 "LAUNCH RECON"
               )}
             </button>
+          </div>
+
+          {/* Quick Target Presets */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-ink-4">
+            <span className="uppercase text-ink-4 mr-1">QUICK TARGETS:</span>
+            {["tesla.com", "apple.com", "microsoft.com", "defense.gov", "cloudflare.com"].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => {
+                  setDomainInput(preset);
+                  executeScan(preset);
+                }}
+                disabled={loading}
+                className="rounded-md border border-white/[0.08] bg-surface px-2 py-0.5 text-cyan-400 transition-colors hover:border-cyan-500/40 hover:bg-cyan-500/10"
+              >
+                {preset}
+              </button>
+            ))}
           </div>
         </form>
 
