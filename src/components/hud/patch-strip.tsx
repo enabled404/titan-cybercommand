@@ -33,7 +33,7 @@ function Signal({ item, now }: { item: PatchItem; now?: number }) {
     <span className={cn("flex shrink-0 items-center gap-1.5 text-[11.5px]", item.exploited ? "text-confirmed" : "text-reported")}>
       <span className="size-[6px] rounded-full bg-current" />
       {label}
-      {age !== null && age <= 7 ? <span className="text-ink-3">· {age === 0 ? "today" : `${age}d`}</span> : null}
+      {age !== null && age <= 7 ? <span suppressHydrationWarning className="text-ink-3">· {age === 0 ? "today" : `${age}d`}</span> : null}
     </span>
   );
 }

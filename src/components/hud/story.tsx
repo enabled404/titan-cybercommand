@@ -159,7 +159,7 @@ function Header({ generatedAt, now }: { generatedAt: string; now: number }) {
           <span className="size-1.5 rounded-full bg-safe" />
         </span>
         Live
-        <span className="text-ink-4">updated {relativeTime(generatedAt, now)}</span>
+        <span suppressHydrationWarning className="text-ink-4">updated {relativeTime(generatedAt, now)}</span>
       </span>
       <Segmented<TimeWindow>
         mono
@@ -395,7 +395,7 @@ function IncidentFeed({ incidents, now }: { incidents: Incident[]; now: number }
                         <span className="truncate text-[14px] font-medium tracking-[-0.005em] text-ink">{incident.victim}</span>
                         {stackMatch(stack, incident.victim, incident.domain?.split(".")[0]) ? <Mine label="Your vendor" /> : null}
                       </span>
-                      <span className="shrink-0 font-mono text-[10.5px] tabular text-ink-4">{relativeTime(incident.date, now).replace(" ago", "")}</span>
+                      <span suppressHydrationWarning className="shrink-0 font-mono text-[10.5px] tabular text-ink-4">{relativeTime(incident.date, now).replace(" ago", "")}</span>
                     </span>
                     <span className="mt-[3px] flex items-center gap-1.5">
                       <StatusMark status={incident.status} size={7} />
@@ -459,7 +459,7 @@ function VulnStatus({ vuln, now }: { vuln: Vuln; now: number }) {
     <>
       <span className="size-[6px] shrink-0 rounded-full bg-reported" />
       <span className="tabular shrink-0 text-reported">Critical{vuln.cvss ? ` ${vuln.cvss.toFixed(1)}` : ""}</span>
-      {vuln.published ? <span className="shrink-0 text-ink-4">· {relativeTime(vuln.published, now)}</span> : null}
+      {vuln.published ? <span suppressHydrationWarning className="shrink-0 text-ink-4">· {relativeTime(vuln.published, now)}</span> : null}
     </>
   );
 }
@@ -532,7 +532,7 @@ function MalwareRows({ malware, now }: { malware: MalwarePackage[]; now: number 
             >
               <span className="w-[52px] shrink-0 rounded-[6px] bg-reported/10 py-0.5 text-center font-mono text-[10.5px] text-reported">{item.ecosystem}</span>
               <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-ink">{item.name}</span>
-              <span className="shrink-0 font-mono text-[10.5px] text-ink-4">{relativeTime(item.published, now).replace(" ago", "")}</span>
+              <span suppressHydrationWarning className="shrink-0 font-mono text-[10.5px] text-ink-4">{relativeTime(item.published, now).replace(" ago", "")}</span>
               <ArrowUpRight className="size-3 shrink-0 text-ink-4 opacity-0 transition-opacity group-hover:opacity-100" />
             </a>
           </li>
@@ -560,7 +560,7 @@ function OutageRows({ outages, now }: { outages: Outage[]; now: number }) {
             >
               <span className="size-2 shrink-0 rounded-full ring-[1.5px] ring-outage" />
               <span className="truncate text-[13.5px] text-ink">{countryName(outage.country)}</span>
-              <span className="ml-auto shrink-0 text-[11.5px] text-ink-4">
+              <span suppressHydrationWarning className="ml-auto shrink-0 text-[11.5px] text-ink-4">
                 {outage.end ? "Recovered" : <span className="text-outage">Ongoing</span>} · {relativeTime(outage.start, now)}
               </span>
             </a>
