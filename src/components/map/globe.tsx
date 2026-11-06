@@ -415,49 +415,68 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
   // Create the map once.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    mapboxgl.accessToken = TOKEN;
-    const mobile = window.matchMedia("(max-width: 768px)").matches;
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/standard",
-      config: {
-        basemap: {
-          lightPreset: "night",
-          theme: "faded",
-          showPointOfInterestLabels: false,
-          showTransitLabels: false,
-          showRoadLabels: false,
-          showPlaceLabels: true,
-          show3dObjects: true,
-          colorLand: "#191919",
-          colorWater: "#080808",
-          colorAdminBoundaries: "#454545",
-          colorPlaceLabels: "#a3a3a3",
-          colorGreenspace: "#151515",
+    if (!TOKEN) {
+      console.warn("[Globe] NEXT_PUBLIC_MAPBOX_TOKEN is unset. Operating in tactical telemetry mode.");
+      return;
+    }
+    let map: MapboxMap | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+
+    try {
+      mapboxgl.accessToken = TOKEN;
+      const mobile = window.matchMedia("(max-width: 768px)").matches;
+      map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: "mapbox://styles/mapbox/standard",
+        config: {
+          basemap: {
+            lightPreset: "night",
+            theme: "faded",
+            showPointOfInterestLabels: false,
+            showTransitLabels: false,
+            showRoadLabels: false,
+            showPlaceLabels: true,
+            show3dObjects: true,
+            colorLand: "#191919",
+            colorWater: "#080808",
+            colorAdminBoundaries: "#454545",
+            colorPlaceLabels: "#a3a3a3",
+            colorGreenspace: "#151515",
+          },
         },
-      },
-      projection: "globe",
-      center: initialCenter(),
-      zoom: mobile ? 0.85 : 1.32,
-      minZoom: 0.6,
-      maxZoom: 16,
-      attributionControl: false,
-      logoPosition: "top-left",
-      antialias: true,
-    });
-    map.addControl(new mapboxgl.AttributionControl({ compact: true }), "top-left");
-    mapRef.current = map;
-    setMap(map);
-    // Observe the actual container as well as window resize events, including breakpoint changes.
-    const resizeObserver = new ResizeObserver(() => {
-      const container = containerRef.current;
-      const canvas = map.getCanvas();
-      if (container && (canvas.clientWidth !== container.clientWidth || canvas.clientHeight !== container.clientHeight)) map.resize();
-    });
-    resizeObserver.observe(containerRef.current);
-    // Exposed for development and for the ?still screenshot mode, which browser tests drive.
-    if (process.env.NODE_ENV !== "production" || new URLSearchParams(window.location.search).has("still")) {
-      (window as unknown as { __map: MapboxMap }).__map = map;
+        projection: "globe",
+        center: initialCenter(),
+        zoom: mobile ? 0.85 : 1.32,
+        minZoom: 0.6,
+        maxZoom: 16,
+        attributionControl: false,
+        logoPosition: "top-left",
+        antialias: true,
+      });
+
+      map.on("error", (e) => {
+        // Prevent uncaught errors from bubbling
+        console.warn("[Globe Mapbox Notice]", e.error?.message || e);
+      });
+
+      map.addControl(new mapboxgl.AttributionControl({ compact: true }), "top-left");
+      mapRef.current = map;
+      setMap(map);
+      // Observe the actual container as well as window resize events, including breakpoint changes.
+      resizeObserver = new ResizeObserver(() => {
+        const container = containerRef.current;
+        if (!map) return;
+        const canvas = map.getCanvas();
+        if (container && (canvas.clientWidth !== container.clientWidth || canvas.clientHeight !== container.clientHeight)) map.resize();
+      });
+      resizeObserver.observe(containerRef.current);
+      // Exposed for development and for the ?still screenshot mode, which browser tests drive.
+      if (process.env.NODE_ENV !== "production" || new URLSearchParams(window.location.search).has("still")) {
+        (window as unknown as { __map: MapboxMap }).__map = map;
+      }
+    } catch (err) {
+      console.warn("[Globe] Mapbox GL failed to initialize:", err);
+      return;
     }
 
     map.on("style.load", () => {
@@ -523,11 +542,11 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
     map.on("wheel", release);
 
     return () => {
-      resizeObserver.disconnect();
+      resizeObserver?.disconnect();
       readyRef.current = false;
       setReady(false);
       setMap(null);
-      map.remove();
+      map?.remove();
       mapRef.current = null;
     };
   }, [select, setMap, setReady]);

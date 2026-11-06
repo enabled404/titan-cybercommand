@@ -40,6 +40,7 @@ export async function takeLimits(limits: Limit[]): Promise<LimitResult> {
   const url = explicit ? process.env.UPSTASH_REDIS_REST_URL : process.env.KV_REST_API_URL;
   const token = explicit ? process.env.UPSTASH_REDIS_REST_TOKEN : process.env.KV_REST_API_TOKEN;
   if (!url || !token) {
+    if (!url && !token) return localLimit(limits);
     if (process.env.NODE_ENV !== "production") return localLimit(limits);
     return { allowed: false, retryAfter: 60, unavailable: true };
   }
