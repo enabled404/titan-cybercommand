@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, LinkSimple, ShieldCheck, Target, X } from "@phosphor-icons/react";
+import { ArrowUpRight, FileText, LinkSimple, ShieldCheck, Target, X } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -88,7 +88,46 @@ function StatusChip({ status }: { status: IncidentStatus }) {
 
 const CHIP = "inline-flex h-7 items-center rounded-full bg-white/[0.04] px-2.5 text-[12px] text-ink-2 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]";
 
-function ShareRow({ url, text }: { url: string; text: string }) {
+function exportIntelDossier(incident: Incident) {
+  const content = `# TITAN CYBER COMMAND — THREAT INTEL DOSSIER
+CONFIDENTIALITY: PUBLIC DEFENSIVE INTELLIGENCE
+INCIDENT ID: ${incident.id}
+
+## TARGET PROFILE
+- Target: ${incident.victim}
+- Domain: ${incident.domain || "N/A"}
+- Country: ${incident.country}
+- Location: ${incident.city ? `${incident.city}, ` : ""}${incident.country}
+- Status: ${incident.status.toUpperCase()}
+- Classification: ${incident.type.toUpperCase()}
+- Threat Actor: ${incident.actor || "Unidentified / Unknown"}
+- Date Reported: ${incident.date}
+
+## EXECUTIVE SUMMARY
+${incident.title}
+${incident.summary ? `\n${incident.summary}\n` : ""}
+
+## LINKED CVE EXPLOITS
+${incident.cves.length > 0 ? incident.cves.map((c) => `- ${c}`).join("\n") : "- None directly confirmed"}
+
+## PRIMARY SOURCED CITATIONS
+${incident.sources.map((s) => `- [${s.publisher}] ${s.title}: ${s.url}`).join("\n")}
+
+---
+SAFE HARBOR & DISCLAIMER: This threat dossier was compiled by Titan Cyber Command for defensive vulnerability research, patch prioritization, and threat intelligence. Unverified dark-web claims are treated as unconfirmed allegations under safe harbor guidelines.
+`;
+
+  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = downloadUrl;
+  a.download = `titan-dossier-${incident.id}.md`;
+  a.click();
+  URL.revokeObjectURL(downloadUrl);
+  toast("Threat Intel Dossier exported (.md)");
+}
+
+function ShareRow({ url, text, incident }: { url: string; text: string; incident?: Incident }) {
   const enc = encodeURIComponent;
   const cls =
     "press flex h-8 items-center gap-1.5 rounded-full bg-white/[0.035] px-3 text-[12.5px] text-ink-2 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] transition-colors hover:bg-white/[0.06] hover:text-ink";
@@ -104,6 +143,16 @@ function ShareRow({ url, text }: { url: string; text: string }) {
       >
         <LinkSimple className="size-3.5" /> Copy link
       </button>
+      {incident && (
+        <button
+          type="button"
+          className={cls}
+          onClick={() => exportIntelDossier(incident)}
+          title="Export formatted Markdown intel dossier"
+        >
+          <FileText className="size-3.5 text-cyan-400" /> Export dossier
+        </button>
+      )}
       <a href={`https://x.com/intent/post?text=${enc(text)}&url=${enc(url)}`} target="_blank" rel="noreferrer" className={cls}>
         Post on X
       </a>
@@ -277,7 +326,7 @@ export function IncidentPanel({ incident, related }: { incident: Incident; relat
       </Section>
 
       <Section title="Share">
-        <ShareRow url={url} text={`${incident.title}. Every cyber incident, live:`} />
+        <ShareRow url={url} text={`${incident.title}. Every cyber incident, live:`} incident={incident} />
         <Link href={`/incident/${incident.id}`} className="mt-4 inline-flex items-center gap-1 text-[13px] text-ink-3 hover:text-ink">
           Open the incident page <ArrowUpRight className="size-3.5" />
         </Link>

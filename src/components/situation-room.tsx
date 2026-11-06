@@ -21,6 +21,8 @@ import { BallisticEngine } from "@/components/map/ballistic-engine";
 import { GlobeErrorBoundary } from "@/components/map/globe-error-boundary";
 import { WargamesModal } from "@/components/hud/wargames-modal";
 import { ReconScannerModal } from "@/components/hud/recon-scanner";
+import { ShortcutsModal } from "@/components/hud/shortcuts-modal";
+import { useAudioStore } from "@/stores/audio";
 import type { Incident, Snapshot, Vuln } from "@/lib/types";
 import { incidentView } from "@/lib/incident-view";
 import { cn } from "@/lib/utils";
@@ -136,6 +138,8 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const [patchDockOpen, setPatchDockOpen] = useState(true);
   const [wargamesOpen, setWargamesOpen] = useState(false);
   const [reconOpen, setReconOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const toggleMute = useAudioStore((s) => s.toggleMute);
 
   const window_ = useSituation((s) => s.window);
   const statuses = useSituation((s) => s.statuses);
@@ -235,14 +239,26 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         event.preventDefault();
         focusSearch();
       } else if (event.key === "Escape") {
-        if (cinema) setCinema(false);
+        if (shortcutsOpen) setShortcutsOpen(false);
+        else if (wargamesOpen) setWargamesOpen(false);
+        else if (reconOpen) setReconOpen(false);
+        else if (cinema) setCinema(false);
         else {
           select(null);
           selectCve(null);
         }
       } else if (event.key.toLowerCase() === "c") {
         setCinema(!cinema);
-      } else if (event.key.toLowerCase() === "j") {
+      } else if (event.key.toLowerCase() === "w") {
+        setWargamesOpen((prev) => !prev);
+      } else if (event.key.toLowerCase() === "r") {
+        setReconOpen((prev) => !prev);
+      } else if (event.key.toLowerCase() === "m") {
+        toggleMute();
+      } else if (event.key === "?" || (event.shiftKey && event.key === "/")) {
+        setShortcutsOpen((prev) => !prev);
+      } else if (event.key.toLowerCase() === "j" || event.key === " ") {
+        if (event.key === " ") event.preventDefault();
         step(1);
       } else if (event.key.toLowerCase() === "k") {
         step(-1);
@@ -250,7 +266,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cinema, setCinema, select, selectCve, step]);
+  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, wargamesOpen, reconOpen, toggleMute]);
 
   const onHover = useCallback((incident: Incident | null, point: { x: number; y: number } | null) => {
     setHovered(incident && point ? { incident, x: point.x, y: point.y } : null);
@@ -316,6 +332,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
             ticker={<CveTicker items={snapshot.fresh} generatedAt={snapshot.generatedAt} onSelect={selectCve} />}
             onOpenWargames={() => setWargamesOpen(true)}
             onOpenRecon={() => setReconOpen(true)}
+            onOpenShortcuts={() => setShortcutsOpen(true)}
           />
         </div>
 
@@ -359,6 +376,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
           open={patchDockOpen}
           onOpenChange={setPatchDockOpen}
           inactive={mobile || cinema}
+          now={now}
         />
         <MapControls generatedAt={snapshot.generatedAt} feeds={snapshot.feeds} shiftForPanel={panelOpen} />
       </div>
@@ -369,6 +387,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
 
       <WargamesModal open={wargamesOpen} onClose={() => setWargamesOpen(false)} />
       <ReconScannerModal open={reconOpen} onClose={() => setReconOpen(false)} snapshot={snapshot} />
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </main>
   );
 }

@@ -14,8 +14,9 @@ import { stackMatch, useStack } from "@/stores/stack";
 
 export const PATCH_DOCK_MIN_WIDTH = 440;
 
-function daysAgo(date: string): number {
-  return Math.floor((Date.now() - Date.parse(`${date}T00:00:00Z`)) / 86_400_000);
+function daysAgo(date: string, now?: number): number {
+  const current = now ?? Date.parse("2026-11-06T00:00:00Z");
+  return Math.max(0, Math.floor((current - Date.parse(`${date}T00:00:00Z`)) / 86_400_000));
 }
 
 function summaryLine(total: number | undefined, mine: number, hasStack: boolean): string {
@@ -25,8 +26,8 @@ function summaryLine(total: number | undefined, mine: number, hasStack: boolean)
   return `None of these ${total} name your stack. Other flaws still might.`;
 }
 
-function Signal({ item }: { item: PatchItem }) {
-  const age = item.kevAdded ? daysAgo(item.kevAdded) : null;
+function Signal({ item, now }: { item: PatchItem; now?: number }) {
+  const age = item.kevAdded ? daysAgo(item.kevAdded, now) : null;
   const label = item.ransomware ? "Ransomware" : item.exploited ? "Exploited" : "In the news";
   return (
     <span className={cn("flex shrink-0 items-center gap-1.5 text-[11.5px]", item.exploited ? "text-confirmed" : "text-reported")}>
@@ -37,7 +38,7 @@ function Signal({ item }: { item: PatchItem }) {
   );
 }
 
-function PatchCard({ item, index, width, mine }: { item: PatchItem; index: number; width: number; mine: boolean }) {
+function PatchCard({ item, index, width, mine, now }: { item: PatchItem; index: number; width: number; mine: boolean; now?: number }) {
   const selectCve = useSituation((s) => s.selectCve);
   const product = productLabel(item);
   // CSS rather than motion/react: the same entrance without shipping Motion on the home page.
@@ -61,7 +62,7 @@ function PatchCard({ item, index, width, mine }: { item: PatchItem; index: numbe
           {mine ? (
             <span className="shrink-0 rounded-full bg-ink px-2 py-0.5 text-[10.5px] font-semibold text-space">You run this</span>
           ) : (
-            <Signal item={item} />
+            <Signal item={item} now={now} />
           )}
         </span>
         <span className="mt-2.5 line-clamp-2 text-[14px] font-medium leading-[1.3] tracking-[-0.005em] text-ink">{item.title}</span>
@@ -85,6 +86,7 @@ export function PatchStrip({
   open = true,
   onOpenChange,
   inactive = false,
+  now,
 }: {
   variant?: "dock" | "rail";
   insetLeft?: number;
@@ -94,6 +96,7 @@ export function PatchStrip({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   inactive?: boolean;
+  now?: number;
 }) {
   const list = usePatchList();
   const section = useRef<HTMLElement>(null);
@@ -231,7 +234,7 @@ export function PatchStrip({
           aria-label="Vulnerabilities to patch now"
         >
           {items
-            ? items.map(({ item, mine }, index) => <PatchCard key={item.key} item={item} index={index} width={width} mine={mine} />)
+            ? items.map(({ item, mine }, index) => <PatchCard key={item.key} item={item} index={index} width={width} mine={mine} now={now} />)
             : [0, 1, 2, 3].map((index) => (
                 <li key={index} className="flex h-[132px] shrink-0 flex-col gap-3 rounded-[14px] bg-white/[0.035] p-3.5" style={{ width }}>
                   <span className="skeleton h-[22px] w-2/3 rounded-[6px]" />

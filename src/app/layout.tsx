@@ -25,34 +25,37 @@ const martian = Martian_Mono({ subsets: ["latin"], axes: ["wdth"], variable: "--
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Global Hack Map: every hack, exploit and breach, live",
-    template: "%s | Global Hack Map",
+    default: "Titan Cyber Command: Global Cyber Warfare & Real-Time Threat Intelligence Monitor",
+    template: "%s | Titan Cyber Command",
   },
   description:
-    "Every breach, ransomware attack, exploited vulnerability and malicious package on Earth, on one live map. Check if you are affected and fix it in one click. Open source, powered by Valyu.",
-  applicationName: "Global Hack Map",
+    "Global Kinetic Cyber Warfare & Real-Time Threat Intelligence Monitor. Every breach, kinetic cyber assault, ransomware attack, and exploited zero-day on Earth, live on an interactive 3D globe. Powered by Valyu.",
+  applicationName: "Titan Cyber Command",
   keywords: [
-    "cyber attack map",
-    "live cyber threat map",
+    "cyber warfare map",
+    "threat intelligence monitor",
+    "live cyber attack globe",
     "data breach tracker",
     "ransomware tracker",
     "actively exploited vulnerabilities",
     "CISA KEV",
     "am I affected",
     "CVE monitoring",
+    "subsea fiber optic cables",
+    "defcon cyber command",
   ],
   openGraph: {
     type: "website",
-    siteName: "Global Hack Map",
-    title: "Global Hack Map: every hack, exploit and breach, live",
-    description: "Every breach, ransomware attack and exploited vulnerability on Earth, on one live map. Are you affected?",
+    siteName: "Titan Cyber Command",
+    title: "Titan Cyber Command: Global Cyber Warfare & Real-Time Threat Intelligence Monitor",
+    description: "Every breach, kinetic cyber assault, ransomware attack and exploited vulnerability on Earth, live on a 3D ballistic globe.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Global Hack Map: every hack, exploit and breach, live",
-    description: "Every breach, ransomware attack and exploited vulnerability on Earth, on one live map. Are you affected?",
+    title: "Titan Cyber Command: Global Cyber Warfare & Real-Time Threat Intelligence Monitor",
+    description: "Every breach, kinetic cyber assault, ransomware attack and exploited vulnerability on Earth, live on a 3D ballistic globe.",
   },
-  alternates: { types: { "application/rss+xml": [{ url: "/feed.xml", title: "Global Hack Map: cyber incidents" }] } },
+  alternates: { types: { "application/rss+xml": [{ url: "/feed.xml", title: "Titan Cyber Command: cyber incidents" }] } },
 };
 
 export const viewport: Viewport = {
@@ -65,8 +68,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`dark ${mona.variable} ${hubot.variable} ${martian.variable} ${GeistMono.variable} h-full antialiased`}>
-      <body className="min-h-full bg-space text-ink">
+    <html lang="en" suppressHydrationWarning className={`dark ${mona.variable} ${hubot.variable} ${martian.variable} ${GeistMono.variable} h-full antialiased`}>
+      <body suppressHydrationWarning className="min-h-full bg-space text-ink">
         <NuqsAdapter>
           <TooltipProvider delay={250}>{children}</TooltipProvider>
         </NuqsAdapter>
