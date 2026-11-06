@@ -12,6 +12,7 @@ import { STATUS_COLOR } from "@/lib/format";
 import type { Incident, Outage } from "@/lib/types";
 import { useSituation } from "@/stores/situation";
 import submarineCables from "@/data/geo/submarine-cables.json";
+import worldBoundaries from "@/data/geo/world-boundaries.json";
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -181,14 +182,12 @@ function addLayers(map: MapboxMap) {
     },
   });
 
-  map.addSource("countries", { type: "vector", url: "mapbox://mapbox.country-boundaries-v1" });
+  map.addSource("countries", { type: "geojson", data: worldBoundaries as FeatureCollection });
   map.addLayer({
     id: "country-heat",
     type: "fill",
     source: "countries",
-    "source-layer": "country_boundaries",
     slot: "bottom",
-    filter: ["any", ["==", ["get", "worldview"], "all"], ["in", "US", ["get", "worldview"]]],
     paint: { "fill-color": "#ff4a3d", "fill-opacity": 0, "fill-emissive-strength": 1 },
   });
   // A red hairline carries the heat; a strong fill would muddy the terrain beneath it.
@@ -196,16 +195,13 @@ function addLayers(map: MapboxMap) {
     id: "country-heat-line",
     type: "line",
     source: "countries",
-    "source-layer": "country_boundaries",
     slot: "bottom",
-    filter: ["any", ["==", ["get", "worldview"], "all"], ["in", "US", ["get", "worldview"]]],
     paint: { "line-color": "#ff6a5c", "line-width": 0.8, "line-opacity": 0, "line-emissive-strength": 1 },
   });
   map.addLayer({
     id: "country-outage",
     type: "line",
     source: "countries",
-    "source-layer": "country_boundaries",
     slot: "middle",
     filter: ["in", ["get", "iso_3166_1"], ["literal", []]],
     paint: {
@@ -436,7 +432,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
             showTransitLabels: false,
             showRoadLabels: false,
             showPlaceLabels: true,
-            show3dObjects: true,
+            show3dObjects: false,
             colorLand: "#191919",
             colorWater: "#080808",
             colorAdminBoundaries: "#454545",

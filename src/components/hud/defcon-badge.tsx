@@ -9,7 +9,7 @@ export function DefconBadge() {
     <Popover>
       <PopoverTrigger
         onClick={() => soundEngine.playClick()}
-        className="press glass-pill hidden h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-mono tracking-wider transition-colors hover:bg-confirmed/15 hover:text-red-300 xl:flex"
+        className="press glass-pill hidden h-7 items-center gap-1.5 rounded-full px-2 text-[10.5px] font-mono tracking-wider transition-colors hover:bg-confirmed/15 hover:text-red-300 sm:flex"
         title="Global Cyber Readiness Posture"
       >
         <span className="relative flex size-2">
