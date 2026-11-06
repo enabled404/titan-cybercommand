@@ -21,6 +21,7 @@ import { BallisticEngine } from "@/components/map/ballistic-engine";
 import { OrbitalHud } from "@/components/map/orbital-hud";
 import { CombatFeedDrawer } from "@/components/hud/combat-feed";
 import { GlobeErrorBoundary } from "@/components/map/globe-error-boundary";
+import { useCombatFeed } from "@/stores/combat-feed";
 import { WargamesModal } from "@/components/hud/wargames-modal";
 import { ReconScannerModal } from "@/components/hud/recon-scanner";
 import { ShortcutsModal } from "@/components/hud/shortcuts-modal";
@@ -252,8 +253,10 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
           select(null);
           selectCve(null);
         }
-      } else if (event.key.toLowerCase() === "c") {
+      } else if (event.key.toLowerCase() === "c" || event.key.toLowerCase() === "p") {
         setCinema(!cinema);
+      } else if (event.key.toLowerCase() === "t") {
+        useCombatFeed.getState().toggleOpen();
       } else if (event.key.toLowerCase() === "v") {
         setDemoOpen((prev) => !prev);
       } else if (event.key.toLowerCase() === "w") {
