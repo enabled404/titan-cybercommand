@@ -66,7 +66,7 @@ export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt
               Connectivity drop
             </span>
           </div>
-          <p className="border-t border-white/[0.06] px-2.5 pb-1.5 pt-2.5 text-[12px] leading-relaxed text-ink-4">
+          <p suppressHydrationWarning className="border-t border-white/[0.06] px-2.5 pb-1.5 pt-2.5 text-[12px] leading-relaxed text-ink-4">
             Updated {relativeTime(generatedAt, now)} from {okFeeds} of {Object.keys(feeds).length} live sources.
           </p>
           <div className="flex items-center justify-between border-t border-white/[0.06] px-2.5 py-1.5 text-[11px] text-ink-4">
