@@ -166,6 +166,12 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
           </button>
         </div>
 
+        {/* Safe Harbor Notice */}
+        <div className="flex items-center gap-2 border-b border-white/5 bg-white/[0.02] px-6 py-2 text-[11px] text-ink-3">
+          <span className="rounded bg-cyan-500/20 px-1.5 py-0.2 font-mono text-[9px] font-bold text-cyan-300 uppercase">OSINT Safe Harbor</span>
+          <span>Queries are limited to passive public DNS and SPF/DMARC records. No active port scanning or intrusion testing is performed.</span>
+        </div>
+
         {/* Input Bar */}
         <form onSubmit={handleScan} className="border-b border-white/5 bg-white/[0.02] p-4">
           <div className="flex gap-2">

@@ -4,6 +4,10 @@
 
 **Global Kinetic Cyber Warfare & Real-Time Threat Intelligence Monitor**
 
+[![Titan Cyber Command Live Demo](docs/demo.gif)](https://titan-cybercommand.vercel.app)
+
+🎥 **[Watch Full 1080p Demo Video (MP4 with Audio)](docs/demo.mp4)** | 🌐 **[WebM Format](docs/demo.webm)**
+
 Every hack, exploit, breach, and kinetic cyber assault, live on one interactive 3D globe. Featuring a real-time ballistic particle missile engine, procedural tactical audio synthesizer, subsea fiber optic infrastructure, interactive disaster simulation, and passive domain reconnaissance.
 
 ---
@@ -15,6 +19,7 @@ Every hack, exploit, breach, and kinetic cyber assault, live on one interactive 
 - **WarGames Cascading Disaster Simulator**: Interactive simulation engine to test catastrophic scenarios including subsea fiber optic cable severance, global cloud hypervisor panic, and SCADA electrical grid infiltration.
 - **Target Recon Passive Scanner**: Enter any domain (e.g. `apple.com`, `tesla.com`, or your company) to execute non-invasive OSINT reconnaissance: DNS routing, SPF/DMARC mail spoof defense, ransomware leak site exposures, and active CVE correlations with a real-time Threat Posture score (A+ to F).
 - **Submarine Internet Cables Layer**: Physical infrastructure layer rendering global deep-sea fiber optic cables (MAREA, Dunant, Grace Hopper, SEA-ME-WE 5, FASTER, 2Africa) directly on the ocean floor.
+- **In-App 1-Click Demo Recorder**: Built-in canvas capture engine allowing visitors to record and download smooth 60fps HD video clips directly from their browser.
 - **New CVEs & CISA KEV**: Real-time ticker and index at `/cve` of critical CVEs published in the last 72 hours and flaws CISA confirmed actively exploited.
 - **Patch Now Dock**: Software currently weaponized by attackers today, saying in plain English what can happen, who is affected, and what fixes it.
 - **Am I Affected?**: Select the apps, packages, and companies you use to see what attackers are exploiting in them.
@@ -33,6 +38,16 @@ Every hack, exploit, breach, and kinetic cyber assault, live on one interactive 
 | Disputed      | Reported, and denied by the organisation                    |
 
 *An absent result is never proof that you are safe.*
+
+---
+
+## Legal, Rights & Security Protections
+
+Titan Cyber Command is built strictly for defensive cybersecurity education and research:
+
+- 🛡️ **[Security Policy & Safe Harbor](SECURITY.md)**: Responsible vulnerability disclosure guidelines, researcher legal safe-harbor, and reporting channels.
+- ⚖️ **[Legal Terms of Use](LEGAL.md)**: Defensive research purpose, CFAA compliance, Fair Use (17 U.S.C. § 107), non-affiliation, and limitation of liability.
+- 📋 **[Threat Intelligence Disclaimer](DISCLAIMER.md)**: Explicit distinction between verified disclosures and unverified dark-web claims.
 
 ---
 
@@ -68,7 +83,7 @@ pnpm exec vitest run
 
 ## Acknowledgement & Inspiration
 
-Titan Cyber Command was built upon the design foundation and initial data pipeline architecture of [yorkeccak/globalhackmap](https://github.com/yorkeccak/globalhackmap), completely re-engineered, modernized, and expanded with real-time ballistic particle physics, procedural audio, physical subsea infrastructure, interactive disaster simulation, and target reconnaissance.
+Titan Cyber Command was built upon the design foundation and initial data pipeline architecture of [yorkeccak/globalhackmap](https://github.com/yorkeccak/globalhackmap), completely re-engineered, modernized, and expanded with real-time ballistic particle physics, procedural audio, physical subsea infrastructure, interactive disaster simulation, in-app video recording, and target reconnaissance.
 
 ---
 

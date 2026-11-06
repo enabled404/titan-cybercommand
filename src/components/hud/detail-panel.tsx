@@ -271,6 +271,9 @@ export function IncidentPanel({ incident, related }: { incident: Incident; relat
           </a>
           .
         </p>
+        <p className="mt-3 border-t border-white/[0.06] pt-2 font-mono text-[10px] leading-relaxed text-ink-4">
+          LEGAL NOTICE: Aggregated for defensive research only. Threat actor leak claims are unverified until officially confirmed.
+        </p>
       </Section>
 
       <Section title="Share">
