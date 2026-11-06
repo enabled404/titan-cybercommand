@@ -5,9 +5,14 @@ import { useSyncExternalStore } from "react";
 const TICK = 30_000;
 const listeners = new Set<() => void>();
 let timer: number | undefined;
+let isHydrated = false;
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
+  if (!isHydrated) {
+    isHydrated = true;
+    queueMicrotask(() => listeners.forEach((notify) => notify()));
+  }
   if (listeners.size === 1) timer = window.setInterval(() => listeners.forEach((notify) => notify()), TICK);
   return () => {
     listeners.delete(listener);
@@ -16,15 +21,14 @@ function subscribe(listener: () => void) {
 }
 
 /**
- * The current time for "5m ago" labels, safe to render on the server. The server and the hydration
- * pass both use `serverNow` (pass the snapshot's generatedAt), so the HTML matches even when a cached
- * page is served hours later; React then swaps in the real clock and refreshes every 30 seconds.
- * Calling Date.now() during render instead makes React discard the server HTML (error #418).
+ * The current time for "5m ago" labels, guaranteed safe to render on the server and during hydration.
+ * The server and client initial hydration pass both return `serverNow`, ensuring 100% identical HTML
+ * and zero hydration errors (#418). Once mounted, it switches to the live clock updating every 30s.
  */
 export function useNow(serverNow: number): number {
   return useSyncExternalStore(
     subscribe,
-    () => Math.floor(Date.now() / TICK) * TICK,
+    () => (isHydrated ? Math.floor(Date.now() / TICK) * TICK : serverNow),
     () => serverNow,
   );
 }

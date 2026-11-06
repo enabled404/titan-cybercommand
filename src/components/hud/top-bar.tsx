@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { Crosshair, MagnifyingGlass } from "@phosphor-icons/react";
+import { Crosshair, FilmSlate, MagnifyingGlass } from "@phosphor-icons/react";
 
 import { AuthButton } from "@/components/auth/auth-button";
 import { AudioButton } from "@/components/hud/audio-button";
@@ -61,11 +61,13 @@ export function TopBar({
   onOpenWargames,
   onOpenRecon,
   onOpenShortcuts,
+  onOpenDemo,
 }: {
   ticker?: React.ReactNode;
   onOpenWargames?: () => void;
   onOpenRecon?: () => void;
   onOpenShortcuts?: () => void;
+  onOpenDemo?: () => void;
 }) {
   return (
     <header className="pointer-events-auto flex min-h-[68px] flex-wrap items-center gap-x-2 bg-space pb-3.5 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.875rem,env(safe-area-inset-top))] sm:gap-x-4 sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]">
@@ -124,6 +126,20 @@ export function TopBar({
           >
             <Crosshair size={13} weight="bold" />
             <span className="uppercase tracking-wider">WarGames</span>
+          </button>
+        )}
+
+        {onOpenDemo && (
+          <button
+            onClick={() => {
+              soundEngine.playClick();
+              onOpenDemo();
+            }}
+            className="press glass-pill hidden h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-mono text-cyan-300 transition-colors hover:bg-cyan-500/10 hover:text-cyan-200 md:flex"
+            title="Watch Master 1080p Demo Video (V)"
+          >
+            <FilmSlate size={13} weight="bold" />
+            <span className="uppercase tracking-wider">Demo Video</span>
           </button>
         )}
 

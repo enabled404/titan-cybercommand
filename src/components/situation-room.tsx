@@ -22,6 +22,7 @@ import { GlobeErrorBoundary } from "@/components/map/globe-error-boundary";
 import { WargamesModal } from "@/components/hud/wargames-modal";
 import { ReconScannerModal } from "@/components/hud/recon-scanner";
 import { ShortcutsModal } from "@/components/hud/shortcuts-modal";
+import { DemoModal } from "@/components/hud/demo-modal";
 import { useAudioStore } from "@/stores/audio";
 import type { Incident, Snapshot, Vuln } from "@/lib/types";
 import { incidentView } from "@/lib/incident-view";
@@ -139,6 +140,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const [wargamesOpen, setWargamesOpen] = useState(false);
   const [reconOpen, setReconOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
   const toggleMute = useAudioStore((s) => s.toggleMute);
 
   const window_ = useSituation((s) => s.window);
@@ -240,6 +242,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         focusSearch();
       } else if (event.key === "Escape") {
         if (shortcutsOpen) setShortcutsOpen(false);
+        else if (demoOpen) setDemoOpen(false);
         else if (wargamesOpen) setWargamesOpen(false);
         else if (reconOpen) setReconOpen(false);
         else if (cinema) setCinema(false);
@@ -249,6 +252,8 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         }
       } else if (event.key.toLowerCase() === "c") {
         setCinema(!cinema);
+      } else if (event.key.toLowerCase() === "v") {
+        setDemoOpen((prev) => !prev);
       } else if (event.key.toLowerCase() === "w") {
         setWargamesOpen((prev) => !prev);
       } else if (event.key.toLowerCase() === "r") {
@@ -266,7 +271,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, wargamesOpen, reconOpen, toggleMute]);
+  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute]);
 
   const onHover = useCallback((incident: Incident | null, point: { x: number; y: number } | null) => {
     setHovered(incident && point ? { incident, x: point.x, y: point.y } : null);
@@ -333,6 +338,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
             onOpenWargames={() => setWargamesOpen(true)}
             onOpenRecon={() => setReconOpen(true)}
             onOpenShortcuts={() => setShortcutsOpen(true)}
+            onOpenDemo={() => setDemoOpen(true)}
           />
         </div>
 
@@ -388,6 +394,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       <WargamesModal open={wargamesOpen} onClose={() => setWargamesOpen(false)} />
       <ReconScannerModal open={reconOpen} onClose={() => setReconOpen(false)} snapshot={snapshot} />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </main>
   );
 }

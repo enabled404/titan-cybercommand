@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { preconnect } from "react-dom";
 
 import { SituationRoom } from "@/components/situation-room";
@@ -12,5 +13,9 @@ export default async function Home() {
   preconnect("https://api.mapbox.com", { crossOrigin: "anonymous" });
   preconnect("https://gibs.earthdata.nasa.gov", { crossOrigin: "anonymous" });
   const snapshot = await getSnapshot();
-  return <SituationRoom snapshot={toClientSnapshot(snapshot)} />;
+  return (
+    <Suspense fallback={null}>
+      <SituationRoom snapshot={toClientSnapshot(snapshot)} />
+    </Suspense>
+  );
 }

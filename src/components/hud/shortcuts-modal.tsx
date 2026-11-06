@@ -11,6 +11,7 @@ interface Props {
 const SHORTCUTS = [
   { key: "W", desc: "Launch WarGames cascading disaster simulator" },
   { key: "R", desc: "Launch Target Recon passive OSINT scanner" },
+  { key: "V", desc: "Watch master demo briefing video & export artifacts" },
   { key: "C", desc: "Toggle Panoramic Cinema / Command view" },
   { key: "M", desc: "Toggle procedural DEFCON sound engine" },
   { key: "J / K", desc: "Step forward / backward through live incidents" },
