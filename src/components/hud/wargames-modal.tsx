@@ -173,6 +173,12 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
           </button>
         </div>
 
+        {/* Legal & Educational Disclaimer Banner */}
+        <div className="flex items-center gap-2 border-b border-white/5 bg-white/[0.02] px-6 py-2 text-[11px] text-ink-3">
+          <span className="rounded bg-white/10 px-1.5 py-0.2 font-mono text-[9px] font-bold text-ink uppercase">Hypothetical Simulation</span>
+          <span>Scenarios represent educational mathematical models for resilience planning. No actual infrastructure is targeted or altered.</span>
+        </div>
+
         {/* Body content */}
         <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-6 md:grid-cols-12">
           {/* Scenario Selector */}

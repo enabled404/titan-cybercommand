@@ -7,6 +7,7 @@ import { Crosshair, MagnifyingGlass } from "@phosphor-icons/react";
 
 import { AuthButton } from "@/components/auth/auth-button";
 import { AudioButton } from "@/components/hud/audio-button";
+import { RecordDemoButton } from "@/components/hud/record-demo";
 import { BrandMark, GithubIcon, ValyuMark } from "@/components/icons/agents";
 import { ACCOUNTS } from "@/lib/mode";
 import { REPO_URL } from "@/lib/site";
@@ -120,6 +121,8 @@ export function TopBar({
             <span className="uppercase tracking-wider">WarGames</span>
           </button>
         )}
+
+        <RecordDemoButton />
 
         <AudioButton />
 
