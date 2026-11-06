@@ -15,9 +15,12 @@ Every hack, exploit, breach, and kinetic cyber assault, live on one interactive 
 ## Breakthrough Capabilities
 
 - **Kinetic Ballistic Particle Engine**: Real-time laser trajectories arcing high through the exosphere from threat actor command-and-control nodes to victim targets, complete with glowing comet heads, fading trails, and concentric impact shockwaves.
+- **In-App Demo Video & Artifact Showcase (`V`)**: Watch the high-definition master briefing video embedded directly in the application or download the full 1080p MP4, animated GIF, or WebM master with one click.
+- **STIX 2.1 Threat Intel Export**: One-click export of machine-readable STIX 2.1 JSON indicators of compromise (IoCs) and formatted Markdown dossiers for direct ingestion into enterprise SIEMs (Splunk, Microsoft Sentinel, Elastic).
 - **Procedural DEFCON Audio Synthesizer**: Built entirely on the Web Audio API with zero external audio downloads. Features a 55Hz sub-bass tactical reactor drone, stereo-panned laser swooshes, impact thuds, terminal relay clicks, and dual-frequency alert chimes.
-- **WarGames Cascading Disaster Simulator**: Interactive simulation engine to test catastrophic scenarios including subsea fiber optic cable severance, global cloud hypervisor panic, and SCADA electrical grid infiltration.
-- **Target Recon Passive Scanner**: Enter any domain (e.g. `apple.com`, `tesla.com`, or your company) to execute non-invasive OSINT reconnaissance: DNS routing, SPF/DMARC mail spoof defense, ransomware leak site exposures, and active CVE correlations with a real-time Threat Posture score (A+ to F).
+- **WarGames Cascading Disaster Simulator (`W`)**: Interactive simulation engine to test catastrophic scenarios including subsea fiber optic cable severance, global cloud hypervisor panic, and SCADA electrical grid infiltration with automated countermeasure deployment.
+- **Target Recon Passive Scanner (`R`)**: Enter any domain (e.g. `apple.com`, `tesla.com`, or your company) to execute non-invasive OSINT reconnaissance: DNS routing, SPF/DMARC mail spoof defense, ransomware leak site exposures, and active CVE correlations with a real-time Threat Posture score (A+ to F).
+- **DEFCON 2 Situational Readiness Matrix**: Real-time tactical status badge tracking 12 live cyber feeds with active posture breakdown and operator controls.
 - **Submarine Internet Cables Layer**: Physical infrastructure layer rendering global deep-sea fiber optic cables (MAREA, Dunant, Grace Hopper, SEA-ME-WE 5, FASTER, 2Africa) directly on the ocean floor.
 - **In-App 1-Click Demo Recorder**: Built-in canvas capture engine allowing visitors to record and download smooth 60fps HD video clips directly from their browser.
 - **New CVEs & CISA KEV**: Real-time ticker and index at `/cve` of critical CVEs published in the last 72 hours and flaws CISA confirmed actively exploited.
@@ -46,7 +49,8 @@ Every hack, exploit, breach, and kinetic cyber assault, live on one interactive 
 Titan Cyber Command is built strictly for defensive cybersecurity education and research:
 
 - 🛡️ **[Security Policy & Safe Harbor](SECURITY.md)**: Responsible vulnerability disclosure guidelines, researcher legal safe-harbor, and reporting channels.
-- ⚖️ **[Legal Terms of Use](LEGAL.md)**: Defensive research purpose, CFAA compliance, Fair Use (17 U.S.C. § 107), non-affiliation, and limitation of liability.
+- ⚖️ **[Terms of Service & Safe Harbor](/terms)**: Defensive research purpose, CFAA compliance, Fair Use (17 U.S.C. § 107), non-affiliation, and limitation of liability.
+- 🔒 **[Privacy Policy](/privacy)**: Zero-log policy for target lookups, client-side only preference caching, and ethical OSINT compliance.
 - 📋 **[Threat Intelligence Disclaimer](DISCLAIMER.md)**: Explicit distinction between verified disclosures and unverified dark-web claims.
 
 ---
