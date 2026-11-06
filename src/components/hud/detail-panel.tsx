@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, FileText, LinkSimple, ShieldCheck, Target, X } from "@phosphor-icons/react";
+import { ArrowUpRight, FileCode, FileText, LinkSimple, ShieldCheck, Target, X } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -89,7 +89,7 @@ function StatusChip({ status }: { status: IncidentStatus }) {
 const CHIP = "inline-flex h-7 items-center rounded-full bg-white/[0.04] px-2.5 text-[12px] text-ink-2 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]";
 
 function exportIntelDossier(incident: Incident) {
-  const content = `# TITAN CYBER COMMAND — THREAT INTEL DOSSIER
+  const content = `# TITAN CYBER COMMAND: THREAT INTEL DOSSIER
 CONFIDENTIALITY: PUBLIC DEFENSIVE INTELLIGENCE
 INCIDENT ID: ${incident.id}
 
@@ -127,6 +127,80 @@ SAFE HARBOR & DISCLAIMER: This threat dossier was compiled by Titan Cyber Comman
   toast("Threat Intel Dossier exported (.md)");
 }
 
+function exportStix21(incident: Incident) {
+  const timestamp = new Date().toISOString();
+  const stixBundle = {
+    type: "bundle",
+    id: `bundle--${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`,
+    spec_version: "2.1",
+    objects: [
+      {
+        type: "incident",
+        spec_version: "2.1",
+        id: `incident--${incident.id}`,
+        created: timestamp,
+        modified: timestamp,
+        name: `Cyber Incident: ${incident.victim}`,
+        description: incident.title,
+        labels: [incident.status, incident.type],
+        confidence: incident.status === "confirmed" ? 95 : incident.status === "reported" ? 75 : 50,
+      },
+      ...(incident.domain
+        ? [
+            {
+              type: "indicator",
+              spec_version: "2.1",
+              id: `indicator--${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`,
+              created: timestamp,
+              modified: timestamp,
+              name: `Domain Indicator: ${incident.domain}`,
+              pattern: `[domain-name:value = '${incident.domain}']`,
+              pattern_type: "stix",
+              valid_from: timestamp,
+            },
+          ]
+        : []),
+      ...(incident.actor
+        ? [
+            {
+              type: "threat-actor",
+              spec_version: "2.1",
+              id: `threat-actor--${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`,
+              created: timestamp,
+              modified: timestamp,
+              name: incident.actor,
+              threat_actor_types: ["cybercrime-syndicate"],
+            },
+          ]
+        : []),
+      ...incident.cves.map((cve) => ({
+        type: "vulnerability",
+        spec_version: "2.1",
+        id: `vulnerability--${cve.toLowerCase()}`,
+        created: timestamp,
+        modified: timestamp,
+        name: cve,
+        external_references: [
+          {
+            source_name: "cve",
+            external_id: cve,
+            url: `https://nvd.nist.gov/vuln/detail/${cve}`,
+          },
+        ],
+      })),
+    ],
+  };
+
+  const blob = new Blob([JSON.stringify(stixBundle, null, 2)], { type: "application/json;charset=utf-8" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = downloadUrl;
+  a.download = `titan-stix-${incident.id}.json`;
+  a.click();
+  URL.revokeObjectURL(downloadUrl);
+  toast("STIX 2.1 Threat Intel exported (.json)");
+}
+
 function ShareRow({ url, text, incident }: { url: string; text: string; incident?: Incident }) {
   const enc = encodeURIComponent;
   const cls =
@@ -144,14 +218,24 @@ function ShareRow({ url, text, incident }: { url: string; text: string; incident
         <LinkSimple className="size-3.5" /> Copy link
       </button>
       {incident && (
-        <button
-          type="button"
-          className={cls}
-          onClick={() => exportIntelDossier(incident)}
-          title="Export formatted Markdown intel dossier"
-        >
-          <FileText className="size-3.5 text-cyan-400" /> Export dossier
-        </button>
+        <>
+          <button
+            type="button"
+            className={cls}
+            onClick={() => exportIntelDossier(incident)}
+            title="Export formatted Markdown intel dossier"
+          >
+            <FileText className="size-3.5 text-cyan-400" /> Dossier (.md)
+          </button>
+          <button
+            type="button"
+            className={cls}
+            onClick={() => exportStix21(incident)}
+            title="Export machine-readable STIX 2.1 Threat Intelligence JSON"
+          >
+            <FileCode className="size-3.5 text-emerald-400" /> STIX 2.1 (.json)
+          </button>
+        </>
       )}
       <a href={`https://x.com/intent/post?text=${enc(text)}&url=${enc(url)}`} target="_blank" rel="noreferrer" className={cls}>
         Post on X
