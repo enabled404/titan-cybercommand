@@ -18,6 +18,7 @@ import { TopBar } from "@/components/hud/top-bar";
 import { AsciiAtlas } from "@/components/map/ascii-atlas";
 import { DataTags } from "@/components/map/data-tags";
 import { BallisticEngine } from "@/components/map/ballistic-engine";
+import { GlobeErrorBoundary } from "@/components/map/globe-error-boundary";
 import { WargamesModal } from "@/components/hud/wargames-modal";
 import { ReconScannerModal } from "@/components/hud/recon-scanner";
 import type { Incident, Snapshot, Vuln } from "@/lib/types";
@@ -296,10 +297,10 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         <DeepLinks />
       </Suspense>
       {mapReady ? (
-        <>
+        <GlobeErrorBoundary fallback={<GlobePlaceholder />}>
           <Globe incidents={filtered} outages={snapshot.outages} countryCounts={countryCounts} padding={padding} onHover={onHover} onCluster={onCluster} />
           <BallisticEngine incidents={filtered} />
-        </>
+        </GlobeErrorBoundary>
       ) : (
         <GlobePlaceholder />
       )}
