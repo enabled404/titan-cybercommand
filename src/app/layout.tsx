@@ -81,7 +81,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             className: "!bg-surface !border-hairline-2 !text-ink !rounded-[12px] !text-[13px] !shadow-2xl",
           }}
         />
-        <Analytics />
+        {process.env.VERCEL ? <Analytics /> : null}
         <OutboundLinks />
       </body>
     </html>

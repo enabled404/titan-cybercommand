@@ -18,6 +18,8 @@ import { TopBar } from "@/components/hud/top-bar";
 import { AsciiAtlas } from "@/components/map/ascii-atlas";
 import { DataTags } from "@/components/map/data-tags";
 import { BallisticEngine } from "@/components/map/ballistic-engine";
+import { OrbitalHud } from "@/components/map/orbital-hud";
+import { CombatFeedDrawer } from "@/components/hud/combat-feed";
 import { GlobeErrorBoundary } from "@/components/map/globe-error-boundary";
 import { WargamesModal } from "@/components/hud/wargames-modal";
 import { ReconScannerModal } from "@/components/hud/recon-scanner";
@@ -320,6 +322,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       {mapReady ? (
         <GlobeErrorBoundary fallback={<GlobePlaceholder />}>
           <Globe incidents={filtered} outages={snapshot.outages} countryCounts={countryCounts} padding={padding} onHover={onHover} onCluster={onCluster} />
+          <OrbitalHud />
           <BallisticEngine incidents={filtered} />
         </GlobeErrorBoundary>
       ) : (
@@ -339,6 +342,8 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
             onOpenRecon={() => setReconOpen(true)}
             onOpenShortcuts={() => setShortcutsOpen(true)}
             onOpenDemo={() => setDemoOpen(true)}
+            onTogglePatrol={() => setCinema(!cinema)}
+            isPatrolActive={cinema}
           />
         </div>
 
@@ -395,6 +400,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       <ReconScannerModal open={reconOpen} onClose={() => setReconOpen(false)} snapshot={snapshot} />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
+      <CombatFeedDrawer shiftUp={patchDockOpen && !mobile} shiftLeft={panelOpen} />
     </main>
   );
 }

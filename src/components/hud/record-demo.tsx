@@ -91,7 +91,7 @@ export function RecordDemoButton() {
         }
       }}
       className={cn(
-        "press glass-pill hidden h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-mono transition-colors md:flex",
+        "press glass-pill hidden h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-mono transition-colors md:flex",
         isRecording
           ? "border border-red-500/40 bg-red-500/20 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
           : "text-ink-3 hover:bg-white/[0.07] hover:text-ink",
@@ -101,13 +101,13 @@ export function RecordDemoButton() {
     >
       {isRecording ? (
         <>
-          <StopCircle size={15} weight="fill" className="animate-pulse text-red-400" />
+          <StopCircle size={14} weight="fill" className="animate-pulse text-red-400" />
           <span className="font-bold text-red-400">REC 00:{countdown < 10 ? `0${countdown}` : countdown}</span>
         </>
       ) : (
         <>
-          <VideoCamera size={14} weight="bold" />
-          <span className="uppercase tracking-wider">Record Clip</span>
+          <VideoCamera size={13} weight="bold" />
+          <span className="uppercase tracking-wider">REC</span>
         </>
       )}
     </button>
