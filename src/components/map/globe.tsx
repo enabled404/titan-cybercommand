@@ -12,21 +12,10 @@ import { STATUS_COLOR } from "@/lib/format";
 import type { Incident, Outage } from "@/lib/types";
 import { useSituation } from "@/stores/situation";
 import submarineCables from "@/data/geo/submarine-cables.json";
-import countriesData from "@/data/geo/countries.json";
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
 const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] };
-
-const COUNTRY_CENTROIDS: FeatureCollection<Point> = {
-  type: "FeatureCollection",
-  features: Object.entries(countriesData as Record<string, { lat: number; lon: number; name: string }>).map(([iso, c]) => ({
-    type: "Feature",
-    id: iso,
-    properties: { iso, name: c.name },
-    geometry: { type: "Point", coordinates: [c.lon, c.lat] },
-  })),
-};
 
 interface GlobeProps {
   incidents: Incident[];
@@ -225,34 +214,6 @@ function addLayers(map: MapboxMap) {
       "line-dasharray": [2, 2],
       "line-opacity": 0.8,
       "line-emissive-strength": 1,
-    },
-  });
-
-  // Country Labels (Tactical NATO font)
-  map.addSource("country-centroids", { type: "geojson", data: COUNTRY_CENTROIDS });
-  map.addLayer({
-    id: "country-labels",
-    type: "symbol",
-    source: "country-centroids",
-    slot: "top",
-    minzoom: 1,
-    maxzoom: 5.5,
-    layout: {
-      "text-field": ["get", "name"],
-      "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
-      "text-size": ["interpolate", ["linear"], ["zoom"], 1, 9, 2.5, 11, 4.5, 13.5],
-      "text-transform": "uppercase",
-      "text-letter-spacing": 0.1,
-      "text-max-width": 8,
-      "text-allow-overlap": false,
-      "text-ignore-placement": false,
-      "text-optional": true,
-    },
-    paint: {
-      "text-color": "rgba(230, 238, 248, 0.72)",
-      "text-halo-color": "rgba(5, 7, 10, 0.95)",
-      "text-halo-width": 1.6,
-      "text-emissive-strength": 1,
     },
   });
 
@@ -469,7 +430,10 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
         style: "mapbox://styles/mapbox/standard",
         transformRequest: (url: string) => {
           if (url.startsWith("https://api.mapbox.com/")) {
-            const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
+            const origin =
+              (typeof window !== "undefined" && window.location?.origin) ||
+              (typeof self !== "undefined" && self.location?.origin) ||
+              "";
             return {
               url: `${origin}${url.replace("https://api.mapbox.com", "/api/mapbox")}`,
             };
@@ -758,7 +722,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
     const set = (ids: string[], on: boolean) => ids.forEach((id) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none"));
     return applyStyle(map, () => {
       set(["incident-halo", "incident-pulse", "incident-core", "incident-selected", "incident-labels"], layers.incidents);
-      set(["country-heat", "country-heat-line", "country-labels"], layers.countries);
+      set(["country-heat", "country-heat-line"], layers.countries);
       set(["country-outage", "outage-ring"], layers.outages);
       set(["arcs"], layers.arcs);
       set(["submarine-cables-glow", "submarine-cables-line"], layers.cables);

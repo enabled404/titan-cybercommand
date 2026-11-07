@@ -11,6 +11,9 @@ export async function GET(
 
   const pathStr = path.join("/");
   const url = new URL(request.url);
+  if (!url.searchParams.has("access_token") && process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {
+    url.searchParams.set("access_token", process.env.NEXT_PUBLIC_MAPBOX_TOKEN);
+  }
   const search = url.search;
   const target = `https://api.mapbox.com/${pathStr}${search}`;
 
