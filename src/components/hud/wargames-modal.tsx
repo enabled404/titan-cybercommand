@@ -154,8 +154,20 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-2xl">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wargames-modal-title"
+        className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-2xl overscroll-contain"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-surface-2 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -172,7 +184,7 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
                   </span>
                 )}
               </div>
-              <h2 className="font-display text-lg font-bold text-ink">WarGames: Global Cyber Disaster Simulator</h2>
+              <h2 id="wargames-modal-title" className="font-display text-lg font-bold text-ink">WarGames: Global Cyber Disaster Simulator</h2>
             </div>
           </div>
           <button

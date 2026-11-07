@@ -145,8 +145,21 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-2xl">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          soundEngine.playClick();
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="recon-modal-title"
+        className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-2xl overscroll-contain"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-surface-2 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -155,7 +168,7 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
             </div>
             <div>
               <span className="font-mono text-[10.5px] uppercase tracking-wider text-cyan-400">PASSIVE OSINT RECONNAISSANCE</span>
-              <h2 className="font-display text-lg font-bold text-ink">Target Recon Scanner</h2>
+              <h2 id="recon-modal-title" className="font-display text-lg font-bold text-ink">Target Recon Scanner</h2>
             </div>
           </div>
           <button
@@ -181,7 +194,10 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
           <div className="flex gap-2">
             <div className="relative flex-1">
               <input
+                id="recon-domain-input"
+                aria-label="Target domain name"
                 type="text"
+                autoComplete="domain"
                 placeholder="Enter domain (e.g. apple.com, tesla.com, openai.com)..."
                 value={domainInput}
                 onChange={(e) => setDomainInput(e.target.value)}

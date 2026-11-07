@@ -12,8 +12,21 @@ export function DemoModal({ open, onClose }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
-      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-2xl">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          soundEngine.playClick();
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="demo-modal-title"
+        className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-2xl overscroll-contain"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-surface-2 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -25,7 +38,7 @@ export function DemoModal({ open, onClose }: Props) {
                 <span className="font-mono text-[10px] uppercase tracking-wider text-cyan-400">MISSION BRIEFING & DEMO</span>
                 <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[9px] text-ink-3">1080p 60FPS</span>
               </div>
-              <h2 className="font-display text-lg font-bold text-ink">Titan Cyber Command Briefing</h2>
+              <h2 id="demo-modal-title" className="font-display text-lg font-bold text-ink">Titan Cyber Command Briefing</h2>
             </div>
           </div>
           <button
@@ -41,7 +54,7 @@ export function DemoModal({ open, onClose }: Props) {
         </div>
 
         {/* Modal Body */}
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6 scrollbar-thin">
+        <div className="flex flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-6 scrollbar-thin">
           {/* Video Player */}
           <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/15 bg-black shadow-[0_0_40px_rgba(0,0,0,0.9)]">
             <video
