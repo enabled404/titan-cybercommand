@@ -30,7 +30,7 @@ export const useCombatFeed = create<CombatFeedState>((set) => ({
   intercepts: [],
   totalIntercepted: 14820,
   attacksPerSec: 18.4,
-  isOpen: true,
+  isOpen: false,
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
   setOpen: (open) => set({ isOpen: open }),
   addIntercept: (item) => {
