@@ -6,6 +6,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { OrgLogo } from "@/components/kit/org-logo";
 import { StatusMark, statusColor } from "@/components/kit/status-mark";
 import { angularDistance, useMapInstance } from "@/components/map/map-instance";
+import { countryName } from "@/lib/countries";
 import { STATUS_LABEL, compact } from "@/lib/format";
 import type { Incident } from "@/lib/types";
 import { useSituation } from "@/stores/situation";
@@ -63,10 +64,13 @@ function textWidth(text: string, font: string): number {
 /** Wide enough for the longer of the two lines, so the status and record count never wrap out of the tag. */
 function tagWidth(incident: Incident): number {
   const status = STATUS_LABEL[incident.status];
-  const meta = incident.records ? `${status} · ${compact(incident.records)}` : status;
+  const country = incident.country ? countryName(incident.country) || incident.country : "";
+  const meta = incident.records
+    ? `${status}${country ? ` · ${country}` : ""} · ${compact(incident.records)}`
+    : `${status}${country ? ` · ${country}` : ""}`;
   const widest = Math.max(textWidth(incident.victim, NAME_FONT), MARK_W + textWidth(meta, META_FONT));
   // The ruler reads the gap before the count as a space, a pixel or so narrower than the tag's flex gap.
-  return TAG_CHROME + Math.ceil(Math.min(TEXT_MAX, widest)) + 2;
+  return TAG_CHROME + Math.ceil(Math.min(TEXT_MAX + 50, widest)) + 2;
 }
 
 function layout(
@@ -165,6 +169,9 @@ const Tag = memo(function Tag({
             <span className={`flex items-center gap-1 whitespace-nowrap ${META_FONT} leading-tight text-ink-3`}>
               <StatusMark status={incident.status} size={7} />
               {STATUS_LABEL[incident.status]}
+              {incident.country ? (
+                <span className="font-medium text-ink-2">· {countryName(incident.country) || incident.country}</span>
+              ) : null}
               {incident.records ? <span className="text-ink-4">· {compact(incident.records)}</span> : null}
             </span>
           </span>

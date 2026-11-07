@@ -400,7 +400,7 @@ function IncidentFeed({ incidents, now }: { incidents: Incident[]; now: number }
                     <span className="mt-[3px] flex items-center gap-1.5">
                       <StatusMark status={incident.status} size={7} />
                       <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink-3">{whatHappened(incident)}</span>
-                      <span className="shrink-0 font-mono text-[10.5px] text-ink-4">{incident.country}</span>
+                      <span className="shrink-0 font-mono text-[11px] font-medium text-ink-3">{countryName(incident.country) || incident.country}</span>
                     </span>
                   </span>
                 </button>
