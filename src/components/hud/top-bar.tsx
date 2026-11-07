@@ -103,6 +103,7 @@ export function TopBar({
               }}
               className="press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] text-cyan-300 transition-colors hover:bg-cyan-500/15 hover:text-cyan-200"
               title="Launch Target Recon OSINT Scanner (R)"
+              aria-label="Launch Target Recon OSINT Scanner"
             >
               <MagnifyingGlass size={12} weight="bold" />
               <span>RECON</span>
@@ -117,6 +118,7 @@ export function TopBar({
               }}
               className="press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] text-confirmed transition-colors hover:bg-confirmed/15 hover:text-red-300"
               title="Launch WarGames Simulation (W)"
+              aria-label="Launch WarGames Simulation"
             >
               <Crosshair size={12} weight="bold" />
               <span>WARGAMES</span>
@@ -136,6 +138,7 @@ export function TopBar({
                   : "text-ink-3 hover:bg-white/10 hover:text-ink",
               )}
               title="Toggle Cinematic Auto-Patrol (P)"
+              aria-label={isPatrolActive ? "Pause Cinematic Auto-Patrol" : "Start Cinematic Auto-Patrol"}
             >
               <Compass size={12} weight="bold" className={cn(isPatrolActive && "animate-spin [animation-duration:12s]")} />
               <span>{isPatrolActive ? "PATROLLING" : "PATROL"}</span>
@@ -150,6 +153,7 @@ export function TopBar({
               }}
               className="press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
               title="Watch Master 1080p Demo Video (V)"
+              aria-label="Watch Master Demo Video"
             >
               <FilmSlate size={12} weight="bold" />
               <span>DEMO</span>

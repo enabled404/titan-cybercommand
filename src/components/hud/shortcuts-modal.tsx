@@ -25,8 +25,21 @@ export function ShortcutsModal({ open, onClose }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-      <div className="relative flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-2xl">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          soundEngine.playClick();
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="shortcuts-modal-title"
+        className="relative flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-2xl overscroll-contain"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-surface-2 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -35,7 +48,7 @@ export function ShortcutsModal({ open, onClose }: Props) {
             </div>
             <div>
               <span className="font-mono text-[10.5px] uppercase tracking-wider text-ink-4">TACTICAL OPERATOR HOTKEYS</span>
-              <h2 className="font-display text-lg font-bold text-ink">Keyboard Shortcuts</h2>
+              <h2 id="shortcuts-modal-title" className="font-display text-lg font-bold text-ink">Keyboard Shortcuts</h2>
             </div>
           </div>
           <button
