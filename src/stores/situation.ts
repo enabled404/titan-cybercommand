@@ -9,6 +9,23 @@ import { INCIDENT_STATUSES } from "@/lib/incident-view";
 export type TimeWindow = "24h" | "7d" | "30d";
 export type RailTab = "incidents" | "exploited" | "malware" | "outages";
 
+export interface WargameSimState {
+  active: boolean;
+  scenarioId: string;
+  code: string;
+  title: string;
+  coords: [number, number];
+  mitigated: boolean;
+  step: number;
+}
+
+export interface ReconTargetState {
+  domain: string;
+  coords: [number, number];
+  score: number;
+  grade: string;
+}
+
 interface SituationState {
   selectedId: string | null;
   selectedCve: string | null;
@@ -19,8 +36,11 @@ interface SituationState {
   country: string | null;
   tab: RailTab;
   cinema: boolean;
+  tacticalCrt: boolean;
   layers: { incidents: boolean; countries: boolean; outages: boolean; arcs: boolean; cables: boolean; ballistics: boolean };
   railOpen: boolean;
+  wargameSim: WargameSimState | null;
+  reconTarget: ReconTargetState | null;
   select: (id: string | null) => void;
   selectCve: (cve: string | null) => void;
   hover: (id: string | null) => void;
@@ -29,8 +49,11 @@ interface SituationState {
   setCountry: (country: string | null) => void;
   setTab: (tab: RailTab) => void;
   setCinema: (on: boolean) => void;
+  toggleTacticalCrt: () => void;
   toggleLayer: (layer: keyof SituationState["layers"]) => void;
   setRailOpen: (open: boolean) => void;
+  setWargameSim: (sim: WargameSimState | null) => void;
+  setReconTarget: (target: ReconTargetState | null) => void;
 }
 
 export const useSituation = create<SituationState>((set, get) => ({
@@ -44,8 +67,11 @@ export const useSituation = create<SituationState>((set, get) => ({
   // Vulnerabilities first: what to patch is the question most visitors arrive with.
   tab: "exploited",
   cinema: false,
+  tacticalCrt: false,
   layers: { incidents: true, countries: true, outages: true, arcs: true, cables: true, ballistics: true },
   railOpen: true,
+  wargameSim: null,
+  reconTarget: null,
   // Opening a dossier checks the free allowance: a few a day without an account, then Global Hack Map asks for a Valyu sign-in.
   select: (id) => {
     if (id && id !== get().selectedId && !useAccess.getState().allowOpen(`i:${id}`)) return;
@@ -67,8 +93,11 @@ export const useSituation = create<SituationState>((set, get) => ({
   setCountry: (country) => set({ country }),
   setTab: (tab) => set({ tab }),
   setCinema: (cinema) => set({ cinema, selectedCve: null }),
+  toggleTacticalCrt: () => set((state) => ({ tacticalCrt: !state.tacticalCrt })),
   toggleLayer: (layer) => set((state) => ({ layers: { ...state.layers, [layer]: !state.layers[layer] } })),
   setRailOpen: (railOpen) => set({ railOpen }),
+  setWargameSim: (wargameSim) => set({ wargameSim }),
+  setReconTarget: (reconTarget) => set({ reconTarget }),
 }));
 
 export const WINDOW_MS: Record<TimeWindow, number> = {

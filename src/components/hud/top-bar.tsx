@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { Compass, Crosshair, FilmSlate, MagnifyingGlass } from "@phosphor-icons/react";
+import { Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass } from "@phosphor-icons/react";
 
 import { AuthButton } from "@/components/auth/auth-button";
 import { AudioButton } from "@/components/hud/audio-button";
 import { DefconBadge } from "@/components/hud/defcon-badge";
 import { RecordDemoButton } from "@/components/hud/record-demo";
 import { BrandMark, GithubIcon } from "@/components/icons/agents";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ACCOUNTS } from "@/lib/mode";
 import { REPO_URL } from "@/lib/site";
 import { soundEngine } from "@/lib/audio/sound-engine";
@@ -159,6 +160,76 @@ export function TopBar({
               <span>DEMO</span>
             </button>
           )}
+        </div>
+
+        {/* Mobile Quick Operations Dropdown */}
+        <div className="flex items-center md:hidden">
+          <Popover>
+            <PopoverTrigger
+              onClick={() => soundEngine.playClick()}
+              className="press glass-pill flex h-7 items-center gap-1 rounded-full px-2 font-mono text-[11px] text-cyan-300"
+              aria-label="Tactical Operations Menu"
+            >
+              <Lightning size={13} weight="bold" />
+              <span>OPS</span>
+            </PopoverTrigger>
+            <PopoverContent
+              side="bottom"
+              align="end"
+              className="w-48 rounded-xl border border-white/10 bg-surface/95 p-1.5 shadow-2xl backdrop-blur-md font-mono text-xs"
+            >
+              <div className="space-y-1">
+                {onOpenRecon && (
+                  <button
+                    onClick={() => {
+                      soundEngine.playClick();
+                      onOpenRecon();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-cyan-300 transition-colors hover:bg-cyan-500/15"
+                  >
+                    <MagnifyingGlass size={14} weight="bold" />
+                    <span>Target Recon (R)</span>
+                  </button>
+                )}
+                {onOpenWargames && (
+                  <button
+                    onClick={() => {
+                      soundEngine.playClick();
+                      onOpenWargames();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-confirmed transition-colors hover:bg-confirmed/15"
+                  >
+                    <Crosshair size={14} weight="bold" />
+                    <span>WarGames Sim (W)</span>
+                  </button>
+                )}
+                {onTogglePatrol && (
+                  <button
+                    onClick={() => {
+                      soundEngine.playClick();
+                      onTogglePatrol();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-ink-2 transition-colors hover:bg-white/10"
+                  >
+                    <Compass size={14} weight="bold" />
+                    <span>{isPatrolActive ? "Stop Patrol" : "Auto-Patrol (P)"}</span>
+                  </button>
+                )}
+                {onOpenDemo && (
+                  <button
+                    onClick={() => {
+                      soundEngine.playClick();
+                      onOpenDemo();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-ink-2 transition-colors hover:bg-white/10"
+                  >
+                    <FilmSlate size={14} weight="bold" />
+                    <span>Master Demo (V)</span>
+                  </button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <RecordDemoButton />

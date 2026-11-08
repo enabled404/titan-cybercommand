@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Crosshair, Play, ShieldCheck, Stop, X } from "@phosphor-icons/react";
 import { soundEngine } from "@/lib/audio/sound-engine";
 import { useMapInstance } from "@/components/map/map-instance";
+import { useSituation } from "@/stores/situation";
 import { cn } from "@/lib/utils";
 
 interface Scenario {
@@ -100,9 +101,26 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
     setIsSimulating(false);
     setSimStep(0);
     setMitigated(false);
+    useSituation.getState().setWargameSim(null);
     soundEngine.playClick();
     onClose();
   };
+
+  useEffect(() => {
+    if (isSimulating) {
+      useSituation.getState().setWargameSim({
+        active: true,
+        scenarioId: selectedScenario.id,
+        code: selectedScenario.code,
+        title: selectedScenario.title,
+        coords: selectedScenario.targetCoords,
+        mitigated,
+        step: simStep,
+      });
+    } else {
+      useSituation.getState().setWargameSim(null);
+    }
+  }, [isSimulating, selectedScenario, mitigated, simStep]);
 
   useEffect(() => {
     if (!isSimulating) return;
@@ -124,8 +142,8 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
     setIsSimulating(true);
     setSimStep(0);
     setMitigated(false);
-    soundEngine.playLaser();
-    soundEngine.playAlert();
+    soundEngine.playKlaxon();
+    soundEngine.playAttackLaunch(selectedScenario.targetCoords[0]);
 
     if (map) {
       map.flyTo({
@@ -140,14 +158,15 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
 
   const handleMitigate = () => {
     setMitigated(true);
-    soundEngine.playImpact();
-    soundEngine.playAlert();
+    soundEngine.playEmpDischarge();
+    soundEngine.playImpact(4);
   };
 
   const handleStopSimulation = () => {
     setIsSimulating(false);
     setSimStep(0);
     setMitigated(false);
+    useSituation.getState().setWargameSim(null);
     soundEngine.playClick();
   };
 

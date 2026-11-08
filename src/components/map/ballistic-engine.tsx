@@ -96,7 +96,19 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
   const ready = useMapInstance((s) => s.ready);
   const selectedId = useSituation((s) => s.selectedId);
   const layers = useSituation((s) => s.layers);
+  const wargameSim = useSituation((s) => s.wargameSim);
+  const reconTarget = useSituation((s) => s.reconTarget);
   const selectedIncident = incidents.find((i) => i.id === selectedId);
+
+  const wargameSimRef = useRef(wargameSim);
+  useEffect(() => {
+    wargameSimRef.current = wargameSim;
+  }, [wargameSim]);
+
+  const reconTargetRef = useRef(reconTarget);
+  useEffect(() => {
+    reconTargetRef.current = reconTarget;
+  }, [reconTarget]);
 
   const attacksRef = useRef<BallisticAttack[]>([]);
   const shockwavesRef = useRef<ImpactShockwave[]>([]);
@@ -200,8 +212,45 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
       const now = performance.now();
       const center = map.getCenter();
 
-      // High-density autonomous spawning: keep 16-22 concurrent attacks flying across Earth
-      if (now - lastSpawnRef.current > 550 && attacksRef.current.length < 20 && incidents.length > 0) {
+      // Autonomous spawning: handle focused WarGames barrage or global threat actor traffic
+      const curWargame = wargameSimRef.current;
+      const curRecon = reconTargetRef.current;
+
+      if (curWargame?.active && !curWargame.mitigated) {
+        if (now - lastSpawnRef.current > 380 && attacksRef.current.length < 24) {
+          lastSpawnRef.current = now;
+          const origin = THREAT_ACTOR_HUBS[Math.floor(Math.random() * THREAT_ACTOR_HUBS.length)];
+          const points = computeGeodesicPoints([origin.lon, origin.lat], [curWargame.coords[0], curWargame.coords[1]]);
+
+          const combatId = useCombatFeed.getState().addIntercept({
+            origin: origin.label,
+            originCountry: origin.country,
+            target: `${curWargame.code} (${curWargame.title.slice(0, 16)}...)`,
+            targetCountry: "TARGET",
+            vector: "DEFCON-1 BARRAGE",
+            severity: 4,
+            color: "#ff2233",
+            status: "ENGAGED",
+          });
+
+          attacksRef.current.push({
+            id: `wg-${now}-${Math.random().toString(36).slice(2, 6)}`,
+            combatId,
+            origin: { lon: origin.lon, lat: origin.lat, label: origin.label },
+            target: { lon: curWargame.coords[0], lat: curWargame.coords[1], label: curWargame.code },
+            color: "#ff2233",
+            protocol: "DEFCON-1 BARRAGE",
+            severity: 4,
+            startTime: now,
+            duration: 1900 + Math.random() * 800,
+            arcHeight: 65 + Math.random() * 95,
+            points,
+            trail: [],
+            embers: [],
+          });
+          soundEngine.playAttackLaunch(origin.lon);
+        }
+      } else if (now - lastSpawnRef.current > 550 && attacksRef.current.length < 20 && incidents.length > 0) {
         lastSpawnRef.current = now;
         const target = incidents[Math.floor(Math.random() * incidents.length)];
         const origin = THREAT_ACTOR_HUBS[Math.floor(Math.random() * THREAT_ACTOR_HUBS.length)];
@@ -455,6 +504,114 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
       }
 
       shockwavesRef.current = activeShockwaves;
+
+      // 3. Render WarGames Target Reticle & Blast Perimeter if active
+      if (curWargame?.active) {
+        const dist = angularDistance(center.lng, center.lat, curWargame.coords[0], curWargame.coords[1]);
+        if (dist <= 88) {
+          try {
+            const p = map.project([curWargame.coords[0], curWargame.coords[1]]);
+            const pulse = (Math.sin(now * 0.007) + 1) * 0.5;
+            const radius = 22 + pulse * 14;
+
+            if (curWargame.mitigated) {
+              // Defensive EMP shield ring
+              ctx.lineWidth = 2.2;
+              ctx.strokeStyle = "#06b6d4";
+              ctx.fillStyle = "rgba(6, 182, 212, 0.12)";
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, radius * 1.3, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+
+              ctx.font = "bold 9px 'Martian Mono', monospace";
+              ctx.fillStyle = "#22d3ee";
+              ctx.textAlign = "center";
+              ctx.fillText("[DEFENSE COUNTERMEASURES ONLINE]", p.x, p.y + radius + 18);
+            } else {
+              // Active strike reticle
+              ctx.lineWidth = 2;
+              ctx.strokeStyle = "#ef4444";
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+              ctx.stroke();
+
+              // Outer dashed targeting ring
+              ctx.lineWidth = 1.2;
+              ctx.strokeStyle = "rgba(239, 68, 68, 0.65)";
+              ctx.setLineDash([4, 4]);
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, radius * 1.5, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.setLineDash([]);
+
+              // Crosshairs
+              ctx.strokeStyle = "#ff4444";
+              ctx.beginPath();
+              ctx.moveTo(p.x - radius - 8, p.y);
+              ctx.lineTo(p.x + radius + 8, p.y);
+              ctx.moveTo(p.x, p.y - radius - 8);
+              ctx.lineTo(p.x, p.y + radius + 8);
+              ctx.stroke();
+
+              // Red alert target tag
+              ctx.font = "bold 9.5px 'Martian Mono', monospace";
+              ctx.fillStyle = "#ef4444";
+              ctx.textAlign = "center";
+              ctx.fillText(`DEFCON 1 TARGET: ${curWargame.code}`, p.x, p.y - radius - 10);
+            }
+          } catch {
+            // Coordinate projection safety
+          }
+        }
+      }
+
+      // 4. Render Target Recon Sonar Reticle if active
+      if (curRecon) {
+        const dist = angularDistance(center.lng, center.lat, curRecon.coords[0], curRecon.coords[1]);
+        if (dist <= 88) {
+          try {
+            const p = map.project([curRecon.coords[0], curRecon.coords[1]]);
+            const radius = 24;
+
+            // Sonar radar ripples
+            ctx.lineWidth = 1.6;
+            ctx.strokeStyle = "#06b6d4";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Expanding wave
+            const waveR = 8 + ((now * 0.035) % 36);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = `rgba(6, 182, 212, ${1 - waveR / 44})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, waveR, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Crosshairs
+            ctx.strokeStyle = "rgba(6, 182, 212, 0.5)";
+            ctx.beginPath();
+            ctx.moveTo(p.x - radius - 4, p.y);
+            ctx.lineTo(p.x + radius + 4, p.y);
+            ctx.moveTo(p.x, p.y - radius - 4);
+            ctx.lineTo(p.x, p.y + radius + 4);
+            ctx.stroke();
+
+            // Label callout box
+            ctx.font = "bold 9px 'Martian Mono', monospace";
+            ctx.fillStyle = "#06b6d4";
+            ctx.textAlign = "center";
+            ctx.fillText(`OSINT TARGET: ${curRecon.domain.toUpperCase()}`, p.x, p.y - radius - 8);
+            ctx.font = "8px 'Martian Mono', monospace";
+            ctx.fillStyle = "#a5f3fc";
+            ctx.fillText(`POSTURE: ${curRecon.grade} (${curRecon.score}/100)`, p.x, p.y + radius + 14);
+          } catch {
+            // Projection safety
+          }
+        }
+      }
+
       ctx.restore();
 
       setActiveCount(activeAttacks.length);

@@ -255,6 +255,101 @@ class SoundEngine {
       // Ignored
     }
   }
+
+  /**
+   * DEFCON 1 Emergency Klaxon siren (warbling dual-frequency alarm)
+   */
+  public playKlaxon() {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+    if (this.ctx.state === "suspended") void this.ctx.resume();
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(480, now);
+      osc.frequency.linearRampToValueAtTime(740, now + 0.25);
+      osc.frequency.linearRampToValueAtTime(480, now + 0.5);
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(1400, now);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.15, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.56);
+    } catch {
+      // Ignored
+    }
+  }
+
+  /**
+   * Satellite Radar / Sonar pulse ping
+   */
+  public playRadarPing() {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+    if (this.ctx.state === "suspended") void this.ctx.resume();
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(2150, now);
+      osc.frequency.exponentialRampToValueAtTime(1950, now + 0.6);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.72);
+    } catch {
+      // Ignored
+    }
+  }
+
+  /**
+   * EMP / Defensive mitigation countermeasure discharge
+   */
+  public playEmpDischarge() {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+    if (this.ctx.state === "suspended") void this.ctx.resume();
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(3200, now);
+      osc.frequency.exponentialRampToValueAtTime(60, now + 0.45);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } catch {
+      // Ignored
+    }
+  }
 }
 
 export const soundEngine = new SoundEngine();
