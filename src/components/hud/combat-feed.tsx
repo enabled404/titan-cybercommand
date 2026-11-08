@@ -3,16 +3,23 @@
 import { CaretDown, CaretUp, Terminal } from "@phosphor-icons/react";
 import { soundEngine } from "@/lib/audio/sound-engine";
 import { useCombatFeed } from "@/stores/combat-feed";
+import { useMapInstance } from "@/components/map/map-instance";
+import { useSituation } from "@/stores/situation";
+import type { Incident } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function CombatFeedDrawer({
+  incidents = [],
   shiftUp = false,
   shiftLeft = false,
 }: {
+  incidents?: Incident[];
   shiftUp?: boolean;
   shiftLeft?: boolean;
 } = {}) {
   const { intercepts, totalIntercepted, attacksPerSec, isOpen, toggleOpen } = useCombatFeed();
+  const map = useMapInstance((s) => s.map);
+  const select = useSituation((s) => s.select);
 
   return (
     <div
@@ -90,7 +97,21 @@ export function CombatFeedDrawer({
                 {intercepts.slice(0, 15).map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between gap-2 rounded bg-white/[0.02] px-2 py-1 transition-colors hover:bg-white/[0.05]"
+                    onClick={() => {
+                      soundEngine.playClick();
+                      const cleanTarget = item.target.replace(/\s*\([^)]*\)\s*/g, "").trim().toLowerCase();
+                      const inc = incidents.find(
+                        (i) => i.victim.toLowerCase() === cleanTarget || i.victim.toLowerCase().includes(cleanTarget) || cleanTarget.includes(i.victim.toLowerCase()),
+                      );
+                      if (inc) {
+                        select(inc.id);
+                        if (map) {
+                          map.flyTo({ center: [inc.lon, inc.lat], zoom: 4.8, pitch: 45, duration: 2200, essential: true });
+                        }
+                      }
+                    }}
+                    title="Click to track target on globe"
+                    className="flex cursor-pointer items-center justify-between gap-2 rounded bg-white/[0.02] px-2 py-1 transition-colors hover:bg-white/[0.08]"
                   >
                     <div className="flex min-w-0 items-center gap-2">
                       <span className="text-ink-4 shrink-0">{item.timestamp}</span>

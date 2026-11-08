@@ -155,6 +155,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const selectCve = useSituation((s) => s.selectCve);
   const cinema = useSituation((s) => s.cinema);
   const setCinema = useSituation((s) => s.setCinema);
+  const tacticalCrt = useSituation((s) => s.tacticalCrt);
 
   // The visitor's stack lives in localStorage; load it after hydration so server and client HTML agree.
   useEffect(() => {
@@ -403,7 +404,14 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       <ReconScannerModal open={reconOpen} onClose={() => setReconOpen(false)} snapshot={snapshot} />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
-      <CombatFeedDrawer shiftUp={patchDockOpen && !mobile} shiftLeft={panelOpen} />
+      <CombatFeedDrawer incidents={filtered} shiftUp={patchDockOpen && !mobile} shiftLeft={panelOpen} />
+
+      {tacticalCrt && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 z-40 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.32)_50%),linear-gradient(90deg,rgba(6,182,212,0.03),rgba(0,255,100,0.01),rgba(6,182,212,0.03))] bg-[length:100%_4px,8px_100%] shadow-[inset_0_0_120px_rgba(0,0,0,0.85)]"
+        />
+      )}
     </main>
   );
 }

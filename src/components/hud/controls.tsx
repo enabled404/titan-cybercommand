@@ -24,6 +24,8 @@ const LAYERS = [
 export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt: string; feeds: Snapshot["feeds"]; shiftForPanel: boolean }) {
   const layers = useSituation((s) => s.layers);
   const toggleLayer = useSituation((s) => s.toggleLayer);
+  const tacticalCrt = useSituation((s) => s.tacticalCrt);
+  const toggleTacticalCrt = useSituation((s) => s.toggleTacticalCrt);
   const okFeeds = Object.values(feeds).filter((feed) => feed.ok).length;
   // The popover is prerendered with the page, so its "updated" time uses the server-safe clock.
   const now = useNow(Date.parse(generatedAt));
@@ -53,6 +55,10 @@ export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt
               <input type="checkbox" className="size-4 accent-ink" checked={layers[layer.id]} onChange={() => toggleLayer(layer.id)} />
             </label>
           ))}
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[10px] px-2.5 py-2 text-[13px] text-cyan-300 transition-colors hover:bg-white/[0.04]">
+            <span>Tactical CRT HUD filter</span>
+            <input type="checkbox" className="size-4 accent-cyan-400" checked={tacticalCrt} onChange={toggleTacticalCrt} />
+          </label>
           <p className="mt-1 border-t border-white/[0.06] px-2.5 pb-1 pt-2.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-4">Key</p>
           <div className="grid grid-cols-2 gap-x-3 gap-y-2 px-2.5 pb-2 pt-1 text-[12.5px] text-ink-2">
             {(["confirmed", "reported", "claimed"] as const).map((status) => (
