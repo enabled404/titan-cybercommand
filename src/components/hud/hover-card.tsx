@@ -10,7 +10,7 @@ export function HoverCard({ incident, x, y }: { incident: Incident; x: number; y
   const flip = typeof window !== "undefined" && x > window.innerWidth - 340;
   return (
     <div
-      className="pointer-events-none absolute z-40 w-[290px] rounded-[16px] bg-surface p-3.5 ring-1 ring-hairline-2 shadow-xl animate-in fade-in zoom-in-95 duration-150"
+      className="pointer-events-none absolute z-40 w-[290px] rounded-[16px] bg-surface p-3.5 ring-1 ring-hairline-2 shadow-xl motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-150"
       style={{ left: flip ? x - 306 : x + 18, top: Math.max(72, y - 28) }}
     >
       <div className="flex items-center gap-2.5">

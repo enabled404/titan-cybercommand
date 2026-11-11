@@ -41,7 +41,7 @@ export function ClusterMenu({ cluster, now, onClose }: { cluster: Cluster; now: 
     <div
       role="dialog"
       aria-label={`${total} incidents here`}
-      className="pointer-events-auto absolute z-40 w-[300px] rounded-[16px] bg-surface p-1.5 ring-1 ring-hairline-2 shadow-xl animate-in fade-in zoom-in-95 duration-150"
+      className="pointer-events-auto absolute z-40 w-[300px] rounded-[16px] bg-surface p-1.5 ring-1 ring-hairline-2 shadow-xl motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-150"
       style={{ left: flip ? cluster.x - 316 : cluster.x + 16, top: Math.max(76, cluster.y - 24) }}
     >
       <p className="px-2.5 pb-1.5 pt-2 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-4">{total} incidents here</p>

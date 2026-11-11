@@ -239,17 +239,20 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         return;
       }
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      const modalOpen = shortcutsOpen || demoOpen || wargamesOpen || reconOpen;
+      if (modalOpen) {
+        // Native `<dialog>` handles Escape directly; prevent map hotkeys from firing behind modals.
+        return;
+      }
+
       if (event.key === "/") {
         event.preventDefault();
         focusSearch();
       } else if (event.key === "Escape") {
-        if (shortcutsOpen) setShortcutsOpen(false);
-        else if (demoOpen) setDemoOpen(false);
-        else if (wargamesOpen) setWargamesOpen(false);
-        else if (reconOpen) setReconOpen(false);
-        else if (cinema) setCinema(false);
+        if (cinema) setCinema(false);
         else {
           select(null);
           selectCve(null);
@@ -268,8 +271,17 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         toggleMute();
       } else if (event.key === "?" || (event.shiftKey && event.key === "/")) {
         setShortcutsOpen((prev) => !prev);
-      } else if (event.key.toLowerCase() === "j" || event.key === " ") {
-        if (event.key === " ") event.preventDefault();
+      } else if (event.key.toLowerCase() === "j") {
+        step(1);
+      } else if (event.key === " ") {
+        if (
+          target?.closest(
+            "button, a[href], select, summary, input, textarea, [role='button'], [role='switch'], [role='checkbox'], [role='radio'], [role='menuitem'], [role='option'], [role='tab'], [role='slider'], [role='combobox'], [contenteditable='true']",
+          )
+        ) {
+          return;
+        }
+        event.preventDefault();
         step(1);
       } else if (event.key.toLowerCase() === "k") {
         step(-1);
@@ -327,7 +339,12 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         <GlobeErrorBoundary fallback={<GlobePlaceholder />}>
           <Globe incidents={filtered} outages={snapshot.outages} countryCounts={countryCounts} padding={padding} onHover={onHover} onCluster={onCluster} />
           <OrbitalHud />
-          <BallisticEngine incidents={filtered} />
+          <BallisticEngine
+            incidents={filtered}
+            hudLeft={patchInsetLeft}
+            hudBottom={patchDockOpen && patchDockFits ? 236 : patchDockFits ? 56 : 16}
+            showHud={!mobile && !cinema && patchAvailableWidth >= 620}
+          />
         </GlobeErrorBoundary>
       ) : (
         <GlobePlaceholder />
@@ -342,6 +359,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         <div ref={topBar} className="absolute inset-x-0 top-0 z-30">
           <TopBar
             ticker={<CveTicker items={snapshot.fresh} generatedAt={snapshot.generatedAt} onSelect={selectCve} />}
+            stats={snapshot.stats}
             onOpenWargames={() => setWargamesOpen(true)}
             onOpenRecon={() => setReconOpen(true)}
             onOpenShortcuts={() => setShortcutsOpen(true)}
@@ -404,7 +422,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       <ReconScannerModal open={reconOpen} onClose={() => setReconOpen(false)} snapshot={snapshot} />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
-      <CombatFeedDrawer incidents={filtered} shiftUp={patchDockOpen && !mobile} shiftLeft={panelOpen} />
+      {!cinema && <CombatFeedDrawer incidents={filtered} shiftUp={patchDockOpen && patchDockFits} shiftLeft={panelOpen} />}
 
       {tacticalCrt && (
         <div

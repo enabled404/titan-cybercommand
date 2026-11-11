@@ -10,6 +10,7 @@ export function AudioButton() {
 
   return (
     <button
+      type="button"
       onClick={() => {
         toggleMute();
       }}
@@ -24,11 +25,11 @@ export function AudioButton() {
     >
       {!muted ? (
         <>
-          <SpeakerHigh className="size-3.5 animate-pulse text-confirmed" weight="fill" />
+          <SpeakerHigh className="size-3.5 text-confirmed motion-safe:animate-pulse" weight="fill" />
           <span className="flex items-center gap-0.5">
-            <span className="inline-block h-2 w-0.5 animate-[bounce_0.6s_infinite_100ms] bg-confirmed" />
-            <span className="inline-block h-3 w-0.5 animate-[bounce_0.6s_infinite_200ms] bg-confirmed" />
-            <span className="inline-block h-1.5 w-0.5 animate-[bounce_0.6s_infinite_300ms] bg-confirmed" />
+            <span className="inline-block h-2 w-0.5 bg-confirmed motion-safe:animate-[bounce_0.6s_infinite_100ms]" />
+            <span className="inline-block h-3 w-0.5 bg-confirmed motion-safe:animate-[bounce_0.6s_infinite_200ms]" />
+            <span className="inline-block h-1.5 w-0.5 bg-confirmed motion-safe:animate-[bounce_0.6s_infinite_300ms]" />
           </span>
           <span className="hidden font-mono text-[10px] uppercase tracking-wider xl:inline">AUDIO</span>
         </>

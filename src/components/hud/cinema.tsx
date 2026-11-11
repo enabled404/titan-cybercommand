@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BrandMark } from "@/components/icons/agents";
 import { DecryptText } from "@/components/kit/decrypt-text";
 import { StatusMark } from "@/components/kit/status-mark";
@@ -40,8 +41,10 @@ function Typewriter(props: { text: string; delay?: number }) {
 }
 
 function TypewriterText({ text, delay = 0 }: { text: string; delay?: number }) {
+  const reduced = useReducedMotion();
   const [count, setCount] = useState(0);
   useEffect(() => {
+    if (reduced) return;
     let i = 0;
     let timer = 0;
     const start = window.setTimeout(() => {
@@ -55,7 +58,8 @@ function TypewriterText({ text, delay = 0 }: { text: string; delay?: number }) {
       window.clearTimeout(start);
       window.clearInterval(timer);
     };
-  }, [text, delay]);
+  }, [text, delay, reduced]);
+  if (reduced) return <span>{text}</span>;
   return (
     <span>
       {text.slice(0, count)}
@@ -119,8 +123,10 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
       <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-space/80 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-[46vh] bg-gradient-to-t from-space via-space/70 to-transparent" />
       <div className="absolute left-6 top-6 flex items-center gap-3 sm:left-10">
-        <BrandMark className="size-6 text-ink" />
-        <span className="font-semicondensed text-[20px] font-bold text-ink">Global Hack Map</span>
+        <BrandMark className="size-6 text-cyan-400" />
+        <span className="font-semicondensed text-[20px] font-bold text-ink">
+          Titan <span className="text-cyan-400">Cyber Command</span>
+        </span>
         <span className="ml-1 flex items-center gap-2 rounded-full bg-confirmed/15 px-2.5 py-1 text-[12px] font-medium text-confirmed">
           <span className="live-dot size-1.5 rounded-full bg-confirmed" /> Live
         </span>
@@ -131,7 +137,7 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
 
       {current ? (
         <div key={current.id} className="absolute bottom-12 left-6 right-6 max-w-[880px] sm:bottom-14 sm:left-10">
-          <div className="flex items-center gap-2.5 text-[14px] text-ink-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="flex items-center gap-2.5 text-[14px] text-ink-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500">
             <StatusMark status={current.status} size={12} />
             <span style={{ color: STATUS_COLOR[current.status] }} className="font-medium">
               {STATUS_LABEL[current.status]}
@@ -155,7 +161,7 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
           <div className="mt-6 h-[2px] w-full overflow-hidden rounded-full bg-white/10">
             <div
               key={`${current.id}-${phase}`}
-              className="h-full bg-ink"
+              className="h-full bg-ink motion-reduce:hidden"
               style={{
                 width: "100%",
                 transformOrigin: "left",

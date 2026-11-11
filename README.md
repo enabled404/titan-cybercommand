@@ -84,9 +84,10 @@ Every cyber assault, ransomware breach, zero-day exploit, and network outage on 
 Titan Cyber Command is built strictly for defensive cybersecurity education and research:
 
 - [Security Policy & Safe Harbor](SECURITY.md): Responsible vulnerability disclosure guidelines, researcher legal safe-harbor, and reporting channels.
-- [Terms of Service & Safe Harbor](src/app/terms/page.tsx): Defensive research purpose, CFAA compliance, Fair Use (17 U.S.C. § 107), non-affiliation, and limitation of liability.
-- [Privacy Policy](src/app/privacy/page.tsx): Zero-log policy for target lookups, client-side only preference caching, and ethical OSINT compliance.
+- [Terms of Service & Safe Harbor](https://titan-cybercommand.vercel.app/terms): Defensive research purpose, CFAA compliance, Fair Use (17 U.S.C. § 107), non-affiliation, and limitation of liability ([source](src/app/terms/page.tsx)).
+- [Privacy Policy](https://titan-cybercommand.vercel.app/privacy): Zero-log policy for target lookups, client-side only preference caching, and ethical OSINT compliance ([source](src/app/privacy/page.tsx)).
 - [Threat Intelligence Disclaimer](DISCLAIMER.md): Explicit distinction between verified disclosures and unverified dark-web claims.
+- [Legal Framework](LEGAL.md): Defensive scope, regulatory alignment, and third-party registry notices.
 
 ---
 

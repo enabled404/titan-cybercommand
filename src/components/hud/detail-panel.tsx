@@ -18,6 +18,7 @@ import { incidentPrompt } from "@/lib/deeplinks";
 import { STATUS_LABEL, TYPE_LABEL, epssPercent, placeLabel, recordsLabel, shortDate } from "@/lib/format";
 import { guidanceFor } from "@/lib/guidance";
 import { SITE_URL } from "@/lib/site";
+import { buildStix21Bundle } from "@/lib/stix";
 import type { Incident, IncidentStatus, Vuln } from "@/lib/types";
 import { productLabel } from "@/lib/og/copy";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,7 @@ function Shell({ children, onClose, label }: { children: React.ReactNode; onClos
   return (
     <aside
       aria-label={label}
-      className="drawer-surface pointer-events-auto absolute inset-x-0 bottom-0 top-[max(22dvh,var(--map-top))] z-30 flex flex-col overflow-hidden rounded-t-[24px] pb-[env(safe-area-inset-bottom)] animate-in fade-in slide-in-from-bottom-6 duration-300 md:inset-x-auto md:bottom-4 md:right-4 md:top-[var(--map-top)] md:w-[440px] md:rounded-[22px] md:pb-0 md:slide-in-from-bottom-0 md:slide-in-from-right-6"
+      className="drawer-surface pointer-events-auto absolute inset-x-0 bottom-0 top-[max(22dvh,var(--map-top))] z-30 flex flex-col overflow-hidden rounded-t-[24px] pb-[env(safe-area-inset-bottom)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-6 motion-safe:duration-300 md:inset-x-auto md:bottom-4 md:right-4 md:top-[var(--map-top)] md:w-[440px] md:rounded-[22px] md:pb-0 md:motion-safe:slide-in-from-bottom-0 md:motion-safe:slide-in-from-right-6"
     >
       <button
         type="button"
@@ -88,6 +89,18 @@ function StatusChip({ status }: { status: IncidentStatus }) {
 
 const CHIP = "inline-flex h-7 items-center rounded-full bg-white/[0.04] px-2.5 text-[12px] text-ink-2 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]";
 
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const downloadUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = downloadUrl;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+}
+
 function exportIntelDossier(incident: Incident) {
   const content = `# TITAN CYBER COMMAND: THREAT INTEL DOSSIER
 CONFIDENTIALITY: PUBLIC DEFENSIVE INTELLIGENCE
@@ -111,93 +124,23 @@ ${incident.summary ? `\n${incident.summary}\n` : ""}
 ${incident.cves.length > 0 ? incident.cves.map((c) => `- ${c}`).join("\n") : "- None directly confirmed"}
 
 ## PRIMARY SOURCED CITATIONS
-${incident.sources.map((s) => `- [${s.publisher}] ${s.title}: ${s.url}`).join("\n")}
+${incident.sources.map((s) => `- [${s.publisher || "Source"}] ${s.title}: ${s.url}`).join("\n")}
 
 ---
 SAFE HARBOR & DISCLAIMER: This threat dossier was compiled by Titan Cyber Command for defensive vulnerability research, patch prioritization, and threat intelligence. Unverified dark-web claims are treated as unconfirmed allegations under safe harbor guidelines.
 `;
 
+  const safeId = incident.id.replace(/[^a-zA-Z0-9._-]+/g, "-");
   const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
-  const downloadUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = downloadUrl;
-  a.download = `titan-dossier-${incident.id}.md`;
-  a.click();
-  URL.revokeObjectURL(downloadUrl);
+  triggerBlobDownload(blob, `titan-dossier-${safeId}.md`);
   toast("Threat Intel Dossier exported (.md)");
 }
 
 function exportStix21(incident: Incident) {
-  const timestamp = new Date().toISOString();
-  const stixBundle = {
-    type: "bundle",
-    id: `bundle--${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`,
-    spec_version: "2.1",
-    objects: [
-      {
-        type: "incident",
-        spec_version: "2.1",
-        id: `incident--${incident.id}`,
-        created: timestamp,
-        modified: timestamp,
-        name: `Cyber Incident: ${incident.victim}`,
-        description: incident.title,
-        labels: [incident.status, incident.type],
-        confidence: incident.status === "confirmed" ? 95 : incident.status === "reported" ? 75 : 50,
-      },
-      ...(incident.domain
-        ? [
-            {
-              type: "indicator",
-              spec_version: "2.1",
-              id: `indicator--${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`,
-              created: timestamp,
-              modified: timestamp,
-              name: `Domain Indicator: ${incident.domain}`,
-              pattern: `[domain-name:value = '${incident.domain}']`,
-              pattern_type: "stix",
-              valid_from: timestamp,
-            },
-          ]
-        : []),
-      ...(incident.actor
-        ? [
-            {
-              type: "threat-actor",
-              spec_version: "2.1",
-              id: `threat-actor--${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`,
-              created: timestamp,
-              modified: timestamp,
-              name: incident.actor,
-              threat_actor_types: ["cybercrime-syndicate"],
-            },
-          ]
-        : []),
-      ...incident.cves.map((cve) => ({
-        type: "vulnerability",
-        spec_version: "2.1",
-        id: `vulnerability--${cve.toLowerCase()}`,
-        created: timestamp,
-        modified: timestamp,
-        name: cve,
-        external_references: [
-          {
-            source_name: "cve",
-            external_id: cve,
-            url: `https://nvd.nist.gov/vuln/detail/${cve}`,
-          },
-        ],
-      })),
-    ],
-  };
-
+  const safeId = incident.id.replace(/[^a-zA-Z0-9._-]+/g, "-");
+  const stixBundle = buildStix21Bundle(incident);
   const blob = new Blob([JSON.stringify(stixBundle, null, 2)], { type: "application/json;charset=utf-8" });
-  const downloadUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = downloadUrl;
-  a.download = `titan-stix-${incident.id}.json`;
-  a.click();
-  URL.revokeObjectURL(downloadUrl);
+  triggerBlobDownload(blob, `titan-stix-${safeId}.json`);
   toast("STIX 2.1 Threat Intel exported (.json)");
 }
 
@@ -211,8 +154,12 @@ function ShareRow({ url, text, incident }: { url: string; text: string; incident
         type="button"
         className={cls}
         onClick={async () => {
-          await navigator.clipboard.writeText(url);
-          toast("Link copied");
+          try {
+            await navigator.clipboard.writeText(url);
+            toast("Link copied");
+          } catch {
+            toast.error("Clipboard access denied in this browser context");
+          }
         }}
       >
         <LinkSimple className="size-3.5" /> Copy link
@@ -480,7 +427,13 @@ export function CvePanel({ vuln }: { vuln: Vuln }) {
         <dl className="mt-3 grid grid-cols-2 overflow-hidden rounded-[16px] bg-surface-2 text-[13px] [&>div:nth-child(even)]:border-l [&>div:nth-child(n+3)]:border-t [&>div]:border-white/[0.05] [&>div]:px-4 [&>div]:py-3">
           <Fact
             label="Exploited in the wild"
-            value={vuln.kev ? `Yes, CISA listed it ${shortDate(`${vuln.kevAdded}T00:00:00Z`)}` : "Not confirmed yet"}
+            value={
+              vuln.kev
+                ? vuln.kevAdded
+                  ? `Yes, CISA listed it ${shortDate(`${vuln.kevAdded}T00:00:00Z`)}`
+                  : "Yes, listed in CISA KEV"
+                : "Not confirmed yet"
+            }
             hot={vuln.kev}
           />
           <Fact label="US federal deadline" value={vuln.kevDue ? shortDate(`${vuln.kevDue}T00:00:00Z`) : "None set"} />

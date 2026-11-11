@@ -55,7 +55,8 @@ async function record() {
   await page.goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
 
   // Allow globe and canvas layers to initialize
-  await sleep(4500);
+  await page.waitForSelector(".mapboxgl-canvas", { timeout: 20000 }).catch(() => {});
+  await sleep(5000);
 
   let frameCount = 0;
   const captureFrame = async () => {
@@ -63,12 +64,20 @@ async function record() {
     const num = String(frameCount).padStart(5, "0");
     const filePath = path.join(FRAMES_DIR, `frame_${num}.png`);
     await page.screenshot({ path: filePath, type: "png" });
+    return filePath;
   };
 
   // Scene 1: Kinetic Great Circle Ballistic Swarm, Orbital HUD, and Live Combat Feed
   console.log("Recording Scene 1: Great Circle Ballistic Swarm & Combat Stream (70 frames)...");
   for (let i = 0; i < 70; i++) {
-    await captureFrame();
+    const framePath = await captureFrame();
+    if (i === 25) {
+      const outShot = path.join(OUT_DIR, "screenshot.png");
+      const pubShot = path.join(PUBLIC_DOCS, "screenshot.png");
+      fs.copyFileSync(framePath, outShot);
+      fs.copyFileSync(framePath, pubShot);
+      console.log(`Saved fresh 1440x900 screenshot poster -> ${outShot} and ${pubShot}`);
+    }
     await sleep(50);
   }
 
@@ -140,7 +149,7 @@ async function record() {
     const counterButtons = await page.$$("button");
     for (const b of counterButtons) {
       const text = await page.evaluate((el) => el.textContent || "", b);
-      if (text.includes("DEPLOY AUTONOMOUS COUNTERMEASURES")) {
+      if (text.includes("DEPLOY COUNTERMEASURE")) {
         await b.click();
         break;
       }

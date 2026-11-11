@@ -42,7 +42,7 @@ export default function PrivacyPage() {
               We utilize local client storage (such as browser localStorage) solely to preserve your non-sensitive interface preferences across sessions:
             </p>
             <ul className="mt-3 list-inside list-disc space-y-1.5 text-ink-3 pl-2">
-              <li>DEFCON audio volume and mute state (`titan_audio_pref_v1`).</li>
+              <li>DEFCON audio volume and mute state (<code className="font-mono text-xs text-ink">titan_audio_pref_v1</code>).</li>
               <li>Your saved local technology stack for live vulnerability highlighting.</li>
               <li>Preferred sidebar layout and map layer visibility toggles.</li>
             </ul>

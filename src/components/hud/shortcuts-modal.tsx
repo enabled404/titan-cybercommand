@@ -1,6 +1,8 @@
 "use client";
 
 import { Command, Keyboard, X } from "@phosphor-icons/react";
+
+import { TacticalDialog } from "@/components/ui/tactical-dialog";
 import { soundEngine } from "@/lib/audio/sound-engine";
 
 interface Props {
@@ -22,79 +24,66 @@ const SHORTCUTS = [
 ];
 
 export function ShortcutsModal({ open, onClose }: Props) {
-  if (!open) return null;
+  const handleClose = () => {
+    soundEngine.playClick();
+    onClose();
+  };
 
   return (
-    <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          soundEngine.playClick();
-          onClose();
-        }
-      }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="shortcuts-modal-title"
-        className="relative flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-2xl overscroll-contain"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 bg-surface-2 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-8 items-center justify-center rounded-lg border border-white/20 bg-white/5 text-ink">
-              <Keyboard size={20} weight="bold" />
-            </div>
-            <div>
-              <span className="font-mono text-[10.5px] uppercase tracking-wider text-ink-4">TACTICAL OPERATOR HOTKEYS</span>
-              <h2 id="shortcuts-modal-title" className="font-display text-lg font-bold text-ink">Keyboard Shortcuts</h2>
-            </div>
+    <TacticalDialog open={open} onClose={handleClose} labelledBy="shortcuts-modal-title" className="max-w-lg">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-white/10 bg-surface-2 px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex size-8 items-center justify-center rounded-lg border border-white/20 bg-white/5 text-ink">
+            <Keyboard size={20} weight="bold" />
           </div>
+          <div>
+            <span className="font-mono text-[10.5px] uppercase tracking-wider text-ink-4">TACTICAL OPERATOR HOTKEYS</span>
+            <h2 id="shortcuts-modal-title" className="font-display text-lg font-bold text-ink">
+              Keyboard Shortcuts
+            </h2>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="flex min-h-9 min-w-9 items-center justify-center rounded-full p-1 text-ink-3 transition-colors hover:bg-white/10 hover:text-ink"
+          aria-label="Close Keyboard Shortcuts"
+        >
+          <X size={20} />
+        </button>
+      </div>
+
+      {/* Shortcuts List */}
+      <div className="flex-1 overflow-y-auto overscroll-contain p-6">
+        <div className="space-y-2.5">
+          {SHORTCUTS.map((s) => (
+            <div
+              key={s.key}
+              className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5"
+            >
+              <span className="font-sans text-xs text-ink-2">{s.desc}</span>
+              <kbd className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded border border-white/20 bg-surface-2 px-2 font-mono text-[11px] font-bold text-ink shadow-inner">
+                {s.key}
+              </kbd>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 flex items-center justify-between border-t border-white/[0.08] pt-4 font-mono text-[11px] text-ink-4">
+          <span className="flex items-center gap-1.5">
+            <Command size={14} /> Titan Cyber Command Terminal v2.6
+          </span>
           <button
-            onClick={() => {
-              soundEngine.playClick();
-              onClose();
-            }}
-            className="rounded-full p-1 text-ink-3 transition-colors hover:bg-white/10 hover:text-ink"
-            aria-label="Close"
+            type="button"
+            data-autofocus
+            onClick={handleClose}
+            className="min-h-8 px-2 text-cyan-400 hover:underline"
           >
-            <X size={20} />
+            Dismiss (Esc)
           </button>
         </div>
-
-        {/* Shortcuts List */}
-        <div className="p-6">
-          <div className="space-y-2.5">
-            {SHORTCUTS.map((s) => (
-              <div
-                key={s.key}
-                className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5"
-              >
-                <span className="text-xs text-ink-2 font-sans">{s.desc}</span>
-                <kbd className="flex h-6 min-w-6 items-center justify-center rounded border border-white/20 bg-surface-2 px-2 font-mono text-[11px] font-bold text-ink shadow-inner">
-                  {s.key}
-                </kbd>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 flex items-center justify-between border-t border-white/[0.08] pt-4 font-mono text-[11px] text-ink-4">
-            <span className="flex items-center gap-1.5">
-              <Command size={14} /> Titan Cyber Command Terminal v2.6
-            </span>
-            <button
-              onClick={() => {
-                soundEngine.playClick();
-                onClose();
-              }}
-              className="text-cyan-400 hover:underline"
-            >
-              Dismiss (Esc)
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+    </TacticalDialog>
   );
 }
