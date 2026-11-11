@@ -136,5 +136,11 @@ describe("route coverage", () => {
     }
     expect(requestLimits("/api/mcp", "POST", "a").some((rule) => rule.key.startsWith("mcp-hour:"))).toBe(true);
     expect(requestLimits("/api/research/a", "GET", "a").some((rule) => rule.key.startsWith("research-hour:"))).toBe(false);
+    expect(requestLimits("/api/mapbox/styles/v1/mapbox/standard", "GET", "a")).toEqual([
+      { key: "mapbox:a", limit: 1200, windowMs: 60_000 },
+    ]);
+    const lookup = requestLimits("/country/US", "GET", "a");
+    expect(lookup.find((rule) => rule.key.startsWith("lookup-burst:"))?.limit).toBeGreaterThanOrEqual(180);
+    expect(lookup.some((rule) => rule.key.startsWith("lookup-hour:"))).toBe(true);
   });
 });

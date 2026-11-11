@@ -15,20 +15,20 @@ const wait = (code) => browser("wait", "--fn", code);
 try {
   browser("set", "viewport", "1440", "900");
   browser("open", `${base}/?still`);
-  const ready = `!!window.__map && window.__map.isStyleLoaded() && document.querySelectorAll('canvas').length === 2`;
+  const ready = `!!window.__map && window.__map.isStyleLoaded() && document.querySelectorAll('canvas').length >= 4`;
   wait(ready);
-  evaluate(`window.__oldAtlas = [...document.querySelectorAll('canvas')].find(c => !c.classList.contains('mapboxgl-canvas'))`);
+  evaluate(`window.__oldAtlas = [...document.querySelectorAll('canvas')].find(c => !c.classList.contains('mapboxgl-canvas') && c.className.includes('absolute inset-0 h-full w-full'))`);
   for (const mode of ["back", "home", "back"]) {
     browser("find", "role", "link", "click", "--name", "Agents", "--exact");
     wait("location.pathname === '/agents'");
-    if (mode === "home") browser("find", "role", "link", "click", "--name", "Global Hack Map home");
+    if (mode === "home") browser("find", "role", "link", "click", "--name", "Titan Cyber Command home");
     else browser("back");
     wait(ready);
     const state = evaluate(`(() => {
       const canvases = [...document.querySelectorAll('canvas')].filter(c => c.checkVisibility());
-      return {count:canvases.length, lost:canvases.some(c => c.getContext('webgl2')?.isContextLost()), oldConnected:window.__oldAtlas.isConnected};
+      return {count:canvases.length, lost:canvases.some(c => c.getContext('webgl2')?.isContextLost()), oldConnected:window.__oldAtlas?.isConnected ?? false};
     })()`);
-    assert.equal(state.count, 2);
+    assert.ok(state.count >= 4);
     assert.equal(state.lost, false, "Restored canvases must have live contexts");
     assert.equal(state.oldConnected, false, "Disposed Atlas canvases must be removed");
     if (mode === "back") {

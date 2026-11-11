@@ -24,14 +24,15 @@ export function CombatFeedDrawer({
   return (
     <div
       className={cn(
-        "pointer-events-auto fixed z-30 hidden flex-col items-end transition-all duration-300 ease-out md:flex",
-        shiftUp ? "bottom-[195px]" : "bottom-3",
-        shiftLeft ? "right-[475px]" : "right-3",
+        "pointer-events-auto fixed z-30 hidden flex-col items-end md:flex",
+        shiftUp ? "bottom-[236px]" : "bottom-14",
+        shiftLeft ? "md:hidden xl:flex xl:right-[475px]" : "right-3",
       )}
     >
       {/* Minimized Pill Toggle */}
       {!isOpen && (
         <button
+          type="button"
           onClick={() => {
             soundEngine.playClick();
             toggleOpen();
@@ -39,7 +40,7 @@ export function CombatFeedDrawer({
           className="press glass-pill flex h-8 items-center gap-2 rounded-full border border-white/10 bg-surface/90 px-3 font-mono text-[11px] text-ink-2 shadow-xl backdrop-blur transition-colors hover:border-cyan-500/40 hover:text-ink"
         >
           <span className="relative flex size-2 items-center justify-center">
-            <span className="absolute inset-0 animate-ping rounded-full bg-cyan-400/60" />
+            <span className="absolute inset-0 rounded-full bg-cyan-400/60 motion-safe:animate-ping" />
             <span className="size-1.5 rounded-full bg-cyan-400" />
           </span>
           <span className="font-bold text-cyan-300">COMBAT TELEMETRY</span>
@@ -51,12 +52,12 @@ export function CombatFeedDrawer({
 
       {/* Expanded Tactical Terminal */}
       {isOpen && (
-        <div className="flex w-[460px] flex-col overflow-hidden rounded-xl border border-white/10 bg-surface/95 shadow-[0_8px_32px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all">
+        <div className="flex w-[min(460px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border border-white/10 bg-surface/95 shadow-[0_8px_32px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all">
           {/* Terminal Header */}
           <div className="flex items-center justify-between border-b border-white/10 bg-surface-2/80 px-3 py-2">
             <div className="flex items-center gap-2">
               <span className="relative flex size-2 items-center justify-center">
-                <span className="absolute inset-0 animate-ping rounded-full bg-cyan-400/60" />
+                <span className="absolute inset-0 rounded-full bg-cyan-400/60 motion-safe:animate-ping" />
                 <span className="size-1.5 rounded-full bg-cyan-400" />
               </span>
               <Terminal size={14} className="text-cyan-400" />
@@ -73,6 +74,7 @@ export function CombatFeedDrawer({
                 {totalIntercepted.toLocaleString()} TOTAL
               </span>
               <button
+                type="button"
                 onClick={() => {
                   soundEngine.playClick();
                   toggleOpen();
@@ -87,7 +89,7 @@ export function CombatFeedDrawer({
           </div>
 
           {/* Intercepts List */}
-          <div className="h-44 overflow-y-auto p-1.5 font-mono text-[10.5px] leading-tight scrollbar-thin">
+          <div className="h-44 overflow-y-auto overscroll-contain p-1.5 font-mono text-[10.5px] leading-tight scrollbar-thin">
             {intercepts.length === 0 ? (
               <div className="flex h-full items-center justify-center text-ink-4">
                 Initializing satellite packet sniffer...
@@ -95,7 +97,8 @@ export function CombatFeedDrawer({
             ) : (
               <div className="space-y-1">
                 {intercepts.slice(0, 15).map((item) => (
-                  <div
+                  <button
+                    type="button"
                     key={item.id}
                     onClick={() => {
                       soundEngine.playClick();
@@ -111,7 +114,7 @@ export function CombatFeedDrawer({
                       }
                     }}
                     title="Click to track target on globe"
-                    className="flex cursor-pointer items-center justify-between gap-2 rounded bg-white/[0.02] px-2 py-1 transition-colors hover:bg-white/[0.08]"
+                    className="flex w-full cursor-pointer items-center justify-between gap-2 rounded bg-white/[0.02] px-2 py-1 text-left transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400"
                   >
                     <div className="flex min-w-0 items-center gap-2">
                       <span className="text-ink-4 shrink-0">{item.timestamp}</span>
@@ -152,7 +155,7 @@ export function CombatFeedDrawer({
                         {item.status}
                       </span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

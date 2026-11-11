@@ -464,6 +464,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
         attributionControl: false,
         logoPosition: "top-left",
         antialias: true,
+        preserveDrawingBuffer: true,
       });
 
       map.on("error", (e) => {

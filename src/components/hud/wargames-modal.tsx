@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Crosshair, Play, ShieldCheck, Stop, X } from "@phosphor-icons/react";
 import { soundEngine } from "@/lib/audio/sound-engine";
 import { useMapInstance } from "@/components/map/map-instance";
+import { TacticalDialog } from "@/components/ui/tactical-dialog";
 import { useSituation } from "@/stores/situation";
 import { cn } from "@/lib/utils";
 
@@ -97,17 +98,17 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
   const [mitigated, setMitigated] = useState<boolean>(false);
   const map = useMapInstance((s) => s.map);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsSimulating(false);
     setSimStep(0);
     setMitigated(false);
     useSituation.getState().setWargameSim(null);
     soundEngine.playClick();
     onClose();
-  };
+  }, [onClose]);
 
   useEffect(() => {
-    if (isSimulating) {
+    if (open && isSimulating) {
       useSituation.getState().setWargameSim({
         active: true,
         scenarioId: selectedScenario.id,
@@ -120,10 +121,10 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
     } else {
       useSituation.getState().setWargameSim(null);
     }
-  }, [isSimulating, selectedScenario, mitigated, simStep]);
+  }, [open, isSimulating, selectedScenario, mitigated, simStep]);
 
   useEffect(() => {
-    if (!isSimulating) return;
+    if (!open || !isSimulating || mitigated) return;
 
     const interval = setInterval(() => {
       setSimStep((prev) => {
@@ -136,7 +137,7 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
     }, 2800);
 
     return () => clearInterval(interval);
-  }, [isSimulating, selectedScenario]);
+  }, [open, isSimulating, mitigated, selectedScenario]);
 
   const handleStartSimulation = () => {
     setIsSimulating(true);
@@ -170,23 +171,8 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
     soundEngine.playClick();
   };
 
-  if (!open) return null;
-
   return (
-    <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleClose();
-        }
-      }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="wargames-modal-title"
-        className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-2xl overscroll-contain"
-      >
+    <TacticalDialog open={open} onClose={handleClose} labelledBy="wargames-modal-title" className="max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-surface-2 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -197,9 +183,14 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[11px] uppercase tracking-wider text-confirmed">DEFCON SIMULATION ENGINE v2.6</span>
                 {isSimulating && (
-                  <span className="flex items-center gap-1 rounded bg-confirmed/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-confirmed">
-                    <span className="size-1.5 animate-ping rounded-full bg-confirmed" />
-                    LIVE CASUALTY STREAM
+                  <span
+                    className={cn(
+                      "flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] font-bold",
+                      mitigated ? "bg-emerald-500/20 text-emerald-300" : "bg-confirmed/20 text-confirmed",
+                    )}
+                  >
+                    {!mitigated && <span className="size-1.5 rounded-full bg-confirmed motion-safe:animate-ping" />}
+                    {mitigated ? "DEFENSE ACTIVE" : "LIVE CASUALTY STREAM"}
                   </span>
                 )}
               </div>
@@ -207,9 +198,11 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
             </div>
           </div>
           <button
+            type="button"
+            data-autofocus
             onClick={handleClose}
-            className="rounded-full p-1 text-ink-3 transition-colors hover:bg-white/10 hover:text-ink"
-            aria-label="Close"
+            className="flex min-h-9 min-w-9 items-center justify-center rounded-full p-1 text-ink-3 transition-colors hover:bg-white/10 hover:text-ink"
+            aria-label="Close WarGames Simulator"
           >
             <X size={20} />
           </button>
@@ -217,7 +210,9 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
 
         {/* Legal & Educational Disclaimer Banner */}
         <div className="flex items-center gap-2 border-b border-white/5 bg-white/[0.02] px-6 py-2 text-[11px] text-ink-3">
-          <span className="rounded bg-white/10 px-1.5 py-0.2 font-mono text-[9px] font-bold text-ink uppercase">Hypothetical Simulation</span>
+          <span className="shrink-0 whitespace-nowrap rounded bg-white/10 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-ink">
+            Hypothetical Simulation
+          </span>
           <span>Scenarios represent educational mathematical models for resilience planning. No actual infrastructure is targeted or altered.</span>
         </div>
 
@@ -232,6 +227,7 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
                 return (
                   <button
                     key={sc.id}
+                    type="button"
                     onClick={() => {
                       if (isSimulating) handleStopSimulation();
                       setSelectedScenario(sc);
@@ -339,6 +335,7 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
               <div className="flex items-center gap-3">
                 {!isSimulating ? (
                   <button
+                    type="button"
                     onClick={handleStartSimulation}
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-confirmed py-3 font-mono text-xs font-bold uppercase tracking-wider text-white shadow-lg transition-all hover:bg-confirmed/90 active:scale-[0.99]"
                   >
@@ -348,6 +345,7 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
                 ) : (
                   <>
                     <button
+                      type="button"
                       onClick={handleMitigate}
                       disabled={mitigated}
                       className={cn(
@@ -359,6 +357,7 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
                       {mitigated ? "DEFENSE ACTIVE" : "DEPLOY COUNTERMEASURE"}
                     </button>
                     <button
+                      type="button"
                       onClick={handleStopSimulation}
                       className="flex items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/20 px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider text-red-300 transition-all hover:bg-red-500/30 active:scale-[0.99]"
                     >
@@ -371,7 +370,6 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </TacticalDialog>
   );
 }

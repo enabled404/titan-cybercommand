@@ -6,6 +6,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 
 import { OrgLogo } from "@/components/kit/org-logo";
 import { StatusMark } from "@/components/kit/status-mark";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { allCountries, countryName } from "@/lib/countries";
 import { STATUS_LABEL, relativeTime } from "@/lib/format";
 import type { Incident, Vuln } from "@/lib/types";
@@ -60,6 +61,7 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
   const [active, setActive] = useState(0);
   const [prompt, setPrompt] = useState(0);
   const [typed, setTyped] = useState("");
+  const reduced = useReducedMotion();
 
   useImperativeHandle(ref, () => ({ focus: () => inputRef.current?.focus() }));
 
@@ -71,7 +73,7 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
 
   // Typewriter placeholder that cycles through real things people ask.
   useEffect(() => {
-    if (value) return;
+    if (value || reduced) return;
     const target = prompts[prompt % prompts.length];
     let i = 0;
     let timer = window.setInterval(() => {
@@ -86,7 +88,7 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
       window.clearInterval(timer);
       window.clearTimeout(timer);
     };
-  }, [prompt, prompts, value]);
+  }, [prompt, prompts, value, reduced]);
 
   const rows = useMemo<Row[]>(() => {
     const q = value.trim();
@@ -254,12 +256,13 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
         {!value ? (
           <span
             className={cn(
-              "caret pointer-events-none absolute leading-6 text-ink-4",
+              "pointer-events-none absolute leading-6 text-ink-4",
+              !reduced && "caret",
               large ? "left-[46px] top-[15px] text-[16.5px]" : "left-11 top-3 text-[15px]",
             )}
             aria-hidden
           >
-            {typed}
+            {reduced ? prompts[0] : typed}
           </span>
         ) : null}
         <kbd className="mt-[2px] hidden shrink-0 rounded-[6px] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10.5px] text-ink-4 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] sm:block">
@@ -271,7 +274,7 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
         <div
           id="omnibox-results"
           role="listbox"
-          className="absolute inset-x-0 top-[calc(100%+8px)] z-50 max-h-[min(460px,60vh)] overflow-y-auto rounded-[14px] bg-surface p-1.5 ring-1 ring-hairline-2 elevated scrollbar-thin animate-in fade-in slide-in-from-top-1 duration-150"
+          className="absolute inset-x-0 top-[calc(100%+8px)] z-50 max-h-[min(460px,60vh)] overflow-y-auto rounded-[14px] bg-surface p-1.5 ring-1 ring-hairline-2 elevated scrollbar-thin motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 motion-safe:duration-150"
         >
           {rows.map((row, index) => (
             <button

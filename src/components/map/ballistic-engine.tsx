@@ -90,7 +90,17 @@ function computeGeodesicPoints(origin: [number, number], target: [number, number
   return [origin, target];
 }
 
-export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
+export function BallisticEngine({
+  incidents,
+  hudLeft = 452,
+  hudBottom = 236,
+  showHud = true,
+}: {
+  incidents: Incident[];
+  hudLeft?: number;
+  hudBottom?: number;
+  showHud?: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const map = useMapInstance((s) => s.map);
   const ready = useMapInstance((s) => s.ready);
@@ -115,14 +125,23 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
   const lastSpawnRef = useRef<number>(0);
   const animFrameRef = useRef<number | null>(null);
   const [activeCount, setActiveCount] = useState(0);
+  const activeCountRef = useRef(0);
+  const hasOverlayTarget = Boolean(wargameSim?.active || reconTarget);
 
   // Spawn attacks continuously
   useEffect(() => {
     if (!ready || !map || incidents.length === 0 || !layers.ballistics) {
-      attacksRef.current = [];
-      shockwavesRef.current = [];
+      if (!hasOverlayTarget) {
+        attacksRef.current = [];
+        shockwavesRef.current = [];
+      }
       return;
     }
+
+    const reduced =
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      new URLSearchParams(window.location.search).has("still");
+    if (reduced) return;
 
     const spawnAttack = (forcedTarget?: Incident) => {
       const target = forcedTarget ?? incidents[Math.floor(Math.random() * incidents.length)];
@@ -172,7 +191,7 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
       const timer = window.setTimeout(() => spawnAttack(selectedIncident), 600);
       return () => window.clearTimeout(timer);
     }
-  }, [ready, map, incidents, selectedIncident, layers.ballistics]);
+  }, [ready, map, incidents, selectedIncident, layers.ballistics, hasOverlayTarget]);
 
   // Main rendering loop synchronized with requestAnimationFrame
   useEffect(() => {
@@ -183,14 +202,39 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const syncCount = (next: number) => {
+      if (activeCountRef.current !== next) {
+        activeCountRef.current = next;
+        setActiveCount(next);
+      }
+    };
+
+    if (!layers.ballistics && !hasOverlayTarget) {
+      attacksRef.current = [];
+      shockwavesRef.current = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      syncCount(0);
+      return;
+    }
+
+    const reduced =
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      new URLSearchParams(window.location.search).has("still");
+
     let running = true;
 
-    const render = () => {
+    const renderFrame = (scheduleNext: boolean) => {
       if (!running) return;
+
+      if (document.hidden) {
+        lastSpawnRef.current = performance.now();
+        if (scheduleNext) animFrameRef.current = requestAnimationFrame(() => renderFrame(true));
+        return;
+      }
 
       const mapCanvas = map.getCanvas();
       if (!mapCanvas) {
-        animFrameRef.current = requestAnimationFrame(render);
+        if (scheduleNext) animFrameRef.current = requestAnimationFrame(() => renderFrame(true));
         return;
       }
 
@@ -216,7 +260,7 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
       const curWargame = wargameSimRef.current;
       const curRecon = reconTargetRef.current;
 
-      if (curWargame?.active && !curWargame.mitigated) {
+      if (!reduced && curWargame?.active && !curWargame.mitigated) {
         if (now - lastSpawnRef.current > 380 && attacksRef.current.length < 24) {
           lastSpawnRef.current = now;
           const origin = THREAT_ACTOR_HUBS[Math.floor(Math.random() * THREAT_ACTOR_HUBS.length)];
@@ -250,7 +294,7 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
           });
           soundEngine.playAttackLaunch(origin.lon);
         }
-      } else if (now - lastSpawnRef.current > 550 && attacksRef.current.length < 20 && incidents.length > 0) {
+      } else if (!reduced && layers.ballistics && now - lastSpawnRef.current > 550 && attacksRef.current.length < 20 && incidents.length > 0) {
         lastSpawnRef.current = now;
         const target = incidents[Math.floor(Math.random() * incidents.length)];
         const origin = THREAT_ACTOR_HUBS[Math.floor(Math.random() * THREAT_ACTOR_HUBS.length)];
@@ -614,29 +658,50 @@ export function BallisticEngine({ incidents }: { incidents: Incident[] }) {
 
       ctx.restore();
 
-      setActiveCount(activeAttacks.length);
-      animFrameRef.current = requestAnimationFrame(render);
+      syncCount(activeAttacks.length);
+      if (scheduleNext) {
+        animFrameRef.current = requestAnimationFrame(() => renderFrame(true));
+      }
     };
 
-    animFrameRef.current = requestAnimationFrame(render);
+    if (reduced) {
+      const drawStatic = () => renderFrame(false);
+      drawStatic();
+      map.on("move", drawStatic);
+      map.on("resize", drawStatic);
+      return () => {
+        running = false;
+        map.off("move", drawStatic);
+        map.off("resize", drawStatic);
+        if (canvas) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        syncCount(0);
+      };
+    }
+
+    animFrameRef.current = requestAnimationFrame(() => renderFrame(true));
 
     return () => {
       running = false;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       if (canvas) {
-        const ctx = canvas.getContext("2d");
-        ctx?.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
+      syncCount(0);
     };
-  }, [ready, map, incidents, layers.ballistics]);
+  }, [ready, map, incidents, layers.ballistics, hasOverlayTarget]);
 
   return (
     <>
-      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-10" />
+      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-10" aria-hidden="true" />
       {/* Live Ballistic Missile HUD telemetry indicator */}
-      {ready && layers.ballistics && (
-        <div className="pointer-events-none absolute bottom-4 left-4 z-20 hidden items-center gap-2 rounded-full border border-white/[0.08] bg-surface-2/80 px-3 py-1 font-mono text-[10px] tracking-wider text-ink-3 backdrop-blur md:flex">
-          <span className="size-1.5 animate-pulse rounded-full bg-confirmed" />
+      {ready && layers.ballistics && showHud && (
+        <div
+          style={{ left: hudLeft, bottom: hudBottom }}
+          className="pointer-events-none absolute z-20 hidden items-center gap-2 rounded-full border border-white/[0.08] bg-surface-2/80 px-3 py-1 font-mono text-[10px] tracking-wider text-ink-3 backdrop-blur md:flex"
+        >
+          <span className="size-1.5 rounded-full bg-confirmed motion-safe:animate-pulse" />
           <span>BALLISTIC KINETIC SWARM:</span>
           <span className="font-bold text-ink">{activeCount} ACTIVE TRACERS</span>
         </div>

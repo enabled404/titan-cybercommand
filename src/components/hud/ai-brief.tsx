@@ -86,10 +86,10 @@ function Thinking() {
     <div className="space-y-3 px-4 py-4">
       <div className="flex items-center gap-2.5 text-[13px] text-ink-2">
         <span className="relative flex size-4 items-center justify-center">
-          <span className="absolute inset-0 animate-ping rounded-full bg-ink/20" />
+          <span className="absolute inset-0 rounded-full bg-ink/20 motion-safe:animate-ping" />
           <ValyuMark className="relative size-3 text-ink" />
         </span>
-        <span key={step} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
+        <span key={step} className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300">
           {STEPS[step]}
         </span>
       </div>
@@ -217,7 +217,7 @@ function Brief({ kind, id, label }: { kind: Kind; id: string; label: string }) {
 export function AnswerCard({ question, onClose }: { question: string; onClose: () => void }) {
   const { state, data, run } = useBrief("question", question, true);
   return (
-    <div className="overflow-hidden rounded-[18px] bg-white/[0.028] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06),inset_0_1px_0_rgb(255_255_255/0.05)] animate-in fade-in slide-in-from-top-2 duration-300">
+    <div className="overflow-hidden rounded-[18px] bg-white/[0.028] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06),inset_0_1px_0_rgb(255_255_255/0.05)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-300">
       <div className="flex items-start gap-3 border-b border-white/[0.06] px-4 py-3">
         <Sparkle className="mt-0.5 size-4 shrink-0 text-ink-2" />
         <p className="min-w-0 flex-1 text-[14px] font-medium leading-snug text-ink">{question}</p>

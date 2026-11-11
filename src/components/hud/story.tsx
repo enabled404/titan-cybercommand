@@ -155,7 +155,7 @@ function Header({ generatedAt, now }: { generatedAt: string; now: number }) {
     <div className="flex items-center justify-between gap-3 pl-2">
       <span className="flex items-center gap-2 text-[12px] text-ink-3">
         <span className="relative flex size-2 items-center justify-center" aria-hidden>
-          <span className="absolute inset-0 animate-ping rounded-full bg-safe/40 [animation-duration:2.4s]" />
+          <span className="absolute inset-0 rounded-full bg-safe/40 [animation-duration:2.4s] motion-safe:animate-ping" />
           <span className="size-1.5 rounded-full bg-safe" />
         </span>
         Live

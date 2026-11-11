@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass } from "@phosphor-icons/react";
 
 import { AuthButton } from "@/components/auth/auth-button";
 import { AudioButton } from "@/components/hud/audio-button";
-import { DefconBadge } from "@/components/hud/defcon-badge";
+import { DefconBadge, type PostureStats } from "@/components/hud/defcon-badge";
 import { RecordDemoButton } from "@/components/hud/record-demo";
 import { BrandMark, GithubIcon } from "@/components/icons/agents";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -21,8 +21,8 @@ const NAV = [
   { href: "/", label: "Map", show: "hidden md:flex" },
   { href: "/check", label: "Check", show: "flex" },
   { href: "/brief", label: "Brief", show: "hidden lg:flex" },
-  { href: "/agents", label: "Agents", show: "hidden 2xl:flex" },
-  ...(ACCOUNTS ? [{ href: "/pricing", label: "Pricing", show: "hidden 2xl:flex" }] : []),
+  { href: "/agents", label: "Agents", show: "hidden xl:flex" },
+  ...(ACCOUNTS ? [{ href: "/pricing", label: "Pricing", show: "hidden xl:flex" }] : []),
 ];
 
 function NavLinks({ pathname }: { pathname: string | null }) {
@@ -33,6 +33,7 @@ function NavLinks({ pathname }: { pathname: string | null }) {
         key={item.href}
         href={item.href}
         aria-label={item.href === "/check" ? item.label : undefined}
+        aria-current={active ? "page" : undefined}
         onClick={() => soundEngine.playClick()}
         className={cn(
           "press h-7 items-center whitespace-nowrap rounded-full px-2 text-[12px] transition-colors md:px-2.5",
@@ -52,6 +53,7 @@ function ActiveNavLinks() {
 
 export function TopBar({
   ticker,
+  stats,
   onOpenWargames,
   onOpenRecon,
   onOpenShortcuts,
@@ -60,6 +62,7 @@ export function TopBar({
   isPatrolActive,
 }: {
   ticker?: React.ReactNode;
+  stats?: PostureStats;
   onOpenWargames?: () => void;
   onOpenRecon?: () => void;
   onOpenShortcuts?: () => void;
@@ -67,177 +70,199 @@ export function TopBar({
   onTogglePatrol?: () => void;
   isPatrolActive?: boolean;
 }) {
+  const [opsOpen, setOpsOpen] = useState(false);
+  const hasTacticalOps = Boolean(onOpenRecon || onOpenWargames || onTogglePatrol || onOpenDemo);
+
   return (
-    <header className="pointer-events-auto flex h-14 items-center justify-between gap-3 bg-space/90 px-3 backdrop-blur-md border-b border-white/[0.06] sm:px-4">
+    <header className="pointer-events-auto flex h-14 items-center justify-between gap-2 bg-space/90 px-3 backdrop-blur-md border-b border-white/[0.06] sm:gap-3 sm:px-4">
       {/* Brand & Readiness Posture */}
-      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+      <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3">
         <Link
           href="/"
           onClick={() => soundEngine.playClick()}
-          className="flex items-center gap-2 rounded-full py-1 pl-0.5 pr-2 transition-opacity hover:opacity-90"
+          className="flex min-w-0 items-center gap-2 rounded-full py-1 pl-0.5 pr-1 transition-opacity hover:opacity-90 sm:pr-2"
           aria-label="Titan Cyber Command home"
         >
-          <BrandMark className="size-[20px] text-cyan-400" />
-          <span className="font-semicondensed text-[16px] font-bold tracking-tight text-ink sm:text-[18px]">
+          <BrandMark className="size-[20px] shrink-0 text-cyan-400" />
+          <span className="truncate font-semicondensed text-[14px] font-bold tracking-tight text-ink sm:text-[18px]">
             Titan <span className="text-cyan-400">Cyber Command</span>
           </span>
         </Link>
-        <DefconBadge />
+        <div className="hidden xs:block sm:block">
+          <DefconBadge stats={stats} />
+        </div>
       </div>
 
       {/* Center: Live CVE Ticker (Controlled width, never wraps) */}
       {ticker ? (
-        <div className="hidden min-w-0 max-w-sm flex-1 xl:block 2xl:max-w-md">
+        <div className="hidden min-w-0 max-w-[220px] flex-1 xl:block 2xl:max-w-md">
           {ticker}
         </div>
       ) : null}
 
       {/* Right: Tactical Command Operations & Navigation */}
       <div className="flex shrink-0 items-center gap-1.5">
-        {/* Tactical Operations Segmented Dock */}
-        <div className="glass-pill hidden items-center gap-0.5 rounded-full p-0.5 md:flex">
-          {onOpenRecon && (
-            <button
-              onClick={() => {
-                soundEngine.playClick();
-                onOpenRecon();
-              }}
-              className="press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] text-cyan-300 transition-colors hover:bg-cyan-500/15 hover:text-cyan-200"
-              title="Launch Target Recon OSINT Scanner (R)"
-              aria-label="Launch Target Recon OSINT Scanner"
-            >
-              <MagnifyingGlass size={12} weight="bold" />
-              <span>RECON</span>
-            </button>
-          )}
+        {/* Tactical Operations Segmented Dock (only on interactive Situation Room) */}
+        {hasTacticalOps && (
+          <div className="glass-pill hidden items-center gap-0.5 rounded-full p-0.5 lg:flex">
+            {onOpenRecon && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  onOpenRecon();
+                }}
+                className="press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] text-cyan-300 transition-colors hover:bg-cyan-500/15 hover:text-cyan-200"
+                title="Launch Target Recon OSINT Scanner (R)"
+                aria-label="Launch Target Recon OSINT Scanner"
+              >
+                <MagnifyingGlass size={12} weight="bold" />
+                <span>RECON</span>
+              </button>
+            )}
 
-          {onOpenWargames && (
-            <button
-              onClick={() => {
-                soundEngine.playClick();
-                onOpenWargames();
-              }}
-              className="press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] text-confirmed transition-colors hover:bg-confirmed/15 hover:text-red-300"
-              title="Launch WarGames Simulation (W)"
-              aria-label="Launch WarGames Simulation"
-            >
-              <Crosshair size={12} weight="bold" />
-              <span>WARGAMES</span>
-            </button>
-          )}
+            {onOpenWargames && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  onOpenWargames();
+                }}
+                className="press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] text-confirmed transition-colors hover:bg-confirmed/15 hover:text-red-300"
+                title="Launch WarGames Simulation (W)"
+                aria-label="Launch WarGames Simulation"
+              >
+                <Crosshair size={12} weight="bold" />
+                <span>WARGAMES</span>
+              </button>
+            )}
 
-          {onTogglePatrol && (
-            <button
-              onClick={() => {
-                soundEngine.playClick();
-                onTogglePatrol();
-              }}
-              className={cn(
-                "press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] transition-colors",
-                isPatrolActive
-                  ? "bg-cyan-500/25 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.4)]"
-                  : "text-ink-3 hover:bg-white/10 hover:text-ink",
-              )}
-              title="Toggle Cinematic Auto-Patrol (P)"
-              aria-label={isPatrolActive ? "Pause Cinematic Auto-Patrol" : "Start Cinematic Auto-Patrol"}
-            >
-              <Compass size={12} weight="bold" className={cn(isPatrolActive && "animate-spin [animation-duration:12s]")} />
-              <span>{isPatrolActive ? "PATROLLING" : "PATROL"}</span>
-            </button>
-          )}
-
-          {onOpenDemo && (
-            <button
-              onClick={() => {
-                soundEngine.playClick();
-                onOpenDemo();
-              }}
-              className="press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
-              title="Watch Master 1080p Demo Video (V)"
-              aria-label="Watch Master Demo Video"
-            >
-              <FilmSlate size={12} weight="bold" />
-              <span>DEMO</span>
-            </button>
-          )}
-        </div>
-
-        {/* Mobile Quick Operations Dropdown */}
-        <div className="flex items-center md:hidden">
-          <Popover>
-            <PopoverTrigger
-              onClick={() => soundEngine.playClick()}
-              className="press glass-pill flex h-7 items-center gap-1 rounded-full px-2 font-mono text-[11px] text-cyan-300"
-              aria-label="Tactical Operations Menu"
-            >
-              <Lightning size={13} weight="bold" />
-              <span>OPS</span>
-            </PopoverTrigger>
-            <PopoverContent
-              side="bottom"
-              align="end"
-              className="w-48 rounded-xl border border-white/10 bg-surface/95 p-1.5 shadow-2xl backdrop-blur-md font-mono text-xs"
-            >
-              <div className="space-y-1">
-                {onOpenRecon && (
-                  <button
-                    onClick={() => {
-                      soundEngine.playClick();
-                      onOpenRecon();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-cyan-300 transition-colors hover:bg-cyan-500/15"
-                  >
-                    <MagnifyingGlass size={14} weight="bold" />
-                    <span>Target Recon (R)</span>
-                  </button>
+            {onTogglePatrol && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  onTogglePatrol();
+                }}
+                className={cn(
+                  "press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] transition-colors",
+                  isPatrolActive
+                    ? "bg-cyan-500/25 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.4)]"
+                    : "text-ink-3 hover:bg-white/10 hover:text-ink",
                 )}
-                {onOpenWargames && (
-                  <button
-                    onClick={() => {
-                      soundEngine.playClick();
-                      onOpenWargames();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-confirmed transition-colors hover:bg-confirmed/15"
-                  >
-                    <Crosshair size={14} weight="bold" />
-                    <span>WarGames Sim (W)</span>
-                  </button>
-                )}
-                {onTogglePatrol && (
-                  <button
-                    onClick={() => {
-                      soundEngine.playClick();
-                      onTogglePatrol();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-ink-2 transition-colors hover:bg-white/10"
-                  >
-                    <Compass size={14} weight="bold" />
-                    <span>{isPatrolActive ? "Stop Patrol" : "Auto-Patrol (P)"}</span>
-                  </button>
-                )}
-                {onOpenDemo && (
-                  <button
-                    onClick={() => {
-                      soundEngine.playClick();
-                      onOpenDemo();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-ink-2 transition-colors hover:bg-white/10"
-                  >
-                    <FilmSlate size={14} weight="bold" />
-                    <span>Master Demo (V)</span>
-                  </button>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+                title="Toggle Cinematic Auto-Patrol (P)"
+                aria-label={isPatrolActive ? "Pause Cinematic Auto-Patrol" : "Start Cinematic Auto-Patrol"}
+              >
+                <Compass size={12} weight="bold" className={cn(isPatrolActive && "motion-safe:animate-spin [animation-duration:12s]")} />
+                <span>{isPatrolActive ? "PATROLLING" : "PATROL"}</span>
+              </button>
+            )}
 
-        <RecordDemoButton />
+            {onOpenDemo && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  onOpenDemo();
+                }}
+                className="press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
+                title="Watch Master 1080p Demo Video (V)"
+                aria-label="Watch Master Demo Video"
+              >
+                <FilmSlate size={12} weight="bold" />
+                <span>DEMO</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Mobile Quick Operations Dropdown (only when tactical actions exist) */}
+        {hasTacticalOps && (
+          <div className="flex items-center lg:hidden">
+            <Popover open={opsOpen} onOpenChange={setOpsOpen}>
+              <PopoverTrigger
+                onClick={() => soundEngine.playClick()}
+                className="press glass-pill flex h-7 items-center gap-1 rounded-full px-2 font-mono text-[11px] text-cyan-300"
+                aria-label="Tactical Operations Menu"
+              >
+                <Lightning size={13} weight="bold" />
+                <span>OPS</span>
+              </PopoverTrigger>
+              <PopoverContent
+                side="bottom"
+                align="end"
+                className="w-48 rounded-xl border border-white/10 bg-surface/95 p-1.5 shadow-2xl backdrop-blur-md font-mono text-xs"
+              >
+                <div className="space-y-1">
+                  {onOpenRecon && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playClick();
+                        setOpsOpen(false);
+                        onOpenRecon();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-cyan-300 transition-colors hover:bg-cyan-500/15"
+                    >
+                      <MagnifyingGlass size={14} weight="bold" />
+                      <span>Target Recon (R)</span>
+                    </button>
+                  )}
+                  {onOpenWargames && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playClick();
+                        setOpsOpen(false);
+                        onOpenWargames();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-confirmed transition-colors hover:bg-confirmed/15"
+                    >
+                      <Crosshair size={14} weight="bold" />
+                      <span>WarGames Sim (W)</span>
+                    </button>
+                  )}
+                  {onTogglePatrol && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playClick();
+                        setOpsOpen(false);
+                        onTogglePatrol();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-ink-2 transition-colors hover:bg-white/10"
+                    >
+                      <Compass size={14} weight="bold" />
+                      <span>{isPatrolActive ? "Stop Patrol" : "Auto-Patrol (P)"}</span>
+                    </button>
+                  )}
+                  {onOpenDemo && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playClick();
+                        setOpsOpen(false);
+                        onOpenDemo();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-ink-2 transition-colors hover:bg-white/10"
+                    >
+                      <FilmSlate size={14} weight="bold" />
+                      <span>Master Demo (V)</span>
+                    </button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+
+        {hasTacticalOps && <RecordDemoButton />}
 
         <AudioButton />
 
         {onOpenShortcuts && (
           <button
+            type="button"
             onClick={() => {
               soundEngine.playClick();
               onOpenShortcuts();

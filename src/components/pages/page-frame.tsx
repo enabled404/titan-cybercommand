@@ -11,6 +11,8 @@ const FOOTER_LINKS = [
   { href: "/check", label: "Am I affected?" },
   { href: "/cve", label: "New CVEs" },
   { href: "/agents", label: "For agents" },
+  { href: "/terms", label: "Terms" },
+  { href: "/privacy", label: "Privacy" },
   { href: "/feed.xml", label: "RSS" },
 ];
 

@@ -156,7 +156,7 @@ const Tag = memo(function Tag({
           onClick={() => onSelect(incident.id)}
           onMouseEnter={() => onHover(incident.id)}
           onMouseLeave={() => onHover(null)}
-          className="pointer-events-auto flex size-full items-center gap-2 rounded-[10px] bg-space py-1 pl-1 pr-3 text-left ring-1 transition-[box-shadow,background-color] duration-200 hover:bg-surface animate-in fade-in zoom-in-95 duration-300"
+          className="pointer-events-auto flex size-full items-center gap-2 rounded-[10px] bg-space py-1 pl-1 pr-3 text-left ring-1 transition-[box-shadow,background-color] duration-200 hover:bg-surface motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-300"
           style={{
             // Tinted ring, not a glow: the status colour at low alpha.
             boxShadow: active ? `0 0 0 1px ${color}` : undefined,

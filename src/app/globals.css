@@ -351,6 +351,18 @@
   mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%);
 }
 
+/* Native top-layer modal scroll containment (prevents page scroll behind open dialogs) */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.tactical-dialog[open] {
+  display: flex;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ticker-track {
     animation: none;

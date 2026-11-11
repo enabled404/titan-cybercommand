@@ -49,7 +49,7 @@ export default function ValyuCallback() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-space text-ink">
-      <BrandMark className="size-8 animate-pulse text-ink" />
+      <BrandMark className="size-8 text-ink motion-safe:animate-pulse" />
       <p className="text-[14px] text-ink-2">{error ?? "Connecting your Valyu account"}</p>
       {error ? (
         <Link href="/" className="text-[14px] text-ink underline underline-offset-4">

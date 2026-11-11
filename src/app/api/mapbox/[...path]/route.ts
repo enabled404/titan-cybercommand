@@ -1,26 +1,24 @@
 import { NextResponse } from "next/server";
 
+import { buildMapboxProxyUrl } from "@/lib/http/mapbox-proxy";
+import { SITE_URL } from "@/lib/site";
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
-  if (!path || !path.length) {
+  const url = new URL(request.url);
+  const serverToken = process.env.MAPBOX_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const target = buildMapboxProxyUrl(path, url.search, serverToken);
+  if (!target) {
     return new NextResponse(null, { status: 400 });
   }
-
-  const pathStr = path.join("/");
-  const url = new URL(request.url);
-  if (!url.searchParams.has("access_token") && process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {
-    url.searchParams.set("access_token", process.env.NEXT_PUBLIC_MAPBOX_TOKEN);
-  }
-  const search = url.search;
-  const target = `https://api.mapbox.com/${pathStr}${search}`;
 
   try {
     const upstream = await fetch(target, {
       headers: {
-        Referer: "https://globalhackmap.vercel.app/",
+        Referer: process.env.MAPBOX_PROXY_REFERER || `${SITE_URL.replace(/\/$/, "")}/`,
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)",
         Accept: request.headers.get("accept") ?? "*/*",
       },
@@ -42,7 +40,8 @@ export async function GET(
       },
     });
   } catch (err) {
-    console.error("[Mapbox Proxy Error]", err);
+    const message = err instanceof Error ? err.message.replace(/access_token=[^&\s]+/gi, "access_token=[redacted]") : "upstream error";
+    console.error("[Mapbox Proxy Error]", message);
     return new NextResponse(null, { status: 502 });
   }
 }

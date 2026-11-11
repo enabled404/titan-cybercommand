@@ -127,7 +127,7 @@ export function AsciiAtlas() {
     // context released during cleanup is never reused when the route becomes visible again.
     const canvas = document.createElement("canvas");
     canvas.className = "absolute inset-0 h-full w-full";
-    const gl = canvas.getContext("webgl2", { premultipliedAlpha: true, antialias: false, alpha: true });
+    const gl = canvas.getContext("webgl2", { premultipliedAlpha: true, antialias: false, alpha: true, preserveDrawingBuffer: true });
     if (!gl) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches || new URLSearchParams(window.location.search).has("still");
 
