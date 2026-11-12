@@ -55,8 +55,7 @@ function GlobePlaceholder() {
 }
 
 /**
- * True once the browser is first idle after hydration. Mapbox GL is about 1.8 MB of script whose start-up
- * runs as long tasks; mounting it after the panel hydrates lets search and the lists respond first.
+ * True once the browser is first idle after hydration. WebGL MapLibre startup involves shader compilation and tile initialization; mounting it after the panel hydrates lets search and the lists respond first.
  */
 function useIdle(timeout = 1200) {
   const [idle, setIdle] = useState(false);

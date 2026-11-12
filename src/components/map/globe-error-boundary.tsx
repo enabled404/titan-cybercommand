@@ -23,7 +23,7 @@ export class GlobeErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.warn("[GlobeErrorBoundary] Caught Mapbox GL runtime exception:", error, errorInfo);
+    console.warn("[GlobeErrorBoundary] Caught WebGL Globe runtime exception:", error, errorInfo);
   }
 
   render() {
@@ -42,7 +42,7 @@ export class GlobeErrorBoundary extends Component<Props, State> {
                 TACTICAL RADAR TELEMETRY ACTIVE
               </div>
               <p className="mt-2 text-xs font-mono text-neutral-400 max-w-sm">
-                Mapbox GL satellite mesh initializing or fell back to telemetry radar feed. Threat streams and missile interception engines remain fully operational.
+                WebGL 3D satellite mesh is unavailable on this context and fell back to telemetry radar mode. Threat streams and missile interception engines remain fully operational.
               </p>
             </div>
           </div>

@@ -235,7 +235,7 @@
 }
 
 /* The bottom edge belongs to the panels; the wordmark and credits sit top-left, clear of every panel. */
-.mapboxgl-map .mapboxgl-ctrl-top-left {
+.maplibregl-map .maplibregl-ctrl-top-left {
   /* Below the site bar and the ticker row it wraps to on phones (104px together). */
   top: 112px;
   display: flex;
@@ -243,31 +243,36 @@
 }
 
 @media (min-width: 768px) {
-  .mapboxgl-map .mapboxgl-ctrl-top-left {
+  .maplibregl-map .maplibregl-ctrl-top-left {
     top: 66px;
     left: 444px;
   }
 }
 
-.mapboxgl-ctrl-logo {
+.maplibregl-ctrl-logo {
   opacity: 0.4;
 }
 
-.mapboxgl-map .mapboxgl-ctrl-attrib.mapboxgl-compact {
+.maplibregl-map .maplibregl-ctrl-attrib.maplibregl-compact {
   transform: scale(0.78);
   transform-origin: left center;
 }
 
-.mapboxgl-ctrl-attrib {
+.maplibregl-ctrl-attrib {
   opacity: 0.6;
 }
 
-.mapboxgl-ctrl-attrib.mapboxgl-compact {
+.maplibregl-ctrl-attrib.maplibregl-compact {
   background: var(--color-surface) !important;
   color: var(--color-ink-3) !important;
 }
 
-.mapboxgl-ctrl-attrib a {
+.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+  background-color: transparent !important;
+  filter: invert(0.85);
+}
+
+.maplibregl-ctrl-attrib a {
   color: var(--color-ink-3) !important;
 }
 

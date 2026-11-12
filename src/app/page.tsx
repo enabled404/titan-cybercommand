@@ -8,9 +8,9 @@ import { getSnapshot, toClientSnapshot } from "@/lib/snapshot";
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default async function Home() {
-  // The globe's style and tiles (Mapbox) and night lights (NASA GIBS) are fetched with CORS once the
-  // map chunk runs. Opening those connections while the HTML parses takes DNS and TLS off that path.
-  preconnect("https://api.mapbox.com", { crossOrigin: "anonymous" });
+  // The globe's open vector tiles/glyphs (OpenFreeMap) and night lights (NASA GIBS) are fetched
+  // with CORS once the map chunk runs. Opening those connections early takes DNS and TLS off that path.
+  preconnect("https://tiles.openfreemap.org", { crossOrigin: "anonymous" });
   preconnect("https://gibs.earthdata.nasa.gov", { crossOrigin: "anonymous" });
   const snapshot = await getSnapshot();
   return (

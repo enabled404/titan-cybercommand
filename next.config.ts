@@ -2,20 +2,21 @@ import type { NextConfig } from "next";
 
 const dev = process.env.NODE_ENV === "development";
 
-const MAPBOX = "https://api.mapbox.com https://*.tiles.mapbox.com";
+const OPENFREEMAP = "https://tiles.openfreemap.org";
 const NASA_GIBS = "https://gibs.earthdata.nasa.gov";
 const CLOUDFLARE_DOH = "https://cloudflare-dns.com";
 
 // Report-only for now: violations show in the console without breaking anything. Inline scripts stay
 // allowed because the pages are static (ISR) and nonces would force them to render per request.
-// Mapbox GL needs blob: workers and data:/blob: images; NASA GIBS serves the night-lights tiles.
+// MapLibre GL needs blob: workers and data:/blob: images; OpenFreeMap serves vector tiles & fonts;
+// NASA GIBS serves Blue Marble relief and Black Marble night-lights tiles.
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${MAPBOX} ${NASA_GIBS}`,
-  "font-src 'self' data:",
-  `connect-src 'self' ${MAPBOX} https://events.mapbox.com ${CLOUDFLARE_DOH} ${NASA_GIBS}${dev ? " ws: wss:" : ""}`,
+  `img-src 'self' data: blob: ${OPENFREEMAP} ${NASA_GIBS}`,
+  `font-src 'self' data: ${OPENFREEMAP}`,
+  `connect-src 'self' ${OPENFREEMAP} ${CLOUDFLARE_DOH} ${NASA_GIBS}${dev ? " ws: wss:" : ""}`,
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
   "object-src 'none'",

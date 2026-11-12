@@ -128,7 +128,7 @@ export function PatchStrip({
       (section.current?.contains(document.activeElement) || document.activeElement === showButton.current)
     ) {
       // If the viewport removes the dock while it has focus, leave focus on the map, not hidden UI.
-      document.querySelector<HTMLCanvasElement>(".mapboxgl-canvas")?.focus();
+      document.querySelector<HTMLCanvasElement>(".maplibregl-canvas")?.focus();
     }
     previouslyAvailable.current = available;
   }, [available, dock, open]);
