@@ -52,4 +52,4 @@ We consider security research conducted under this policy to be:
 
 ## 4. Software Dependencies & Upstream Vulnerabilities
 
-Titan Cyber Command automates vulnerability auditing for open-source software via OSV and CISA KEV feeds. If you discover a vulnerability in an underlying library or dependency (e.g. Next.js, Mapbox GL, React), please report it directly to the respective upstream maintainers.
+Titan Cyber Command automates vulnerability auditing for open-source software via OSV and CISA KEV feeds. If you discover a vulnerability in an underlying library or dependency (e.g. Next.js, MapLibre GL, React), please report it directly to the respective upstream maintainers.

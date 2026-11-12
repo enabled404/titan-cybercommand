@@ -55,7 +55,7 @@ async function record() {
   await page.goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
 
   // Allow globe and canvas layers to initialize
-  await page.waitForSelector(".mapboxgl-canvas", { timeout: 20000 }).catch(() => {});
+  await page.waitForSelector(".maplibregl-canvas", { timeout: 20000 }).catch(() => {});
   await sleep(5000);
 
   let frameCount = 0;

@@ -45,7 +45,7 @@ const state = () =>
     dockDisplay: getComputedStyle(dock).display,
     cursor: document.body.style.cursor,
     tabsOverflow: document.querySelector('[aria-label="Live lists"]').scrollWidth > document.querySelector('[aria-label="Live lists"]').clientWidth,
-    creditsLeft: parseFloat(getComputedStyle(document.querySelector('.mapboxgl-ctrl-top-left')).left),
+    creditsLeft: parseFloat(getComputedStyle(document.querySelector('.maplibregl-ctrl-top-left')).left),
     navBottom: document.querySelector('header').getBoundingClientRect().bottom
   };
 })()`);
@@ -179,7 +179,7 @@ try {
   console.error(
     "Map container bounds:",
     evaluate(
-      "({map:document.querySelector('.mapboxgl-map').getBoundingClientRect().toJSON(),canvas:window.__map.getCanvas().getBoundingClientRect().toJSON(),focus:document.activeElement.getAttribute('role')})",
+      "({map:document.querySelector('.maplibregl-map').getBoundingClientRect().toJSON(),canvas:window.__map.getCanvas().getBoundingClientRect().toJSON(),focus:document.activeElement.getAttribute('role')})",
     ),
   );
   console.error("Failure screenshot:", browser("screenshot"));

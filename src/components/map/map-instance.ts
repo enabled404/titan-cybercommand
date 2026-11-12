@@ -1,16 +1,16 @@
 "use client";
 
-import type { Map as MapboxMap } from "mapbox-gl";
+import type { Map as MapLibreMap } from "maplibre-gl";
 import { create } from "zustand";
 
 interface MapInstanceState {
-  map: MapboxMap | null;
+  map: MapLibreMap | null;
   ready: boolean;
-  setMap: (map: MapboxMap | null) => void;
+  setMap: (map: MapLibreMap | null) => void;
   setReady: (ready: boolean) => void;
 }
 
-/** Shares the live Mapbox instance with panels, cinema mode and the command palette. */
+/** Shares the live MapLibre instance with panels, cinema mode and the command palette. */
 export const useMapInstance = create<MapInstanceState>((set) => ({
   map: null,
   ready: false,
@@ -18,7 +18,7 @@ export const useMapInstance = create<MapInstanceState>((set) => ({
   setReady: (ready) => set({ ready }),
 }));
 
-export function flyToIncident(map: MapboxMap, lon: number, lat: number, opts: { zoom?: number; pitch?: number; duration?: number } = {}): void {
+export function flyToIncident(map: MapLibreMap, lon: number, lat: number, opts: { zoom?: number; pitch?: number; duration?: number } = {}): void {
   map.flyTo({
     center: [lon, lat],
     zoom: opts.zoom ?? Math.max(map.getZoom(), 4.2),
@@ -48,10 +48,10 @@ function destination(lat: number, lng: number, bearing: number, d: number): [num
 }
 
 /**
- * Screen-space circle of the globe in CSS pixels. Mapbox scales the globe at low zoom, so rather
+ * Screen-space circle of the globe in CSS pixels. Globe scale varies near low zoom, so rather
  * than trust a formula we project points towards the horizon and keep the farthest: that is the limb.
  */
-export function globeCircle(map: MapboxMap): { x: number; y: number; r: number } {
+export function globeCircle(map: MapLibreMap): { x: number; y: number; r: number } {
   const center = map.getCenter();
   const origin = map.project(center);
   let r = 0;
@@ -63,11 +63,11 @@ export function globeCircle(map: MapboxMap): { x: number; y: number; r: number }
 }
 
 /**
- * Applies a style change now, or once the style can take it. Mapbox throws "Style is not done loading"
- * while the Standard style's imports re-evaluate, which can happen after the map reports ready; retrying
- * on the next idle keeps the change instead of throwing into React. Returns a cancel for effect cleanup.
+ * Applies a style change now, or once the style can take it. Vector and GeoJSON sources can re-evaluate
+ * briefly after the map reports ready; retrying on idle keeps the change instead of throwing into React.
+ * Returns a cancel callback for effect cleanup.
  */
-export function applyStyle(map: MapboxMap, change: () => void): () => void {
+export function applyStyle(map: MapLibreMap, change: () => void): () => void {
   let cancelled = false;
   const attempt = () => {
     if (cancelled) return;

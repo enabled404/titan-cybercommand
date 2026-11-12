@@ -1,6 +1,6 @@
 "use client";
 
-import type { Map as MapboxMap } from "mapbox-gl";
+import type { Map as MapLibreMap } from "maplibre-gl";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 import { OrgLogo } from "@/components/kit/org-logo";
@@ -74,7 +74,7 @@ function tagWidth(incident: Incident): number {
 }
 
 function layout(
-  map: MapboxMap,
+  map: MapLibreMap,
   candidates: Incident[],
   pins: Incident[],
   pinned: string | null,

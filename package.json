@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "mkdir -p public/vendor && cp -f node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs public/vendor/maplibre-gl-worker.mjs && next dev",
+    "build": "mkdir -p public/vendor && cp -f node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs public/vendor/maplibre-gl-worker.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write .",
@@ -27,7 +27,7 @@
     "cn": "^0.5.0",
     "geist": "^1.8.2",
     "lucide-react": "^1.61.0",
-    "mapbox-gl": "^3.33.0",
+    "maplibre-gl": "^6.18.0",
     "mcp-handler": "^2.3.0",
     "motion": "^14.6.0",
     "next": "16.4.3",
@@ -47,7 +47,6 @@
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
     "@types/geojson": "^7946.0.16",
-    "@types/mapbox-gl": "^3.5.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -6,9 +6,6 @@ const HOUR = 60 * MINUTE;
 /** Buckets ignore query strings and resource IDs, so cycling CVEs cannot reset an allowance. */
 export function requestLimits(path: string, method: string, ip: string): Limit[] {
   if (path === "/api/patch") return [];
-  if (path.startsWith("/api/mapbox/")) {
-    return [{ key: `mapbox:${ip}`, limit: 1200, windowMs: MINUTE }];
-  }
   if (!path.startsWith("/api/"))
     // Account for Next.js partialPrefetching link bursts on country/CVE dossiers (~12-18 RSC prefetches per visit).
     return [

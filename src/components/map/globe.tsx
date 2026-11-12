@@ -1,10 +1,18 @@
 "use client";
 
-import "mapbox-gl/dist/mapbox-gl.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 import greatCircle from "@turf/great-circle";
 import type { Feature, FeatureCollection, LineString, Point } from "geojson";
-import mapboxgl, { type GeoJSONSource, type Map as MapboxMap } from "mapbox-gl";
+import {
+  addProtocol,
+  AttributionControl,
+  Map as MapLibre,
+  setWorkerUrl,
+  type ExpressionSpecification,
+  type GeoJSONSource,
+  type StyleSpecification,
+} from "maplibre-gl";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
 import { angularDistance, applyStyle, flyToIncident, globeCircle, tryStyle, useMapInstance } from "@/components/map/map-instance";
@@ -12,8 +20,7 @@ import { STATUS_COLOR } from "@/lib/format";
 import type { Incident, Outage } from "@/lib/types";
 import { useSituation } from "@/stores/situation";
 import submarineCables from "@/data/geo/submarine-cables.json";
-
-const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+import worldBoundaries from "@/data/geo/world-boundaries.json";
 
 const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] };
 
@@ -34,7 +41,7 @@ interface GlobeProps {
  * Distances come from projecting the incidents directly: on the globe, Mapbox's box query drops some
  * features that are plainly under the pointer, which made stacked pins impossible to tell apart.
  */
-function pinsNear(map: MapboxMap, incidents: Incident[], point: { x: number; y: number }, radius: number): { id: string; distance: number }[] {
+function pinsNear(map: MapLibre, incidents: Incident[], point: { x: number; y: number }, radius: number): { id: string; distance: number }[] {
   const center = map.getCenter();
   const hits: { id: string; distance: number }[] = [];
   for (const incident of incidents) {
@@ -120,102 +127,387 @@ function outageFeatures(outages: Outage[]): FeatureCollection<Point> {
   };
 }
 
-// Opaque through mid zoom, where it hides Standard's pale desert landcover, then hands over to streets.
-const GLOBE_RASTER_OPACITY = ["interpolate", ["linear"], ["zoom"], 0, 1, 5.8, 0.96, 7.6, 0] as unknown as number;
+let blackMarbleRegistered = false;
 
-function addLayers(map: MapboxMap) {
-  // Neutral relief leaves colour to incident status while keeping terrain readable.
-  map.addSource("relief", {
-    type: "raster",
-    tiles: ["https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"],
-    tileSize: 256,
-    maxzoom: 8,
-    attribution: "Imagery: NASA Blue Marble, Black Marble",
+/**
+ * Registers `blackmarble://{z}/{y}/{x}` so NASA VIIRS Black Marble tiles render with dark pixels
+ * keyed out via alpha channel, matching luminous city clusters over monochrome shaded relief.
+ */
+function ensureMapRuntime(): void {
+  if (blackMarbleRegistered) return;
+  blackMarbleRegistered = true;
+  setWorkerUrl("/vendor/maplibre-gl-worker.mjs");
+  addProtocol("blackmarble", async (params, abortController) => {
+    const tilePath = params.url.slice("blackmarble://".length);
+    const url = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/${tilePath}.png`;
+    const response = await fetch(url, { signal: abortController.signal });
+    if (!response.ok) throw new Error(`NASA Black Marble HTTP ${response.status}`);
+    const blob = await response.blob();
+    const bitmap = await createImageBitmap(blob);
+    const { width, height } = bitmap;
+    const canvas =
+      typeof OffscreenCanvas !== "undefined"
+        ? new OffscreenCanvas(width, height)
+        : Object.assign(document.createElement("canvas"), { width, height });
+    const ctx = canvas.getContext("2d", { willReadFrequently: true }) as
+      | OffscreenCanvasRenderingContext2D
+      | CanvasRenderingContext2D
+      | null;
+    if (!ctx) {
+      bitmap.close();
+      throw new Error("2D canvas context unavailable for Black Marble tile decode");
+    }
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    const image = ctx.getImageData(0, 0, width, height);
+    const pixels = image.data;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const luma = (0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]) / 255;
+      let alpha = 0;
+      if (luma > 0.1) {
+        if (luma < 0.3) alpha = ((luma - 0.1) / 0.2) * 0.35;
+        else if (luma < 0.6) alpha = 0.35 + ((luma - 0.3) / 0.3) * 0.25;
+        else alpha = 0.6 + ((luma - 0.6) / 0.4) * 0.2;
+      }
+      pixels[i] = 245;
+      pixels[i + 1] = 245;
+      pixels[i + 2] = 248;
+      pixels[i + 3] = Math.round(alpha * 255);
+    }
+    ctx.putImageData(image, 0, 0);
+    return { data: await createImageBitmap(canvas) };
   });
-  map.addLayer({
-    id: "relief",
-    type: "raster",
-    source: "relief",
-    slot: "bottom",
-    paint: {
-      "raster-opacity": GLOBE_RASTER_OPACITY,
-      "raster-emissive-strength": 1,
-      "raster-brightness-min": 0.04,
-      "raster-brightness-max": 0.6,
-      "raster-saturation": -1,
-      "raster-contrast": 0.05,
-    },
-  });
-  // NASA Black Marble city lights on top. Dark pixels map to transparent, so only the lights land on the relief.
-  map.addSource("night-lights", {
-    type: "raster",
-    tiles: ["https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png"],
-    tileSize: 256,
-    maxzoom: 8,
-  });
-  map.addLayer({
-    id: "night-lights",
-    type: "raster",
-    source: "night-lights",
-    slot: "bottom",
-    paint: {
-      "raster-opacity": GLOBE_RASTER_OPACITY,
-      "raster-emissive-strength": 1,
-      "raster-color-mix": [0.2126, 0.7152, 0.0722, 0],
-      "raster-color-range": [0, 1],
-      "raster-color": [
-        "interpolate",
-        ["linear"],
-        ["raster-value"],
-        0,
-        "rgba(0,0,0,0)",
-        0.1,
-        "rgba(240,240,240,0)",
-        0.3,
-        "rgba(240,240,240,0.35)",
-        0.6,
-        "rgba(240,240,240,0.6)",
-        1,
-        "rgba(250,250,250,0.8)",
-      ],
-    },
-  });
+}
 
-  map.addSource("countries", { type: "vector", url: "mapbox://mapbox.country-boundaries-v1" });
-  map.addLayer({
-    id: "country-heat",
-    type: "fill",
-    source: "countries",
-    "source-layer": "country_boundaries",
-    slot: "bottom",
-    filter: ["any", ["==", ["get", "worldview"], "all"], ["in", "US", ["get", "worldview"]]],
-    paint: { "fill-color": "#ff4a3d", "fill-opacity": 0, "fill-emissive-strength": 1 },
-  });
+// Fade globe relief rasters smoothly into detailed vector streets at city zoom.
+const GLOBE_RASTER_OPACITY: ExpressionSpecification = ["interpolate", ["linear"], ["zoom"], 0, 0.98, 5.8, 0.92, 7.6, 0];
+const PLACE_NAME: ExpressionSpecification = ["coalesce", ["get", "name:en"], ["get", "name:latin"], ["get", "name"]];
+const LABEL_HALO = "rgba(7,8,10,0.9)";
+
+function createBaseStyle(): StyleSpecification {
+  return {
+    version: 8,
+    projection: { type: "globe" },
+    sky: {
+      "sky-color": "#050505",
+      "horizon-color": "#1d2028",
+      "fog-color": "#090a0d",
+      "sky-horizon-blend": 0.42,
+      "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.55, 5, 0.35, 8, 0],
+    },
+    glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+    sources: {
+      openmaptiles: {
+        type: "vector",
+        url: "https://tiles.openfreemap.org/planet",
+        attribution: "Map: © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors",
+      },
+      relief: {
+        type: "raster",
+        tiles: [
+          "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+        ],
+        tileSize: 256,
+        maxzoom: 8,
+        attribution: "Imagery: NASA Blue Marble, Black Marble",
+      },
+      "night-lights": {
+        type: "raster",
+        tiles: ["blackmarble://{z}/{y}/{x}"],
+        tileSize: 256,
+        maxzoom: 8,
+      },
+    },
+    layers: [
+      { id: "background", type: "background", paint: { "background-color": "#16171a" } },
+      {
+        id: "relief",
+        type: "raster",
+        source: "relief",
+        paint: {
+          "raster-opacity": GLOBE_RASTER_OPACITY,
+          "raster-brightness-min": 0.03,
+          "raster-brightness-max": 0.52,
+          "raster-saturation": -1,
+          "raster-contrast": 0.12,
+        },
+      },
+      {
+        id: "water",
+        type: "fill",
+        source: "openmaptiles",
+        "source-layer": "water",
+        filter: ["all", ["match", ["geometry-type"], ["MultiPolygon", "Polygon"], true, false], ["!=", ["get", "brunnel"], "tunnel"]],
+        paint: {
+          "fill-antialias": false,
+          "fill-color": "#08090c",
+          "fill-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.42, 5.8, 0.58, 7.6, 0.98],
+        },
+      },
+      {
+        id: "landuse-park",
+        type: "fill",
+        source: "openmaptiles",
+        "source-layer": "landuse",
+        minzoom: 6,
+        filter: ["in", ["get", "class"], ["literal", ["park", "cemetery", "pitch"]]],
+        paint: { "fill-color": "#151619", "fill-opacity": 0.65 },
+      },
+      {
+        id: "transportation-roads",
+        type: "line",
+        source: "openmaptiles",
+        "source-layer": "transportation",
+        minzoom: 7,
+        filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary"]]],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#282b33",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 7, 0.5, 12, 1.8],
+          "line-opacity": ["interpolate", ["linear"], ["zoom"], 7, 0.35, 10, 0.85],
+        },
+      },
+      {
+        id: "building-footprints",
+        type: "fill",
+        source: "openmaptiles",
+        "source-layer": "building",
+        minzoom: 12,
+        paint: { "fill-color": "#1f2128", "fill-opacity": 0.72 },
+      },
+      {
+        id: "night-lights",
+        type: "raster",
+        source: "night-lights",
+        paint: { "raster-opacity": GLOBE_RASTER_OPACITY },
+      },
+      {
+        id: "boundary-state",
+        type: "line",
+        source: "openmaptiles",
+        "source-layer": "boundary",
+        minzoom: 3.2,
+        filter: ["==", ["get", "admin_level"], 4],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#2d3038",
+          "line-dasharray": [2, 2],
+          "line-width": ["interpolate", ["linear"], ["zoom"], 3.2, 0.5, 8, 1.1],
+          "line-opacity": ["interpolate", ["linear"], ["zoom"], 3.2, 0.25, 6, 0.7],
+        },
+      },
+      {
+        id: "boundary-country-low",
+        type: "line",
+        source: "openmaptiles",
+        "source-layer": "boundary",
+        maxzoom: 5,
+        filter: ["all", ["==", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1], ["!", ["has", "claimed_by"]]],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#4f5460",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 0, 0.65, 3, 1.0, 5, 1.3],
+          "line-opacity": 0.85,
+        },
+      },
+      {
+        id: "boundary-country-high",
+        type: "line",
+        source: "openmaptiles",
+        "source-layer": "boundary",
+        minzoom: 5,
+        filter: ["all", ["==", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#555a66",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1.3, 12, 2.2],
+          "line-opacity": 0.9,
+        },
+      },
+      {
+        id: "water-labels-point",
+        type: "symbol",
+        source: "openmaptiles",
+        "source-layer": "water_name",
+        filter: ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false],
+        layout: {
+          "text-field": PLACE_NAME,
+          "text-font": ["Noto Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 0, 10, 4, 12],
+          "text-max-width": 8,
+        },
+        paint: {
+          "text-color": "#5e6472",
+          "text-halo-color": LABEL_HALO,
+          "text-halo-width": 1.2,
+        },
+      },
+      {
+        id: "water-labels-line",
+        type: "symbol",
+        source: "openmaptiles",
+        "source-layer": "water_name",
+        minzoom: 1,
+        filter: ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
+        layout: {
+          "symbol-placement": "line",
+          "symbol-spacing": 450,
+          "text-field": PLACE_NAME,
+          "text-font": ["Noto Sans Regular"],
+          "text-rotation-alignment": "map",
+          "text-size": 11,
+        },
+        paint: {
+          "text-color": "#5e6472",
+          "text-halo-color": LABEL_HALO,
+          "text-halo-width": 1.2,
+        },
+      },
+      {
+        id: "continent-labels",
+        type: "symbol",
+        source: "openmaptiles",
+        "source-layer": "place",
+        maxzoom: 3.4,
+        filter: [
+          "all",
+          ["==", ["get", "class"], "continent"],
+          ["!", ["in", ["coalesce", ["get", "name:en"], ["get", "name"]], ["literal", ["Afro-Eurasia", "Eurasia", "Americas"]]]],
+        ],
+        layout: {
+          "text-field": PLACE_NAME,
+          "text-font": ["Noto Sans Bold"],
+          "text-transform": "uppercase",
+          "text-letter-spacing": 0.14,
+          "text-size": ["interpolate", ["linear"], ["zoom"], 0, 10, 3, 12],
+        },
+        paint: {
+          "text-color": "#858b99",
+          "text-halo-color": LABEL_HALO,
+          "text-halo-width": 1.4,
+        },
+      },
+      {
+        id: "country-labels-major",
+        type: "symbol",
+        source: "openmaptiles",
+        "source-layer": "place",
+        maxzoom: 6.5,
+        filter: ["all", ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false], ["==", ["get", "class"], "country"], ["<=", ["get", "rank"], 1]],
+        layout: {
+          "text-field": PLACE_NAME,
+          "text-font": ["Noto Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 0, 10, 3, 12.5, 5, 14],
+          "text-max-width": 9,
+        },
+        paint: {
+          "text-color": "#a8aeb9",
+          "text-halo-color": LABEL_HALO,
+          "text-halo-width": 1.4,
+        },
+      },
+      {
+        id: "country-labels-minor",
+        type: "symbol",
+        source: "openmaptiles",
+        "source-layer": "place",
+        minzoom: 2.0,
+        maxzoom: 8,
+        filter: ["all", ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false], ["==", ["get", "class"], "country"], [">=", ["get", "rank"], 2]],
+        layout: {
+          "text-field": PLACE_NAME,
+          "text-font": ["Noto Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 2.0, 9.5, 5, 12],
+          "text-max-width": 8,
+        },
+        paint: {
+          "text-color": "#949aa6",
+          "text-halo-color": LABEL_HALO,
+          "text-halo-width": 1.3,
+        },
+      },
+      {
+        id: "state-labels",
+        type: "symbol",
+        source: "openmaptiles",
+        "source-layer": "place",
+        minzoom: 4.2,
+        maxzoom: 8,
+        filter: ["all", ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false], ["==", ["get", "class"], "state"]],
+        layout: {
+          "text-field": PLACE_NAME,
+          "text-font": ["Noto Sans Regular"],
+          "text-transform": "uppercase",
+          "text-letter-spacing": 0.08,
+          "text-size": 10,
+        },
+        paint: {
+          "text-color": "#747985",
+          "text-halo-color": LABEL_HALO,
+          "text-halo-width": 1.2,
+        },
+      },
+      {
+        id: "city-labels",
+        type: "symbol",
+        source: "openmaptiles",
+        "source-layer": "place",
+        minzoom: 4.5,
+        filter: ["all", ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false], ["in", ["get", "class"], ["literal", ["city", "town"]]]],
+        layout: {
+          "text-field": PLACE_NAME,
+          "text-font": ["Noto Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 4.5, 9.5, 10, 12.5],
+          "text-max-width": 8,
+        },
+        paint: {
+          "text-color": "#9ca2ae",
+          "text-halo-color": LABEL_HALO,
+          "text-halo-width": 1.2,
+        },
+      },
+    ],
+  };
+}
+
+function addLayers(map: MapLibre) {
+  if (map.getSource("countries")) return;
+  const beforeBorders = map.getLayer("boundary-country-low") ? "boundary-country-low" : undefined;
+  map.addSource("countries", { type: "geojson", data: worldBoundaries as FeatureCollection });
+  map.addLayer(
+    {
+      id: "country-heat",
+      type: "fill",
+      source: "countries",
+      paint: { "fill-color": "#ff4a3d", "fill-opacity": 0 },
+    },
+    beforeBorders,
+  );
   // A red hairline carries the heat; a strong fill would muddy the terrain beneath it.
-  map.addLayer({
-    id: "country-heat-line",
-    type: "line",
-    source: "countries",
-    "source-layer": "country_boundaries",
-    slot: "bottom",
-    filter: ["any", ["==", ["get", "worldview"], "all"], ["in", "US", ["get", "worldview"]]],
-    paint: { "line-color": "#ff6a5c", "line-width": 0.8, "line-opacity": 0, "line-emissive-strength": 1 },
-  });
-  map.addLayer({
-    id: "country-outage",
-    type: "line",
-    source: "countries",
-    "source-layer": "country_boundaries",
-    slot: "middle",
-    filter: ["in", ["get", "iso_3166_1"], ["literal", []]],
-    paint: {
-      "line-color": "#5ec8ff",
-      "line-width": 1.2,
-      "line-dasharray": [2, 2],
-      "line-opacity": 0.8,
-      "line-emissive-strength": 1,
+  map.addLayer(
+    {
+      id: "country-heat-line",
+      type: "line",
+      source: "countries",
+      paint: { "line-color": "#ff6a5c", "line-width": 0.9, "line-opacity": 0 },
     },
-  });
+    beforeBorders,
+  );
+  map.addLayer(
+    {
+      id: "country-outage",
+      type: "line",
+      source: "countries",
+      filter: ["in", ["get", "iso_3166_1"], ["literal", []]],
+      paint: {
+        "line-color": "#5ec8ff",
+        "line-width": 1.2,
+        "line-dasharray": [2, 2],
+        "line-opacity": 0.8,
+      },
+    },
+    beforeBorders,
+  );
 
   // Submarine internet fiber cables
   map.addSource("submarine-cables", { type: "geojson", data: submarineCables as FeatureCollection });
@@ -223,26 +515,22 @@ function addLayers(map: MapboxMap) {
     id: "submarine-cables-glow",
     type: "line",
     source: "submarine-cables",
-    slot: "middle",
     paint: {
       "line-color": "#06b6d4",
       "line-width": 2.5,
       "line-opacity": 0.25,
       "line-blur": 2,
-      "line-emissive-strength": 1,
     },
   });
   map.addLayer({
     id: "submarine-cables-line",
     type: "line",
     source: "submarine-cables",
-    slot: "middle",
     paint: {
       "line-color": "#22d3ee",
       "line-width": 0.8,
       "line-opacity": 0.5,
       "line-dasharray": [4, 2],
-      "line-emissive-strength": 1,
     },
   });
 
@@ -251,14 +539,11 @@ function addLayers(map: MapboxMap) {
     id: "arcs",
     type: "line",
     source: "arcs",
-    slot: "top",
     layout: { "line-cap": "round" },
     paint: {
       "line-width": 1.6,
-      "line-emissive-strength": 1,
-      "line-color": "#dedede",
       "line-opacity": 0.65,
-      "line-trim-offset": [0, 0],
+      "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "rgba(222,222,222,0)", 1, "rgba(222,222,222,0)"],
     },
   });
 
@@ -267,14 +552,12 @@ function addLayers(map: MapboxMap) {
     id: "outage-ring",
     type: "circle",
     source: "outages",
-    slot: "top",
     paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 7, 5, 14],
       "circle-color": "rgba(0,0,0,0)",
       "circle-stroke-color": "#5ec8ff",
       "circle-stroke-width": 1,
       "circle-stroke-opacity": 0.7,
-      "circle-emissive-strength": 1,
       "circle-pitch-alignment": "map",
     },
   });
@@ -286,13 +569,11 @@ function addLayers(map: MapboxMap) {
     id: "incident-halo",
     type: "circle",
     source: "incidents",
-    slot: "top",
     paint: {
       "circle-radius": sizeBySeverity(5.5),
       "circle-color": ["get", "color"],
       "circle-opacity": ["case", ["==", ["get", "hollow"], 1], 0.05, 0.16],
       "circle-blur": 0.9,
-      "circle-emissive-strength": 1,
       "circle-pitch-alignment": "map",
     },
   });
@@ -300,7 +581,6 @@ function addLayers(map: MapboxMap) {
     id: "incident-pulse",
     type: "circle",
     source: "incidents",
-    slot: "top",
     filter: ["==", ["get", "fresh"], 1],
     paint: {
       "circle-radius": sizeBySeverity(4),
@@ -308,7 +588,6 @@ function addLayers(map: MapboxMap) {
       "circle-stroke-color": ["get", "color"],
       "circle-stroke-width": 1.2,
       "circle-stroke-opacity": 0.6,
-      "circle-emissive-strength": 1,
       "circle-pitch-alignment": "map",
     },
   });
@@ -316,7 +595,6 @@ function addLayers(map: MapboxMap) {
     id: "incident-core",
     type: "circle",
     source: "incidents",
-    slot: "top",
     paint: {
       "circle-radius": sizeBySeverity(2.1),
       "circle-color": ["case", ["==", ["get", "hollow"], 1], "rgba(5,5,5,0.6)", ["get", "color"]],
@@ -340,7 +618,6 @@ function addLayers(map: MapboxMap) {
         1.2,
         0.8,
       ],
-      "circle-emissive-strength": 1,
       "circle-pitch-alignment": "map",
     },
   });
@@ -348,14 +625,12 @@ function addLayers(map: MapboxMap) {
     id: "incident-selected",
     type: "circle",
     source: "incidents",
-    slot: "top",
     filter: ["==", ["get", "id"], ""],
     paint: {
       "circle-radius": sizeBySeverity(7),
       "circle-color": "rgba(0,0,0,0)",
       "circle-stroke-color": "#f2f2f2",
       "circle-stroke-width": 1.4,
-      "circle-emissive-strength": 1,
       "circle-pitch-alignment": "map",
     },
   });
@@ -363,11 +638,10 @@ function addLayers(map: MapboxMap) {
     id: "incident-labels",
     type: "symbol",
     source: "incidents",
-    slot: "top",
     minzoom: 4.2,
     layout: {
       "text-field": ["get", "victim"],
-      "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+      "text-font": ["Noto Sans Bold"],
       "text-size": ["interpolate", ["linear"], ["zoom"], 2.2, 10, 6, 13],
       "text-offset": [0, 1.1],
       "text-anchor": "top",
@@ -379,14 +653,13 @@ function addLayers(map: MapboxMap) {
       "text-color": "#f2f2f2",
       "text-halo-color": "rgba(7,8,10,0.92)",
       "text-halo-width": 1.4,
-      "text-emissive-strength": 1,
     },
   });
 }
 
 export function Globe({ incidents, outages, countryCounts, padding, onHover, onCluster }: GlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MapboxMap | null>(null);
+  const mapRef = useRef<MapLibre | null>(null);
   const readyRef = useRef(false);
   const interactingRef = useRef(false);
   const lastSelectedRef = useRef<string | null>(null);
@@ -415,96 +688,86 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
   // Create the map once.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    if (!TOKEN) {
-      console.warn("[Globe] NEXT_PUBLIC_MAPBOX_TOKEN is unset. Operating in tactical telemetry mode.");
-      return;
-    }
-    let map: MapboxMap | null = null;
+    let instance: MapLibre | null = null;
     let resizeObserver: ResizeObserver | null = null;
 
     try {
-      mapboxgl.accessToken = TOKEN;
+      ensureMapRuntime();
       const mobile = window.matchMedia("(max-width: 768px)").matches;
-      map = new mapboxgl.Map({
+      instance = new MapLibre({
         container: containerRef.current,
-        style: "mapbox://styles/mapbox/standard",
-        transformRequest: (url: string) => {
-          if (url.startsWith("https://api.mapbox.com/")) {
-            const origin =
-              (typeof window !== "undefined" && window.location?.origin) ||
-              (typeof self !== "undefined" && self.location?.origin) ||
-              "";
-            return {
-              url: `${origin}${url.replace("https://api.mapbox.com", "/api/mapbox")}`,
-            };
-          }
-          return { url };
-        },
-        config: {
-          basemap: {
-            lightPreset: "night",
-            theme: "faded",
-            showPointOfInterestLabels: false,
-            showTransitLabels: false,
-            showRoadLabels: false,
-            showPlaceLabels: true,
-            show3dObjects: true,
-            colorLand: "#191919",
-            colorWater: "#080808",
-            colorAdminBoundaries: "#454545",
-            colorPlaceLabels: "#a3a3a3",
-            colorGreenspace: "#151515",
-          },
-        },
-        projection: "globe",
+        style: createBaseStyle(),
         center: initialCenter(),
         zoom: mobile ? 0.85 : 1.32,
         minZoom: 0.6,
         maxZoom: 16,
         attributionControl: false,
-        logoPosition: "top-left",
-        antialias: true,
-        preserveDrawingBuffer: true,
+        maplibreLogo: false,
+        canvasContextAttributes: {
+          antialias: true,
+          preserveDrawingBuffer: true,
+        },
       });
-
-      map.on("error", (e) => {
-        // Prevent uncaught errors from bubbling
-        console.warn("[Globe Mapbox Notice]", e.error?.message || e);
-      });
-
-      map.addControl(new mapboxgl.AttributionControl({ compact: true }), "top-left");
-      mapRef.current = map;
-      setMap(map);
-      // Observe the actual container as well as window resize events, including breakpoint changes.
-      resizeObserver = new ResizeObserver(() => {
-        const container = containerRef.current;
-        if (!map) return;
-        const canvas = map.getCanvas();
-        if (container && (canvas.clientWidth !== container.clientWidth || canvas.clientHeight !== container.clientHeight)) map.resize();
-      });
-      resizeObserver.observe(containerRef.current);
-      // Exposed for development and for the ?still screenshot mode, which browser tests drive.
-      if (process.env.NODE_ENV !== "production" || new URLSearchParams(window.location.search).has("still")) {
-        (window as unknown as { __map: MapboxMap }).__map = map;
-      }
     } catch (err) {
-      console.warn("[Globe] Mapbox GL failed to initialize:", err);
+      console.warn("[Globe] MapLibre GL failed to initialize:", err);
       return;
     }
 
-    map.on("style.load", () => {
-      // The faded theme keeps true blacks; monochrome's colour grade lifts space to grey.
-      map.setFog({
-        color: "#131313",
-        "high-color": "#252525",
-        "horizon-blend": 0.04,
-        "space-color": "#050505",
-        "star-intensity": 0.12,
-      });
+    const map = instance;
+    map.on("error", (e) => {
+      // Prevent uncaught errors from bubbling
+      console.warn("[Globe Notice]", e.error?.message || e);
+    });
+
+    map.addControl(new AttributionControl({ compact: true }), "top-left");
+    mapRef.current = map;
+    setMap(map);
+    // Observe the actual container as well as window resize events, including breakpoint changes.
+    resizeObserver = new ResizeObserver(() => {
+      const container = containerRef.current;
+      const canvas = map.getCanvas();
+      if (container && (canvas.clientWidth !== container.clientWidth || canvas.clientHeight !== container.clientHeight)) map.resize();
+    });
+    resizeObserver.observe(containerRef.current);
+    // Exposed for development and for the ?still screenshot mode, which browser tests drive.
+    if (process.env.NODE_ENV !== "production" || new URLSearchParams(window.location.search).has("still")) {
+      (window as unknown as { __map: MapLibre }).__map = map;
+    }
+
+    let styleInitialized = false;
+    let attribToggledByUser = false;
+    const collapseCompactAttrib = () => {
+      if (attribToggledByUser) return;
+      const attrib = map.getContainer().querySelector<HTMLElement>(".maplibregl-ctrl-attrib.maplibregl-compact");
+      if (!attrib) return;
+      attrib.classList.remove("maplibregl-compact-show");
+      attrib.removeAttribute("open");
+    };
+    map
+      .getContainer()
+      .querySelector(".maplibregl-ctrl-attrib")
+      ?.addEventListener(
+        "click",
+        () => {
+          attribToggledByUser = true;
+        },
+        { capture: true, once: true },
+      );
+    map.on("sourcedata", () => {
+      if (!attribToggledByUser) queueMicrotask(collapseCompactAttrib);
+    });
+    const onStyleReady = () => {
+      if (styleInitialized) return;
+      styleInitialized = true;
+      map.setProjection({ type: "globe" });
       addLayers(map);
+      collapseCompactAttrib();
+      map.once("idle", collapseCompactAttrib);
       readyRef.current = true;
       setReady(true);
-    });
+    };
+    map.on("style.load", onStyleReady);
+    if (map.isStyleLoaded()) onStyleReady();
 
     const reach = window.matchMedia("(pointer: coarse)").matches ? 24 : 14;
     let hoveredPin: string | null = null;
@@ -573,7 +836,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
     paddingRef.current = padding;
   });
 
-  const fittedZoom = useCallback((map: MapboxMap) => {
+  const fittedZoom = useCallback((map: MapLibre) => {
     const canvas = map.getCanvas();
     const p = paddingRef.current;
     const availW = canvas.clientWidth - p.left - p.right;
@@ -594,8 +857,8 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
     // Leaving cinema also changes the padding; the fly-home below replaces this ease a frame later.
     const sidebarChanged = previousLeftPadding.current !== padding.left;
     previousLeftPadding.current = padding.left;
-    // Mapbox owns this element, so keep its credits clear of the sidebar and its reopen control.
-    const credits = map.getContainer().querySelector<HTMLElement>(".mapboxgl-ctrl-top-left");
+    // MapLibre owns this element, so keep its credits clear of the sidebar and its reopen control.
+    const credits = map.getContainer().querySelector<HTMLElement>(".maplibregl-ctrl-top-left");
     if (credits) {
       const mobile = window.matchMedia("(max-width: 767px)").matches;
       credits.style.left = `${mobile ? 0 : Math.max(0, padding.left - 8)}px`;
@@ -752,7 +1015,17 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
       const step = (now: number) => {
         const t = Math.max(0, Math.min(1, (now - start) / 1400));
         if (!map.getLayer("arcs")) return;
-        tryStyle(() => map.setPaintProperty("arcs", "line-trim-offset", [easeOut(t), 1]));
+        const head = Math.max(0.002, Math.min(0.996, easeOut(t)));
+        const fade = Math.min(0.998, head + 0.002);
+        tryStyle(() =>
+          map.setPaintProperty(
+            "arcs",
+            "line-gradient",
+            t >= 1
+              ? ["interpolate", ["linear"], ["line-progress"], 0, "#dedede", 1, "#dedede"]
+              : ["interpolate", ["linear"], ["line-progress"], 0, "#dedede", head, "#dedede", fade, "rgba(222,222,222,0)", 1, "rgba(222,222,222,0)"],
+          ),
+        );
         if (t < 1) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);

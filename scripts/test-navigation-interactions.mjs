@@ -17,7 +17,7 @@ try {
   browser("open", `${base}/?still`);
   const ready = `!!window.__map && window.__map.isStyleLoaded() && document.querySelectorAll('canvas').length >= 4`;
   wait(ready);
-  evaluate(`window.__oldAtlas = [...document.querySelectorAll('canvas')].find(c => !c.classList.contains('mapboxgl-canvas') && c.className.includes('absolute inset-0 h-full w-full'))`);
+  evaluate(`window.__oldAtlas = [...document.querySelectorAll('canvas')].find(c => !c.classList.contains('maplibregl-canvas') && c.className.includes('absolute inset-0 h-full w-full'))`);
   for (const mode of ["back", "home", "back"]) {
     browser("find", "role", "link", "click", "--name", "Agents", "--exact");
     wait("location.pathname === '/agents'");
