@@ -83,7 +83,7 @@ async function metadataFor(iso: string): Promise<Metadata> {
     description,
     alternates: { canonical: url },
     robots: incidents.length ? undefined : { index: false },
-    openGraph: { type: "website", siteName: "Global Hack Map", title, description, url },
+    openGraph: { type: "website", siteName: "Titan Cyber Command", title, description, url },
     twitter: { card: "summary_large_image", title, description },
   };
 }
@@ -154,7 +154,7 @@ async function CountryView({ iso }: { iso: string }) {
         name: `Cyber incidents in ${phrase}, last 30 days`,
         inLanguage: "en",
         dateModified: snapshot.generatedAt,
-        isPartOf: { "@type": "WebSite", name: "Global Hack Map", url: SITE_URL },
+        isPartOf: { "@type": "WebSite", name: "Titan Cyber Command", url: SITE_URL },
         about: { "@type": "Country", name },
         mainEntity: { "@id": `${url}#incidents` },
         breadcrumb: { "@id": `${url}#breadcrumb` },

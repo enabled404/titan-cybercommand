@@ -7,7 +7,7 @@ import { countryIncidents } from "@/lib/og/select";
 import { getSnapshot } from "@/lib/snapshot";
 import { countryParams } from "@/lib/static-params";
 
-export const alt = "Global Hack Map country card: organisations hit by cyber attacks in this country in the last 30 days, on a map";
+export const alt = "Titan Cyber Command country card: organisations hit by cyber attacks in this country in the last 30 days, on a map";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

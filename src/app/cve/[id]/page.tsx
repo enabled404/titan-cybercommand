@@ -69,7 +69,7 @@ async function metadataFor(id: string): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: url },
-    openGraph: { type: "article", siteName: "Global Hack Map", title, description, url },
+    openGraph: { type: "article", siteName: "Titan Cyber Command", title, description, url },
     twitter: { card: "summary_large_image", title, description },
   };
 }
@@ -163,7 +163,7 @@ async function CveView({ id, affected }: { id: string; affected: React.ReactNode
         name: title,
         description: cveDescription(vuln, kevKnown),
         inLanguage: "en",
-        isPartOf: { "@type": "WebSite", name: "Global Hack Map", url: SITE_URL },
+        isPartOf: { "@type": "WebSite", name: "Titan Cyber Command", url: SITE_URL },
         about: { "@id": `${url}#vulnerability` },
         mainEntity: { "@id": `${url}#vulnerability` },
         breadcrumb: { "@id": `${url}#breadcrumb` },

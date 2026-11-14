@@ -188,7 +188,7 @@ async function getSecDisclosuresFetched(): Promise<Fetched<Candidate[]>> {
     const day = (d: Date) => d.toISOString().slice(0, 10);
     const url = `https://efts.sec.gov/LATEST/search-index?q=${encodeURIComponent('"cybersecurity incident"')}&forms=8-K&dateRange=custom&startdt=${day(start)}&enddt=${day(end)}`;
     const res = await fetch(url, {
-      headers: { "User-Agent": "Valyu Global Hack Map contact@valyu.ai", Accept: "application/json" },
+      headers: { "User-Agent": "Valyu Titan Cyber Command contact@valyu.ai", Accept: "application/json" },
       signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) throw new Error(`SEC ${res.status}`);

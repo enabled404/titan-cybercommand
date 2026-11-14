@@ -35,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: "/brief", types: { "application/rss+xml": "/feed.xml" } },
-    openGraph: { type: "article", siteName: "Global Hack Map", title, description, url: "/brief" },
+    openGraph: { type: "article", siteName: "Titan Cyber Command", title, description, url: "/brief" },
     twitter: { card: "summary_large_image", title, description },
   };
 }
@@ -110,7 +110,7 @@ export default async function BriefPage() {
         description: digest.summary,
         inLanguage: "en",
         dateModified: digest.compiledAt,
-        isPartOf: { "@type": "WebSite", name: "Global Hack Map", url: SITE_URL },
+        isPartOf: { "@type": "WebSite", name: "Titan Cyber Command", url: SITE_URL },
         mainEntity: { "@id": `${url}#items` },
         breadcrumb: { "@id": `${url}#breadcrumb` },
         primaryImageOfPage: `${url}/opengraph-image`,

@@ -27,7 +27,7 @@ export function CheckExperience({ incidents, suggestions, available, kevTotal, g
       </p>
       <h1 className="mt-4 font-semicondensed text-[clamp(42px,6.6vw,66px)] font-bold leading-[0.95] tracking-[-0.03em] text-ink">Are you affected?</h1>
       <p className="mt-4 max-w-[54ch] text-pretty text-[15.5px] leading-relaxed text-ink-3 sm:text-[16.5px]">
-        Add the apps, products and companies you use. Global Hack Map shows what attackers are exploiting in them, which have been breached, and what to do
+        Add the apps, products and companies you use. Titan Cyber Command shows what attackers are exploiting in them, which have been breached, and what to do
         about it. Nothing to upload.
       </p>
       <div className="mt-8">

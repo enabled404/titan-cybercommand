@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-/** The Global Hack Map mark, warm white on the night-desk ground. iOS rounds the corners itself. */
+/** The Titan Cyber Command mark, warm white on the night-desk ground. iOS rounds the corners itself. */
 export default function AppleIcon() {
   return new ImageResponse(
     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#05070b" }}>

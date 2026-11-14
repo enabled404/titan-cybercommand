@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   description:
     "Critical CVEs published in the last 72 hours, flaws CISA confirmed exploited this week, and the vulnerabilities in the news. Each one says who is affected and how to fix it.",
   alternates: { canonical: "/cve" },
-  openGraph: { type: "website", siteName: "Global Hack Map", url: "/cve" },
+  openGraph: { type: "website", siteName: "Titan Cyber Command", url: "/cve" },
 };
 
 function listedThisWeek(vuln: Vuln, now: number): boolean {

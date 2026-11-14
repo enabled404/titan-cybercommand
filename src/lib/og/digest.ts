@@ -115,7 +115,7 @@ function summaryFor(counts: Digest["counts"]): string {
 /** The report's opening, cut to whole sentences: the numbered items carry the detail. */
 function briefOverview(summary: string): string | undefined {
   const first = summary.split(/\n\s*\n/)[0] ?? "";
-  const text = clean(first.replace(/^Global Hack Map:[^.]*\.\s*/, ""));
+  const text = clean(first.replace(/^(?:Global Hack Map|Titan Cyber Command):[^.]*\.\s*/, ""));
   // A boundary is end punctuation, a space, then a capital, so "LiteLLM 1.107.0" stays whole.
   const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z"(])/);
   let out = "";

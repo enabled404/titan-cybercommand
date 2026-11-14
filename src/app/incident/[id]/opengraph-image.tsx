@@ -6,7 +6,7 @@ import { fallbackCard, incidentCard } from "@/lib/og/cards";
 import { incidentParams } from "@/lib/static-params";
 import { decodeParam } from "@/lib/utils";
 
-export const alt = "Global Hack Map incident card: the organisation, whether the attack is confirmed or only claimed, the place and the date";
+export const alt = "Titan Cyber Command incident card: the organisation, whether the attack is confirmed or only claimed, the place and the date";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

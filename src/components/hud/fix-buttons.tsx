@@ -114,7 +114,7 @@ export function FixButtons({ cve }: { cve: string }) {
       />
       <Group label="Explain it to me" links={chats} cve={cve} copy={{ prompt: chats[0].prompt, label: "Copy" }} />
       <p className="text-[12px] leading-relaxed text-ink-4">
-        Each opens with a short prompt that points at Global Hack Map&apos;s public runbook for {cve}. Nothing runs until you send it.
+        Each opens with a short prompt that points at Titan Cyber Command&apos;s public runbook for {cve}. Nothing runs until you send it.
       </p>
     </div>
   );

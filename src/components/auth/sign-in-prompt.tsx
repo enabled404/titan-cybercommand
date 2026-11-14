@@ -105,7 +105,7 @@ export function SignInPrompt() {
               <ValyuMark className="size-3.5" />
               {leaving ? "Opening Valyu…" : "Continue with Valyu"}
             </button>
-            <p className="mt-3 text-center text-[12px] text-ink-4">Free to start. Global Hack Map is built on Valyu&apos;s search and research APIs.</p>
+            <p className="mt-3 text-center text-[12px] text-ink-4">Free to start. Titan Cyber Command is built on Valyu&apos;s search and research APIs.</p>
           </div>
         </Dialog.Popup>
       </Dialog.Portal>

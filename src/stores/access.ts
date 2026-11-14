@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth/client";
 import { event } from "@/lib/events";
 import { ACCOUNTS } from "@/lib/mode";
 
-/** Dossiers a visitor can open each day before Global Hack Map asks them to sign in with Valyu. */
+/** Dossiers a visitor can open each day before Titan Cyber Command asks them to sign in with Valyu. */
 export const FREE_OPENS = 2;
 
 /** Why the sign-in prompt is showing, so it can say what signing in unlocks. */

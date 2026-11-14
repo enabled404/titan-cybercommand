@@ -17,7 +17,7 @@ import { tidyVendor } from "@/lib/vendors";
 
 export const metadata: Metadata = {
   title: "For agents",
-  description: "Connect Global Hack Map over MCP, read the live picture and give your coding agent a sourced CVE fix runbook.",
+  description: "Connect Titan Cyber Command over MCP, read the live picture and give your coding agent a sourced CVE fix runbook.",
   alternates: { canonical: "/agents" },
 };
 
@@ -87,7 +87,7 @@ export default async function AgentsPage() {
           <div className="min-w-0">
             <Eyebrow>For agents</Eyebrow>
             <h1 className="mt-4 max-w-[560px] text-balance font-semicondensed text-[44px] font-bold leading-[0.96] tracking-[-0.03em] sm:text-[60px]">
-              Put Global Hack Map inside your agent
+              Put Titan Cyber Command inside your agent
             </h1>
             <p className="mt-5 max-w-[500px] text-[16px] leading-relaxed text-ink-2 sm:text-[17px]">
               Read the situation, check your stack and turn a CVE into a pull request. Connect over MCP, or give your coding agent a fix runbook.
@@ -102,7 +102,7 @@ export default async function AgentsPage() {
               </a>
             </div>
             <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-[12.5px] text-ink-3">
-              {["No Global Hack Map API key", "Six read-only tools", "No paid research calls"].map((fact) => (
+              {["No Titan Cyber Command API key", "Six read-only tools", "No paid research calls"].map((fact) => (
                 <li key={fact} className="flex items-center gap-2">
                   <span className="size-1 rounded-full bg-ink-4" aria-hidden />
                   {fact}
@@ -115,7 +115,7 @@ export default async function AgentsPage() {
             <h2 className="sr-only">Connect over MCP</h2>
             <ConnectTabs mcpUrl={mcpUrl} />
             <p className="mt-3 px-2 text-[12.5px] leading-relaxed text-ink-4">
-              Using another client? Add a remote Streamable HTTP MCP server with the Global Hack Map URL. No API key is needed.
+              Using another client? Add a remote Streamable HTTP MCP server with the Titan Cyber Command URL. No API key is needed.
             </p>
           </div>
         </section>
@@ -241,7 +241,7 @@ export default async function AgentsPage() {
 
               <section id="valyu" className="min-w-0 scroll-mt-8">
                 <SectionHead eyebrow="Go deeper" title="Research with Valyu">
-                  Global Hack Map is built on Valyu’s search and DeepResearch APIs. For cited research beyond the snapshot, agents can use Valyu’s own MCP
+                  Titan Cyber Command is built on Valyu’s search and DeepResearch APIs. For cited research beyond the snapshot, agents can use Valyu’s own MCP
                   server or the <code className="font-mono text-[13px] text-ink-2">valyu</code> CLI. Ask before research that costs money.
                 </SectionHead>
                 <CodeBlock className="mt-6" label="Valyu MCP server URL" code="https://mcp.valyu.ai/mcp" />

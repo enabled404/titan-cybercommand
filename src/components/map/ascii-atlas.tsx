@@ -7,7 +7,7 @@ import { useSituation } from "@/stores/situation";
 
 /**
  * Atlas, rendered as live ASCII, holding the real globe on his shoulders.
- * The statue image's sphere is aligned to the Mapbox globe every frame; glyphs inside the
+ * The statue image's sphere is aligned to the 3D globe every frame; glyphs inside the
  * globe's disc are discarded so the planet sits in front of him.
  */
 

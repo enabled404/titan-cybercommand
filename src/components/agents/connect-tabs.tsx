@@ -26,7 +26,7 @@ function clients(mcpUrl: string): Client[] {
       name: "Claude Code",
       Icon: ClaudeCodeIcon,
       steps: "Run this command in your terminal.",
-      snippet: { label: "Terminal", code: `claude mcp add --transport http globalhackmap ${mcpUrl}`, lang: "shell" },
+      snippet: { label: "Terminal", code: `claude mcp add --transport http titan-command ${mcpUrl}`, lang: "shell" },
     },
     {
       id: "claude",
@@ -52,7 +52,7 @@ function clients(mcpUrl: string): Client[] {
       name: "Cursor",
       Icon: CursorIcon,
       steps: "Add this server to your project’s MCP configuration, preserving any existing entries.",
-      snippet: { label: ".cursor/mcp.json", code: JSON.stringify({ mcpServers: { globalhackmap: { url: mcpUrl } } }, null, 2), lang: "json" },
+      snippet: { label: ".cursor/mcp.json", code: JSON.stringify({ mcpServers: { "titan-command": { url: mcpUrl } } }, null, 2), lang: "json" },
     },
     {
       id: "vscode",
@@ -60,7 +60,7 @@ function clients(mcpUrl: string): Client[] {
       name: "VS Code",
       Icon: Code,
       steps: "Add an HTTP server to your project’s MCP configuration.",
-      snippet: { label: ".vscode/mcp.json", code: JSON.stringify({ servers: { globalhackmap: { type: "http", url: mcpUrl } } }, null, 2), lang: "json" },
+      snippet: { label: ".vscode/mcp.json", code: JSON.stringify({ servers: { "titan-command": { type: "http", url: mcpUrl } } }, null, 2), lang: "json" },
     },
     {
       id: "codex",
@@ -68,7 +68,7 @@ function clients(mcpUrl: string): Client[] {
       name: "Codex",
       Icon: CodexIcon,
       steps: "Add this entry to your Codex configuration.",
-      snippet: { label: "~/.codex/config.toml", code: `[mcp_servers.globalhackmap]\nurl = ${JSON.stringify(mcpUrl)}`, lang: "toml" },
+      snippet: { label: "~/.codex/config.toml", code: `[mcp_servers.titan_command]\nurl = ${JSON.stringify(mcpUrl)}`, lang: "toml" },
     },
   ];
 }

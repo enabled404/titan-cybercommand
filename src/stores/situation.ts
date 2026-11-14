@@ -72,7 +72,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   railOpen: true,
   wargameSim: null,
   reconTarget: null,
-  // Opening a dossier checks the free allowance: a few a day without an account, then Global Hack Map asks for a Valyu sign-in.
+  // Opening a dossier checks the free allowance: a few a day without an account, then Titan Cyber Command asks for a Valyu sign-in.
   select: (id) => {
     if (id && id !== get().selectedId && !useAccess.getState().allowOpen(`i:${id}`)) return;
     set({ selectedId: id, selectedCve: null });
