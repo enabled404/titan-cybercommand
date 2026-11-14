@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the compact geo tables Global Hack Map uses for offline geocoding.
+"""Build the compact geo tables Titan Cyber Command uses for offline geocoding.
 
 Usage: python3 scripts/build_geo.py <download-dir>
 

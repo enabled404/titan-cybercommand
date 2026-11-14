@@ -42,7 +42,7 @@ export function PageFrame({ children, bar = <TopBar /> }: { children: React.Reac
             <p className="mt-2 text-[12.5px] leading-relaxed text-ink-4">
               CISA KEV, NVD, FIRST EPSS, the GitHub Advisory Database, RansomLook leak-site claims, SEC 8-K filings, IODA and the news, read by{" "}
               <a
-                href={`${VALYU_URL}/?utm_source=globalhackmap&utm_medium=app&utm_campaign=footer`}
+                href={`${VALYU_URL}/?utm_source=titan-cybercommand&utm_medium=app&utm_campaign=footer`}
                 target="_blank"
                 rel="noreferrer"
                 className={`inline-flex items-baseline gap-1 ${LINK}`}

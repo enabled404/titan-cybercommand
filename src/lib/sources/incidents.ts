@@ -588,7 +588,7 @@ export async function startSweep(fromDaysAgo = 3, toDaysAgo = 0): Promise<string
     mode: "fast",
     outputFormats: [SWEEP_SCHEMA],
     search: { startDate: day(start), endDate: day(end) },
-    metadata: { app: "globalhackmap", kind: "sweep" },
+    metadata: { app: "titan-cybercommand", kind: "sweep" },
   });
   return res.deepresearch_id ?? null;
 }
