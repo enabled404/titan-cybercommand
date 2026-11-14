@@ -70,7 +70,7 @@ const StoryPanel = forwardRef<OmniboxHandle, StoryProps>(function Story(props, r
   return (
     <section className="pointer-events-auto flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain scrollbar-thin md:overflow-hidden">
       <div className="shrink-0 px-3 pt-3">
-        {/* What Global Hack Map is for, in one line, before any number. */}
+        {/* What Titan Cyber Command is for, in one line, before any number. */}
         <div className="px-2 pb-3 pt-1">
           <div className="flex items-start gap-2">
             <h1 className="min-w-0 flex-1 font-semicondensed text-[21px] font-bold leading-[1.15] tracking-[-0.015em] text-ink text-balance">

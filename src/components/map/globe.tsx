@@ -38,7 +38,7 @@ interface GlobeProps {
 /**
  * Pins within reach of the pointer, nearest first. The drawn dots are a few pixels wide, so the hit area
  * is a generous circle around the pointer instead: larger on touch screens, where a finger is the cursor.
- * Distances come from projecting the incidents directly: on the globe, Mapbox's box query drops some
+ * Distances come from projecting the incidents directly: on the globe, map box queries drop some
  * features that are plainly under the pointer, which made stacked pins impossible to tell apart.
  */
 function pinsNear(map: MapLibre, incidents: Incident[], point: { x: number; y: number }, radius: number): { id: string; distance: number }[] {

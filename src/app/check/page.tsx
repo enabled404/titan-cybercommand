@@ -18,8 +18,8 @@ export const metadata: Metadata = {
   title: "Are you affected?",
   description: DESCRIPTION,
   alternates: { canonical: "/check" },
-  openGraph: { title: "Are you affected? | Global Hack Map", description: DESCRIPTION, images: [{ url: "/check/og", width: 1200, height: 630 }] },
-  twitter: { card: "summary_large_image", title: "Are you affected? | Global Hack Map", description: DESCRIPTION, images: ["/check/og"] },
+  openGraph: { title: "Are you affected? | Titan Cyber Command", description: DESCRIPTION, images: [{ url: "/check/og", width: 1200, height: 630 }] },
+  twitter: { card: "summary_large_image", title: "Are you affected? | Titan Cyber Command", description: DESCRIPTION, images: ["/check/og"] },
 };
 
 const COUNTRY_NAMES = new Set(allCountries().map((country) => country.name.toLowerCase()));

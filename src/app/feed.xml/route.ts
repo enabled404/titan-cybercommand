@@ -31,7 +31,7 @@ export async function GET() {
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Global Hack Map: cyber incidents, live</title>
+    <title>Titan Cyber Command: cyber incidents, live</title>
     <link>${xml(SITE_URL)}</link>
     <atom:link href="${xml(`${SITE_URL}/feed.xml`)}" rel="self" type="application/rss+xml"/>
     <description>Every publicly reported breach, ransomware attack and leak-site claim, with an honest status: confirmed, reported, or only claimed by attackers.</description>

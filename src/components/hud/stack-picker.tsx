@@ -54,7 +54,7 @@ export function StackPicker({ suggestions = [], side = "top" }: { suggestions?: 
         <div className="px-4 pb-3 pt-4">
           <p className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-4">Your stack</p>
           <p className="mt-1.5 text-[13.5px] leading-snug text-ink-2">
-            Add the software and vendors you rely on. Global Hack Map flags the flaws and breaches that touch them.
+            Add the software and vendors you rely on. Titan Cyber Command flags the flaws and breaches that touch them.
           </p>
           <form
             className="mt-3 flex items-center gap-2 rounded-[12px] bg-space px-3 ring-1 ring-inset ring-input focus-within:ring-2 focus-within:ring-ink"

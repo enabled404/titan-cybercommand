@@ -61,7 +61,7 @@ export function ValyuMark(props: IconProps) {
   );
 }
 
-/** Global Hack Map mark: a reticle over a meridian. */
+/** Titan Cyber Command mark: a reticle over a meridian. */
 export function BrandMark(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" {...props}>

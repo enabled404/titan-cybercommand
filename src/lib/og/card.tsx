@@ -190,7 +190,7 @@ export function CardFrame({ map, children }: { map: string; children: ReactNode 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <BrandMark size={30} />
           <Text size={29} color={C.ink} font="semiCondensedBold">
-            Global Hack Map
+            Titan Cyber Command
           </Text>
         </div>
         <Text size={23} color={C.ink3}>

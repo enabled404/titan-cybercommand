@@ -76,7 +76,7 @@ async function metadataFor(id: string): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: url },
-    openGraph: { type: "article", siteName: "Global Hack Map", title, description, url, modifiedTime: incident.updated },
+    openGraph: { type: "article", siteName: "Titan Cyber Command", title, description, url, modifiedTime: incident.updated },
     // Declaring twitter here drops the home card inherited from the root, so X falls back to this page's card.
     twitter: { card: "summary_large_image", title, description },
   };
@@ -160,7 +160,7 @@ async function IncidentView({ id }: { id: string }) {
         description: incidentDescription(incident),
         inLanguage: "en",
         dateModified: incident.updated,
-        isPartOf: { "@type": "WebSite", name: "Global Hack Map", url: SITE_URL },
+        isPartOf: { "@type": "WebSite", name: "Titan Cyber Command", url: SITE_URL },
         about: [{ "@id": `${url}#incident` }, { "@id": `${url}#organisation` }],
         mainEntity: { "@id": `${url}#incident` },
         breadcrumb: { "@id": `${url}#breadcrumb` },

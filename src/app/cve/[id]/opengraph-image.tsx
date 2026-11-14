@@ -10,7 +10,7 @@ import { getEpss } from "@/lib/sources/vulns";
 import { cveParams } from "@/lib/static-params";
 import { decodeParam } from "@/lib/utils";
 
-export const alt = "Global Hack Map vulnerability card: whether it is exploited in the wild, the chance of exploitation and its severity";
+export const alt = "Titan Cyber Command vulnerability card: whether it is exploited in the wild, the chance of exploitation and its severity";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

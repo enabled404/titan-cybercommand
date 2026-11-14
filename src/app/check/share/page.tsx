@@ -17,7 +17,7 @@ export async function generateMetadata({ searchParams }: PageProps<"/check/share
   const result = readShared(await searchParams);
   const title = result ? sharedHeadline(result) : "Are you affected?";
   const image = result ? `/check/og?${sharedQuery(result)}` : "/check/og";
-  const description = result ? `${sharedDetail(result)} Check yours on Global Hack Map.` : FALLBACK;
+  const description = result ? `${sharedDetail(result)} Check yours on Titan Cyber Command.` : FALLBACK;
   return {
     title,
     description,
@@ -84,7 +84,7 @@ async function SharedResultFromUrl({ searchParams }: Pick<PageProps<"/check/shar
             <LinkSimple className="size-3.5" aria-hidden />
             Shared check
           </p>
-          <p className="mt-2 text-[14px] text-ink-3">A shared Global Hack Map check. It shares counts only, never package names.</p>
+          <p className="mt-2 text-[14px] text-ink-3">A shared Titan Cyber Command check. It shares counts only, never package names.</p>
           <div className="mt-6">
             <VerdictTile
               as="h1"
@@ -115,7 +115,7 @@ async function SharedResultFromUrl({ searchParams }: Pick<PageProps<"/check/shar
       </div>
 
       <p className="mt-14 max-w-[62ch] px-1 text-[13px] leading-relaxed text-ink-4">
-        Global Hack Map tracks new vulnerabilities, active exploits and breaches as they happen, with sources. Add the apps and products you use and see what
+        Titan Cyber Command tracks new vulnerabilities, active exploits and breaches as they happen, with sources. Add the apps and products you use and see what
         affects them in seconds. Nothing to upload.{" "}
         <Link href="/" className={cn(LINK, "text-ink-3")}>
           See the live map

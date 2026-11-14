@@ -499,7 +499,7 @@ export function UseCheck({
           </h2>
           <p className="mt-2 max-w-[60ch] text-[14px] leading-relaxed text-ink-3">
             Your coding agent audits the repository on your machine against the vulnerabilities attackers are exploiting, fixes what it finds and opens a pull
-            request. Nothing is uploaded to Global Hack Map.
+            request. Nothing is uploaded to Titan Cyber Command.
           </p>
         </div>
         <div className="px-4 pb-4 pt-3 sm:px-5">

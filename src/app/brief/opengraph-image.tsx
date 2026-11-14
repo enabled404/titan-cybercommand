@@ -6,7 +6,7 @@ import { kevIndex } from "@/lib/og/kev";
 import { buildDigest } from "@/lib/og/digest";
 import { getSnapshot } from "@/lib/snapshot";
 
-export const alt = "Global Hack Map daily brief: everything that broke in the last 48 hours, with counts, on a world map";
+export const alt = "Titan Cyber Command daily brief: everything that broke in the last 48 hours, with counts, on a world map";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

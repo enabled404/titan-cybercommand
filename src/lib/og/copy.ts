@@ -64,7 +64,7 @@ export function hostLabel(): string {
   try {
     return new URL(SITE_URL).host;
   } catch {
-    return "globalhackmap";
+    return "titan-cybercommand.vercel.app";
   }
 }
 
