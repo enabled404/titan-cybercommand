@@ -154,7 +154,7 @@ export async function startBrief(): Promise<string | null> {
     mode: "standard",
     outputFormats: [BRIEF_SCHEMA],
     search: { startDate: day(start), endDate: day(now) },
-    metadata: { app: "globalhackmap", kind: "brief" },
+    metadata: { app: "titan-cybercommand", kind: "brief" },
   });
   if (res.deepresearch_id) {
     await valyu.deepresearch.togglePublic(res.deepresearch_id, true).catch(() => undefined);

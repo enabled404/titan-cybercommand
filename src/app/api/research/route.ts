@@ -67,7 +67,7 @@ Cover affected and fixed versions per product line, whether it is exploited in t
     }
   }
   if (!query) return NextResponse.json({ error: kind === "stack" ? "Add something you use first." : "Unknown incident or CVE." }, { status: 404 });
-  const metadata = { app: "globalhackmap", kind: kind ?? "", id: kind === "stack" ? "stack" : (id ?? "") };
+  const metadata = { app: "titan-cybercommand", kind: kind ?? "", id: kind === "stack" ? "stack" : (id ?? "") };
 
   try {
     if (!token) return await startOnDeploymentKey(query, metadata);

@@ -250,7 +250,7 @@ export default function PricingPage() {
             <div className="flex flex-col gap-4 px-3.5 pb-2.5 pt-4 sm:flex-row sm:items-center sm:justify-between sm:pb-2">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px]">
                 <a
-                  href="https://www.valyu.ai/pricing?utm_source=globalhackmap&utm_medium=app&utm_campaign=pricing"
+                  href="https://www.valyu.ai/pricing?utm_source=titan-cybercommand&utm_medium=app&utm_campaign=pricing"
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 text-ink-2 underline decoration-white/20 underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
