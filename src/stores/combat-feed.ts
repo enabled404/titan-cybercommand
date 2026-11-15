@@ -22,8 +22,8 @@ export interface CombatIntercept {
 interface CombatFeedState {
   intercepts: CombatIntercept[];
   totalIntercepted: number;
-  attacksPerSec: number;
   isOpen: boolean;
+  setBaseline: (baseline: number) => void;
   toggleOpen: () => void;
   setOpen: (open: boolean) => void;
   addIntercept: (item: Omit<CombatIntercept, "id" | "timestamp">) => string;
@@ -32,9 +32,12 @@ interface CombatFeedState {
 
 export const useCombatFeed = create<CombatFeedState>((set) => ({
   intercepts: [],
-  totalIntercepted: 14820,
-  attacksPerSec: 18.4,
+  totalIntercepted: 0,
   isOpen: false,
+  setBaseline: (baseline) =>
+    set((state) => ({
+      totalIntercepted: state.totalIntercepted > 0 ? state.totalIntercepted : Math.max(1, baseline),
+    })),
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
   setOpen: (open) => set({ isOpen: open }),
   addIntercept: (item) => {
@@ -51,7 +54,6 @@ export const useCombatFeed = create<CombatFeedState>((set) => ({
     set((state) => ({
       intercepts: [newIntercept, ...state.intercepts.slice(0, 49)],
       totalIntercepted: state.totalIntercepted + 1,
-      attacksPerSec: Number((16 + Math.random() * 8).toFixed(1)),
     }));
 
     return id;

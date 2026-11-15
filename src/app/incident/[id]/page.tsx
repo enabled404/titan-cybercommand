@@ -301,13 +301,14 @@ async function IncidentView({ id }: { id: string }) {
               </div>
             </Tile>
             <Tile className="p-4">
-              <Eyebrow as="h2">Share</Eyebrow>
+              <Eyebrow as="h2">Share & Export</Eyebrow>
               <ShareRow
                 grid
                 className="mt-3"
                 url={url}
                 title={title}
                 text={`${incident.victim}: ${statusLine(incident).toLowerCase()}. What happened and what to do:`}
+                incident={incident}
               />
             </Tile>
           </div>

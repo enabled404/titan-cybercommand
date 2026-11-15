@@ -18,7 +18,7 @@ import { incidentPrompt } from "@/lib/deeplinks";
 import { STATUS_LABEL, TYPE_LABEL, epssPercent, placeLabel, recordsLabel, shortDate } from "@/lib/format";
 import { guidanceFor } from "@/lib/guidance";
 import { SITE_URL } from "@/lib/site";
-import { buildStix21Bundle } from "@/lib/stix";
+import { exportIntelDossier, exportStix21 } from "@/lib/export-intel";
 import type { Incident, IncidentStatus, Vuln } from "@/lib/types";
 import { productLabel } from "@/lib/og/copy";
 import { cn } from "@/lib/utils";
@@ -88,61 +88,6 @@ function StatusChip({ status }: { status: IncidentStatus }) {
 }
 
 const CHIP = "inline-flex h-7 items-center rounded-full bg-white/[0.04] px-2.5 text-[12px] text-ink-2 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]";
-
-function triggerBlobDownload(blob: Blob, filename: string) {
-  const downloadUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = downloadUrl;
-  a.download = filename;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-}
-
-function exportIntelDossier(incident: Incident) {
-  const content = `# TITAN CYBER COMMAND: THREAT INTEL DOSSIER
-CONFIDENTIALITY: PUBLIC DEFENSIVE INTELLIGENCE
-INCIDENT ID: ${incident.id}
-
-## TARGET PROFILE
-- Target: ${incident.victim}
-- Domain: ${incident.domain || "N/A"}
-- Country: ${incident.country}
-- Location: ${incident.city ? `${incident.city}, ` : ""}${incident.country}
-- Status: ${incident.status.toUpperCase()}
-- Classification: ${incident.type.toUpperCase()}
-- Threat Actor: ${incident.actor || "Unidentified / Unknown"}
-- Date Reported: ${incident.date}
-
-## EXECUTIVE SUMMARY
-${incident.title}
-${incident.summary ? `\n${incident.summary}\n` : ""}
-
-## LINKED CVE EXPLOITS
-${incident.cves.length > 0 ? incident.cves.map((c) => `- ${c}`).join("\n") : "- None directly confirmed"}
-
-## PRIMARY SOURCED CITATIONS
-${incident.sources.map((s) => `- [${s.publisher || "Source"}] ${s.title}: ${s.url}`).join("\n")}
-
----
-SAFE HARBOR & DISCLAIMER: This threat dossier was compiled by Titan Cyber Command for defensive vulnerability research, patch prioritization, and threat intelligence. Unverified dark-web claims are treated as unconfirmed allegations under safe harbor guidelines.
-`;
-
-  const safeId = incident.id.replace(/[^a-zA-Z0-9._-]+/g, "-");
-  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
-  triggerBlobDownload(blob, `titan-dossier-${safeId}.md`);
-  toast("Threat Intel Dossier exported (.md)");
-}
-
-function exportStix21(incident: Incident) {
-  const safeId = incident.id.replace(/[^a-zA-Z0-9._-]+/g, "-");
-  const stixBundle = buildStix21Bundle(incident);
-  const blob = new Blob([JSON.stringify(stixBundle, null, 2)], { type: "application/json;charset=utf-8" });
-  triggerBlobDownload(blob, `titan-stix-${safeId}.json`);
-  toast("STIX 2.1 Threat Intel exported (.json)");
-}
 
 function ShareRow({ url, text, incident }: { url: string; text: string; incident?: Incident }) {
   const enc = encodeURIComponent;

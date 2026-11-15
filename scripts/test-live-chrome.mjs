@@ -240,6 +240,7 @@ async function run() {
       !!document.evaluate("//button[contains(., 'STIX 2.1')]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
     `);
     console.log(`STIX 2.1 THREAT INTEL EXPORT PRESENT: ${hasStixExport}`);
+    if (!hasStixExport) throw new Error("STIX 2.1 Threat Intel export button missing on incident page!");
 
     // Verify Brief page
     console.log("Testing /brief route...");
