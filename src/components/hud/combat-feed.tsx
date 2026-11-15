@@ -102,18 +102,30 @@ export function CombatFeedDrawer({
                     key={item.id}
                     onClick={() => {
                       soundEngine.playClick();
-                      const cleanTarget = item.target.replace(/\s*\([^)]*\)\s*/g, "").trim().toLowerCase();
-                      const inc = incidents.find(
-                        (i) => i.victim.toLowerCase() === cleanTarget || i.victim.toLowerCase().includes(cleanTarget) || cleanTarget.includes(i.victim.toLowerCase()),
-                      );
-                      if (inc) {
-                        select(inc.id);
+                      const targetIncident =
+                        (item.incidentId && incidents.find((i) => i.id === item.incidentId)) ||
+                        incidents.find((i) => {
+                          const cleanTarget = item.target.replace(/\s*\([^)]*\)\s*/g, "").trim().toLowerCase();
+                          return (
+                            i.victim.toLowerCase() === cleanTarget ||
+                            i.victim.toLowerCase().includes(cleanTarget) ||
+                            cleanTarget.includes(i.victim.toLowerCase())
+                          );
+                        });
+                      if (targetIncident) {
+                        select(targetIncident.id);
                         if (map) {
-                          map.flyTo({ center: [inc.lon, inc.lat], zoom: 4.8, pitch: 45, duration: 2200, essential: true });
+                          map.flyTo({
+                            center: [targetIncident.lon, targetIncident.lat],
+                            zoom: 4.8,
+                            pitch: 45,
+                            duration: 2200,
+                            essential: true,
+                          });
                         }
                       }
                     }}
-                    title="Click to track target on globe"
+                    title="Click to track verified incident on globe"
                     className="flex w-full cursor-pointer items-center justify-between gap-2 rounded bg-white/[0.02] px-2 py-1 text-left transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400"
                   >
                     <div className="flex min-w-0 items-center gap-2">
@@ -132,6 +144,19 @@ export function CombatFeedDrawer({
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1.5">
+                      {item.verificationStatus && (
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wider",
+                            item.verificationStatus === "confirmed" && "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+                            item.verificationStatus === "reported" && "bg-amber-500/15 text-amber-400 border border-amber-500/30",
+                            item.verificationStatus === "claimed" && "bg-rose-500/15 text-rose-400 border border-rose-500/30",
+                          )}
+                        >
+                          {item.verificationStatus}
+                        </span>
+                      )}
+
                       <span
                         className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
                         style={{

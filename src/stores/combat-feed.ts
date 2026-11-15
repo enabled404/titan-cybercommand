@@ -13,6 +13,10 @@ export interface CombatIntercept {
   severity: 1 | 2 | 3 | 4;
   color: string;
   status: "ENGAGED" | "INTERCEPTED" | "SINKHOLED" | "CONTAINED";
+  incidentId?: string;
+  verificationStatus?: "confirmed" | "reported" | "claimed" | "precautionary" | "disputed";
+  sourceName?: string;
+  cve?: string;
 }
 
 interface CombatFeedState {
