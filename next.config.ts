@@ -5,6 +5,7 @@ const dev = process.env.NODE_ENV === "development";
 const OPENFREEMAP = "https://tiles.openfreemap.org";
 const NASA_GIBS = "https://gibs.earthdata.nasa.gov";
 const CLOUDFLARE_DOH = "https://cloudflare-dns.com";
+const GOOGLE_DOH = "https://dns.google";
 
 // Report-only for now: violations show in the console without breaking anything. Inline scripts stay
 // allowed because the pages are static (ISR) and nonces would force them to render per request.
@@ -16,7 +17,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${OPENFREEMAP} ${NASA_GIBS}`,
   `font-src 'self' data: ${OPENFREEMAP}`,
-  `connect-src 'self' ${OPENFREEMAP} ${CLOUDFLARE_DOH} ${NASA_GIBS}${dev ? " ws: wss:" : ""}`,
+  `connect-src 'self' ${OPENFREEMAP} ${CLOUDFLARE_DOH} ${GOOGLE_DOH} ${NASA_GIBS}${dev ? " ws: wss:" : ""}`,
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
   "object-src 'none'",

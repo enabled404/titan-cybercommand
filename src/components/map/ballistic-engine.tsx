@@ -106,6 +106,7 @@ export function BallisticEngine({
   const ready = useMapInstance((s) => s.ready);
   const selectedId = useSituation((s) => s.selectedId);
   const layers = useSituation((s) => s.layers);
+  const cinema = useSituation((s) => s.cinema);
   const wargameSim = useSituation((s) => s.wargameSim);
   const reconTarget = useSituation((s) => s.reconTarget);
   const selectedIncident = incidents.find((i) => i.id === selectedId);
@@ -294,7 +295,7 @@ export function BallisticEngine({
           });
           soundEngine.playAttackLaunch(origin.lon);
         }
-      } else if (!reduced && layers.ballistics && now - lastSpawnRef.current > 550 && attacksRef.current.length < 20 && incidents.length > 0) {
+      } else if (!reduced && !cinema && layers.ballistics && now - lastSpawnRef.current > 550 && attacksRef.current.length < 20 && incidents.length > 0) {
         lastSpawnRef.current = now;
         const target = incidents[Math.floor(Math.random() * incidents.length)];
         const origin = THREAT_ACTOR_HUBS[Math.floor(Math.random() * THREAT_ACTOR_HUBS.length)];
@@ -690,7 +691,7 @@ export function BallisticEngine({
       }
       syncCount(0);
     };
-  }, [ready, map, incidents, layers.ballistics, hasOverlayTarget]);
+  }, [ready, map, incidents, layers.ballistics, hasOverlayTarget, cinema]);
 
   return (
     <>

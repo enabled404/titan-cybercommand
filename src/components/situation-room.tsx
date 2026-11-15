@@ -26,7 +26,10 @@ import { WargamesModal } from "@/components/hud/wargames-modal";
 import { ReconScannerModal } from "@/components/hud/recon-scanner";
 import { ShortcutsModal } from "@/components/hud/shortcuts-modal";
 import { DemoModal } from "@/components/hud/demo-modal";
+import { CinemaMode } from "@/components/hud/cinema";
 import { useAudioStore } from "@/stores/audio";
+import { soundEngine } from "@/lib/audio/sound-engine";
+import { ShieldCheck, X } from "@phosphor-icons/react";
 import type { Incident, Snapshot, Vuln } from "@/lib/types";
 import { incidentView } from "@/lib/incident-view";
 import { cn } from "@/lib/utils";
@@ -37,10 +40,9 @@ const Globe = dynamic(() => import("@/components/map/globe").then((mod) => mod.G
   ssr: false,
   loading: () => <GlobePlaceholder />,
 });
-// Only needed once something is selected or cinema starts, so they stay out of the first load.
+// Only needed once something is selected, so they stay out of the first load.
 const IncidentPanel = dynamic(() => import("@/components/hud/detail-panel").then((mod) => mod.IncidentPanel));
 const CvePanel = dynamic(() => import("@/components/hud/detail-panel").then((mod) => mod.CvePanel));
-const CinemaMode = dynamic(() => import("@/components/hud/cinema").then((mod) => mod.CinemaMode));
 
 const PANEL = 460;
 /** Space the patch dock takes from the bottom edge on desktop. */
@@ -155,6 +157,8 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const cinema = useSituation((s) => s.cinema);
   const setCinema = useSituation((s) => s.setCinema);
   const tacticalCrt = useSituation((s) => s.tacticalCrt);
+  const wargameSim = useSituation((s) => s.wargameSim);
+  const setWargameSim = useSituation((s) => s.setWargameSim);
 
   // The visitor's stack lives in localStorage; load it after hydration so server and client HTML agree.
   useEffect(() => {
@@ -257,18 +261,25 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
           selectCve(null);
         }
       } else if (event.key.toLowerCase() === "c" || event.key.toLowerCase() === "p") {
+        event.preventDefault();
         setCinema(!cinema);
       } else if (event.key.toLowerCase() === "t") {
+        event.preventDefault();
         useCombatFeed.getState().toggleOpen();
       } else if (event.key.toLowerCase() === "v") {
+        event.preventDefault();
         setDemoOpen((prev) => !prev);
       } else if (event.key.toLowerCase() === "w") {
+        event.preventDefault();
         setWargamesOpen((prev) => !prev);
       } else if (event.key.toLowerCase() === "r") {
+        event.preventDefault();
         setReconOpen((prev) => !prev);
       } else if (event.key.toLowerCase() === "m") {
+        event.preventDefault();
         toggleMute();
       } else if (event.key === "?" || (event.shiftKey && event.key === "/")) {
+        event.preventDefault();
         setShortcutsOpen((prev) => !prev);
       } else if (event.key.toLowerCase() === "j") {
         step(1);
@@ -422,6 +433,49 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
       {!cinema && <CombatFeedDrawer incidents={filtered} shiftUp={patchDockOpen && patchDockFits} shiftLeft={panelOpen} />}
+
+      {wargameSim?.active && !wargamesOpen && !cinema && (
+        <div className="pointer-events-auto fixed top-[76px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-full border border-confirmed/40 bg-space/95 px-4 py-2 font-mono text-xs shadow-2xl backdrop-blur-md">
+          <span className="flex items-center gap-1.5 font-bold text-confirmed">
+            <span className={cn("size-2 rounded-full", wargameSim.mitigated ? "bg-emerald-400" : "bg-confirmed motion-safe:animate-ping")} />
+            {wargameSim.code}: {wargameSim.mitigated ? "DEFENSE ACTIVE" : "CASCADE IN PROGRESS"}
+          </span>
+          {!wargameSim.mitigated ? (
+            <button
+              type="button"
+              onClick={() => {
+                soundEngine.playEmpDischarge();
+                soundEngine.playImpact(4);
+                setWargameSim({ ...wargameSim, mitigated: true });
+              }}
+              className="press flex items-center gap-1.5 rounded-full bg-emerald-500 px-3 py-1 font-bold text-space shadow-md hover:bg-emerald-400 active:scale-95 transition-transform"
+            >
+              <ShieldCheck size={14} weight="bold" />
+              DEPLOY COUNTERMEASURE
+            </button>
+          ) : (
+            <span className="flex items-center gap-1 font-bold text-emerald-400">
+              <ShieldCheck size={14} weight="fill" />
+              COUNTERMEASURE ENGAGED
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setWargamesOpen(true)}
+            className="text-ink-4 hover:text-ink underline decoration-dotted text-[11px]"
+          >
+            DETAILS
+          </button>
+          <button
+            type="button"
+            onClick={() => setWargameSim(null)}
+            className="text-ink-4 hover:text-ink p-0.5"
+            aria-label="Stop simulation"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {tacticalCrt && (
         <div

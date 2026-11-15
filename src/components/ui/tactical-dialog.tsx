@@ -86,7 +86,7 @@ export function TacticalDialog({ open, onClose, labelledBy, className, children 
         if (openRef.current) onCloseRef.current();
       }}
       className={cn(
-        "tactical-dialog m-auto max-h-[90dvh] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface p-0 text-ink shadow-2xl backdrop:bg-black/80 backdrop:backdrop-blur-md",
+        "tactical-dialog m-auto flex max-h-[90dvh] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface p-0 text-ink shadow-2xl backdrop:bg-black/80 backdrop:backdrop-blur-md",
         className,
       )}
     >

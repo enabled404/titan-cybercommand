@@ -126,17 +126,30 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
   useEffect(() => {
     if (!open || !isSimulating || mitigated) return;
 
+    let autoMitigateTimer: number | null = null;
     const interval = setInterval(() => {
       setSimStep((prev) => {
         if (prev < selectedScenario.stages.length - 1) {
           soundEngine.playAlert();
           return prev + 1;
         }
+        // Cascade reached maximum contagion; automatically engage countermeasure defense
+        // after a 2.5s dramatic crescendo so the flow decisively concludes on defense winning!
+        if (autoMitigateTimer === null) {
+          autoMitigateTimer = window.setTimeout(() => {
+            setMitigated(true);
+            soundEngine.playEmpDischarge();
+            soundEngine.playImpact(4);
+          }, 2500);
+        }
         return prev;
       });
     }, 2800);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (autoMitigateTimer !== null) clearTimeout(autoMitigateTimer);
+    };
   }, [open, isSimulating, mitigated, selectedScenario]);
 
   const handleStartSimulation = () => {
@@ -324,12 +337,15 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex flex-col gap-2 pt-3">
+            {/* Sticky Actions Bar */}
+            <div className="sticky bottom-0 z-10 -mx-5 -mb-5 flex flex-col gap-2.5 border-t border-white/10 bg-surface-2/95 p-4 backdrop-blur-md">
               {mitigated && (
-                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 font-mono text-xs text-emerald-300">
-                  <ShieldCheck size={18} weight="bold" />
-                  <span>COUNTERMEASURE ENGAGED: Infiltration vectors arrested and routed to tactical sinkholes.</span>
+                <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 p-3 font-mono text-xs text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                  <ShieldCheck size={20} weight="fill" className="shrink-0 text-emerald-400" />
+                  <div>
+                    <div className="font-bold tracking-wider uppercase text-emerald-300">COUNTERMEASURE ENGAGED</div>
+                    <div className="text-[11px] text-emerald-400/90">Infiltration vectors arrested. Malicious C2 trajectories routed to tactical sinkholes.</div>
+                  </div>
                 </div>
               )}
               <div className="flex items-center gap-3">
@@ -349,20 +365,22 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
                       onClick={handleMitigate}
                       disabled={mitigated}
                       className={cn(
-                        "flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-mono text-xs font-bold uppercase tracking-wider text-white shadow-lg transition-all active:scale-[0.99]",
-                        mitigated ? "bg-emerald-600/50 cursor-default" : "bg-emerald-600 hover:bg-emerald-500",
+                        "flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-mono text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.99]",
+                        mitigated
+                          ? "border border-emerald-500/40 bg-emerald-500/20 text-emerald-300 cursor-default"
+                          : "bg-emerald-500 text-space font-black ring-2 ring-emerald-400/50 shadow-[0_0_24px_rgba(16,185,129,0.4)] motion-safe:animate-pulse hover:bg-emerald-400",
                       )}
                     >
-                      <ShieldCheck size={16} weight="bold" />
+                      <ShieldCheck size={18} weight={mitigated ? "fill" : "bold"} />
                       {mitigated ? "DEFENSE ACTIVE" : "DEPLOY COUNTERMEASURE"}
                     </button>
                     <button
                       type="button"
                       onClick={handleStopSimulation}
-                      className="flex items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/20 px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider text-red-300 transition-all hover:bg-red-500/30 active:scale-[0.99]"
+                      className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider text-ink-3 transition-all hover:bg-white/10 hover:text-ink active:scale-[0.99]"
                     >
                       <Stop size={16} weight="fill" />
-                      ABORT
+                      {mitigated ? "DISMISS" : "ABORT"}
                     </button>
                   </>
                 )}

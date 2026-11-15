@@ -12,8 +12,8 @@ import { STATUS_COLOR, STATUS_LABEL, TYPE_LABEL, placeLabel, recordsLabel, relat
 import type { Incident } from "@/lib/types";
 import { useSituation } from "@/stores/situation";
 
-const FLIGHT_MS = 6500;
-const DWELL_MS = 6000;
+const FLIGHT_MS = 5000;
+const DWELL_MS = 5500;
 
 function tourOrder(incidents: Incident[]): Incident[] {
   const now = Date.now();
@@ -93,17 +93,17 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
       const precise = incident.geoBasis === "stated" || incident.geoBasis === "hq";
       map.flyTo({
         center: [incident.lon, incident.lat],
-        zoom: precise ? 10.6 + Math.random() * 1.2 : 4.6,
-        pitch: precise ? 62 : 40,
-        bearing: (Math.random() - 0.5) * 70,
+        zoom: precise ? 5.2 : 4.4,
+        pitch: precise ? 42 : 32,
+        bearing: (Math.random() - 0.5) * 36,
         duration: FLIGHT_MS,
-        curve: 1.75,
+        curve: 1.4,
         essential: true,
       });
       timer = window.setTimeout(() => {
         if (runRef.current !== run) return;
         setPhase("dwell");
-        map.easeTo({ bearing: map.getBearing() + 14, duration: DWELL_MS, easing: (t) => t });
+        map.easeTo({ bearing: map.getBearing() + 10, duration: DWELL_MS, easing: (t) => t });
         timer = window.setTimeout(() => visit(i + 1), DWELL_MS);
       }, FLIGHT_MS);
     };
