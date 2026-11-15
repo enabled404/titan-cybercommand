@@ -45,32 +45,179 @@ interface ImpactShockwave {
   duration: number; // ms
 }
 
-const ATTACK_PROTOCOLS = [
-  { label: "DDoS SYN-FLOOD", color: "#ff7800", severity: 3, resolved: "SINKHOLED" },
-  { label: "COBALT STRIKE C2", color: "#ff3344", severity: 4, resolved: "INTERCEPTED" },
-  { label: "ZERO-DAY RCE", color: "#d946ef", severity: 4, resolved: "CONTAINED" },
-  { label: "LOCKBIT 3.0 EXFIL", color: "#ef4444", severity: 4, resolved: "INTERCEPTED" },
-  { label: "BGP ROUTE HIJACK", color: "#06b6d4", severity: 3, resolved: "SINKHOLED" },
-  { label: "CREDENTIAL BRUTE", color: "#f59e0b", severity: 2, resolved: "CONTAINED" },
-  { label: "SUBSEA CABLE PROBE", color: "#38bdf8", severity: 3, resolved: "INTERCEPTED" },
-  { label: "SQLi INJECTION", color: "#10b981", severity: 2, resolved: "SINKHOLED" },
-] as const;
-
-// Global threat actor C2 origin hubs for simulated kinetic feeds
-const THREAT_ACTOR_HUBS = [
-  { lon: 37.6173, lat: 55.7558, label: "APT28 / MOSCOW", country: "RU" },
-  { lon: 116.4074, lat: 39.9042, label: "VOLT TYPHOON / BEIJING", country: "CN" },
-  { lon: 125.7625, lat: 39.0392, label: "LAZARUS / PYONGYANG", country: "KP" },
-  { lon: 51.389, lat: 35.6892, label: "CHARMING KITTEN / TEHRAN", country: "IR" },
-  { lon: -77.0369, lat: 38.9072, label: "SHADOW BROKERS / VIRGINIA", country: "US" },
-  { lon: 2.3522, lat: 48.8566, label: "PROXY RELAY / PARIS", country: "FR" },
+// Global Tier-1 internet backbone routing exchanges & transit nodes
+const INTERNET_TRANSIT_HUBS = [
+  { lon: 8.6821, lat: 50.1109, label: "DE-CIX / FRANKFURT", country: "DE" },
+  { lon: 4.9041, lat: 52.3676, label: "AMS-IX / AMSTERDAM", country: "NL" },
+  { lon: 103.8198, lat: 1.3521, label: "EQUINIX SG1 / SINGAPORE", country: "SG" },
+  { lon: -77.4874, lat: 39.0438, label: "DATA ALLEY / ASHBURN", country: "US" },
+  { lon: 139.6917, lat: 35.6895, label: "JPNAP / TOKYO", country: "JP" },
+  { lon: -46.6333, lat: -23.5505, label: "IX.BR / SAO PAULO", country: "BR" },
+  { lon: 37.6173, lat: 55.7558, label: "MSK-IX / MOSCOW", country: "RU" },
+  { lon: 28.0473, lat: -26.2041, label: "NAPAFRICA / JOHANNESBURG", country: "ZA" },
   { lon: 106.8456, lat: -6.2088, label: "BOTNET POOL / JAKARTA", country: "ID" },
-  { lon: -46.6333, lat: -23.5505, label: "FIN7 RELAY / SAO PAULO", country: "BR" },
-  { lon: 28.0473, lat: -26.2041, label: "GATEWAY / JOHANNESBURG", country: "ZA" },
-  { lon: 103.8198, lat: 1.3521, label: "C2 CLUSTER / SINGAPORE", country: "SG" },
-  { lon: 139.6917, lat: 35.6895, label: "SATELLITE / TOKYO", country: "JP" },
   { lon: 26.1025, lat: 44.4268, label: "DARKGATE / BUCHAREST", country: "RO" },
+  { lon: -0.1278, lat: 51.5074, label: "LINX / LONDON", country: "GB" },
+  { lon: 151.2093, lat: -33.8688, label: "EQUINIX SY3 / SYDNEY", country: "AU" },
 ];
+
+function resolveThreatOrigin(target?: Incident): { lon: number; lat: number; label: string; country: string } {
+  const actor = target?.actor?.toLowerCase() ?? "";
+
+  // 1. Russian-nexus ransomware syndicates and APT groups
+  if (
+    actor.includes("qilin") ||
+    actor.includes("akira") ||
+    actor.includes("lockbit") ||
+    actor.includes("blackcat") ||
+    actor.includes("alphv") ||
+    actor.includes("rhysida") ||
+    actor.includes("play") ||
+    actor.includes("medusa") ||
+    actor.includes("darkgate") ||
+    actor.includes("apt28") ||
+    actor.includes("fancy bear") ||
+    actor.includes("russian")
+  ) {
+    const actorUpper = (target?.actor || "RANSOMWARE").toUpperCase();
+    const ruHubs = [
+      { lon: 37.6173, lat: 55.7558, label: `${actorUpper} / MOSCOW`, country: "RU" },
+      { lon: 30.3351, lat: 59.9343, label: `${actorUpper} / ST. PETERSBURG`, country: "RU" },
+      { lon: 26.1025, lat: 44.4268, label: `${actorUpper} / BUCHAREST RELAY`, country: "RO" },
+    ];
+    return ruHubs[Math.floor(Math.random() * ruHubs.length)];
+  }
+
+  // 2. Chinese state-sponsored APT groups
+  if (
+    actor.includes("typhoon") ||
+    actor.includes("volt") ||
+    actor.includes("salt") ||
+    actor.includes("flax") ||
+    actor.includes("chimera") ||
+    actor.includes("aoqin") ||
+    actor.includes("crafty falcon") ||
+    actor.includes("china") ||
+    actor.includes("chinese")
+  ) {
+    const actorUpper = (target?.actor || "APT").toUpperCase();
+    const cnHubs = [
+      { lon: 116.4074, lat: 39.9042, label: `${actorUpper} / BEIJING`, country: "CN" },
+      { lon: 121.4737, lat: 31.2304, label: `${actorUpper} / SHANGHAI`, country: "CN" },
+    ];
+    return cnHubs[Math.floor(Math.random() * cnHubs.length)];
+  }
+
+  // 3. North Korean state-sponsored APT groups
+  if (actor.includes("lazarus") || actor.includes("kimsuky") || actor.includes("korea") || actor.includes("dprk")) {
+    const actorUpper = (target?.actor || "LAZARUS").toUpperCase();
+    return { lon: 125.7625, lat: 39.0392, label: `${actorUpper} / PYONGYANG`, country: "KP" };
+  }
+
+  // 4. Iranian state-sponsored APT groups
+  if (actor.includes("kitten") || actor.includes("oilrig") || actor.includes("muddywater") || actor.includes("iran")) {
+    const actorUpper = (target?.actor || "APT33").toUpperCase();
+    return { lon: 51.389, lat: 35.6892, label: `${actorUpper} / TEHRAN`, country: "IR" };
+  }
+
+  // 5. Distributed cybercrime syndicates (ShinyHunters, Scattered Spider)
+  if (actor.includes("shiny") || actor.includes("scattered") || actor.includes("spider") || actor.includes("lapsus")) {
+    const actorUpper = (target?.actor || "CYBERCRIME").toUpperCase();
+    const proxyHubs = [
+      { lon: 4.9041, lat: 52.3676, label: `${actorUpper} / AMSTERDAM PROXY`, country: "NL" },
+      { lon: 8.6821, lat: 50.1109, label: `${actorUpper} / FRANKFURT C2`, country: "DE" },
+    ];
+    return proxyHubs[Math.floor(Math.random() * proxyHubs.length)];
+  }
+
+  // 6. Named actor not in predefined catalog
+  if (target?.actor) {
+    const actorUpper = target.actor.toUpperCase();
+    const fallback = INTERNET_TRANSIT_HUBS[Math.floor(Math.random() * INTERNET_TRANSIT_HUBS.length)];
+    return { lon: fallback.lon, lat: fallback.lat, label: `${actorUpper} / ${fallback.label.split(" / ")[1]}`, country: fallback.country };
+  }
+
+  // 7. Global backbone routing exchange
+  return INTERNET_TRANSIT_HUBS[Math.floor(Math.random() * INTERNET_TRANSIT_HUBS.length)];
+}
+
+function resolveThreatVector(target?: Incident): {
+  label: string;
+  color: string;
+  severity: 1 | 2 | 3 | 4;
+  resolved: "INTERCEPTED" | "SINKHOLED" | "CONTAINED";
+} {
+  if (target?.cves && target.cves.length > 0) {
+    return {
+      label: `EXPLOIT: ${target.cves[0]}`,
+      color: "#d946ef",
+      severity: 4,
+      resolved: "INTERCEPTED",
+    };
+  }
+
+  if (target?.type === "ransomware") {
+    const label = target.actor ? `${target.actor.toUpperCase()} EXFIL` : "RANSOMWARE EXFIL";
+    return {
+      label,
+      color: "#ef4444",
+      severity: 4,
+      resolved: "SINKHOLED",
+    };
+  }
+
+  if (target?.type === "ddos") {
+    return {
+      label: "DDoS SYN-FLOOD",
+      color: "#ff7800",
+      severity: 3,
+      resolved: "SINKHOLED",
+    };
+  }
+
+  if (target?.type === "supply_chain") {
+    return {
+      label: "SUPPLY CHAIN INJECTION",
+      color: "#06b6d4",
+      severity: 4,
+      resolved: "INTERCEPTED",
+    };
+  }
+
+  if (target?.type === "espionage") {
+    return {
+      label: "APT C2 INFILTRATION",
+      color: "#ff3344",
+      severity: 4,
+      resolved: "CONTAINED",
+    };
+  }
+
+  if (target?.type === "data_breach") {
+    return {
+      label: "CREDENTIAL EXFILTRATION",
+      color: "#f59e0b",
+      severity: target.severity || 3,
+      resolved: "CONTAINED",
+    };
+  }
+
+  if (target?.type === "extortion") {
+    return {
+      label: "DATA EXTORTION PROBE",
+      color: "#ec4899",
+      severity: 3,
+      resolved: "SINKHOLED",
+    };
+  }
+
+  return {
+    label: "TACTICAL INTRUSION",
+    color: "#38bdf8",
+    severity: target?.severity || 2,
+    resolved: "CONTAINED",
+  };
+}
 
 function computeGeodesicPoints(origin: [number, number], target: [number, number]): [number, number][] {
   try {
@@ -148,13 +295,13 @@ export function BallisticEngine({
       const target = forcedTarget ?? incidents[Math.floor(Math.random() * incidents.length)];
       if (!target) return;
 
-      const origin = THREAT_ACTOR_HUBS[Math.floor(Math.random() * THREAT_ACTOR_HUBS.length)];
-      const proto = ATTACK_PROTOCOLS[Math.floor(Math.random() * ATTACK_PROTOCOLS.length)];
+      const origin = resolveThreatOrigin(target);
+      const proto = resolveThreatVector(target);
 
       // Calculate True Geodesic Great Circle points
       const points = computeGeodesicPoints([origin.lon, origin.lat], [target.lon, target.lat]);
 
-      // Log to Combat Intercept Feed
+      // Log to Combat Intercept Feed with deep data provenance
       const combatId = useCombatFeed.getState().addIntercept({
         origin: origin.label,
         originCountry: origin.country,
@@ -164,6 +311,10 @@ export function BallisticEngine({
         severity: target.severity || proto.severity,
         color: proto.color,
         status: "ENGAGED",
+        incidentId: target.id,
+        verificationStatus: target.status,
+        sourceName: target.sources?.[0]?.publisher || target.origin.toUpperCase(),
+        cve: target.cves?.[0],
       });
 
       const attack: BallisticAttack = {
@@ -264,7 +415,7 @@ export function BallisticEngine({
       if (!reduced && curWargame?.active && !curWargame.mitigated) {
         if (now - lastSpawnRef.current > 380 && attacksRef.current.length < 24) {
           lastSpawnRef.current = now;
-          const origin = THREAT_ACTOR_HUBS[Math.floor(Math.random() * THREAT_ACTOR_HUBS.length)];
+          const origin = resolveThreatOrigin();
           const points = computeGeodesicPoints([origin.lon, origin.lat], [curWargame.coords[0], curWargame.coords[1]]);
 
           const combatId = useCombatFeed.getState().addIntercept({
@@ -298,8 +449,8 @@ export function BallisticEngine({
       } else if (!reduced && !cinema && layers.ballistics && now - lastSpawnRef.current > 550 && attacksRef.current.length < 20 && incidents.length > 0) {
         lastSpawnRef.current = now;
         const target = incidents[Math.floor(Math.random() * incidents.length)];
-        const origin = THREAT_ACTOR_HUBS[Math.floor(Math.random() * THREAT_ACTOR_HUBS.length)];
-        const proto = ATTACK_PROTOCOLS[Math.floor(Math.random() * ATTACK_PROTOCOLS.length)];
+        const origin = resolveThreatOrigin(target);
+        const proto = resolveThreatVector(target);
 
         const points = computeGeodesicPoints([origin.lon, origin.lat], [target.lon, target.lat]);
 
@@ -312,6 +463,10 @@ export function BallisticEngine({
           severity: target.severity || proto.severity,
           color: proto.color,
           status: "ENGAGED",
+          incidentId: target.id,
+          verificationStatus: target.status,
+          sourceName: target.sources?.[0]?.publisher || target.origin.toUpperCase(),
+          cve: target.cves?.[0],
         });
 
         attacksRef.current.push({
@@ -412,17 +567,51 @@ export function BallisticEngine({
               });
             }
 
-            // Draw glowing luminous laser trail
+            // Draw glowing luminous laser trail (triple-pass laser bloom)
             if (atk.trail.length > 1) {
-              ctx.lineWidth = 2.2;
               ctx.lineCap = "round";
+
+              // Pass 1: Outer radiant glow bloom
+              ctx.lineWidth = 4.8;
+              for (let i = 0; i < atk.trail.length - 1; i++) {
+                const p1 = atk.trail[i];
+                const p2 = atk.trail[i + 1];
+                const ageRatio = (now - p1.time) / 550;
+                const alpha = (1 - ageRatio) * 0.25;
+
+                ctx.strokeStyle = atk.color;
+                ctx.globalAlpha = alpha;
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+              }
+
+              // Pass 2: High-energy core laser beam
+              ctx.lineWidth = 1.8;
+              for (let i = 0; i < atk.trail.length - 1; i++) {
+                const p1 = atk.trail[i];
+                const p2 = atk.trail[i + 1];
+                const ageRatio = (now - p1.time) / 550;
+                const alpha = (1 - ageRatio) * 0.9;
+
+                ctx.strokeStyle = atk.color;
+                ctx.globalAlpha = alpha;
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+              }
+
+              // Pass 3: White-hot center filament
+              ctx.lineWidth = 0.8;
               for (let i = 0; i < atk.trail.length - 1; i++) {
                 const p1 = atk.trail[i];
                 const p2 = atk.trail[i + 1];
                 const ageRatio = (now - p1.time) / 550;
                 const alpha = (1 - ageRatio) * 0.85;
 
-                ctx.strokeStyle = atk.color;
+                ctx.strokeStyle = "#ffffff";
                 ctx.globalAlpha = alpha;
                 ctx.beginPath();
                 ctx.moveTo(p1.x, p1.y);
@@ -478,8 +667,13 @@ export function BallisticEngine({
 
         // Impact reached!
         if (progress >= 1) {
-          const proto = ATTACK_PROTOCOLS.find((p) => p.label === atk.protocol) || ATTACK_PROTOCOLS[0];
-          useCombatFeed.getState().updateStatus(atk.combatId, proto.resolved as "INTERCEPTED");
+          const resolvedStatus: "INTERCEPTED" | "SINKHOLED" | "CONTAINED" =
+            atk.protocol.includes("EXFIL") || atk.protocol.includes("SYN-FLOOD") || atk.protocol.includes("PROBE")
+              ? "SINKHOLED"
+              : atk.protocol.includes("INFILTRATION") || atk.protocol.includes("INTRUSION") || atk.protocol.includes("EXFILTRATION")
+                ? "CONTAINED"
+                : "INTERCEPTED";
+          useCombatFeed.getState().updateStatus(atk.combatId, resolvedStatus);
 
           shockwavesRef.current.push({
             id: `shk-${now}-${Math.random()}`,

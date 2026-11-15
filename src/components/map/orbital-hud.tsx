@@ -71,6 +71,17 @@ export function OrbitalHud() {
         const orbitR = r * 1.04;
         const outerR = r * 1.08;
 
+        // 0. Atmospheric Rim Glow (Limb Illumination)
+        const atmoGrad = ctx.createRadialGradient(x, y, r * 0.93, x, y, r * 1.08);
+        atmoGrad.addColorStop(0, "rgba(6, 182, 212, 0)");
+        atmoGrad.addColorStop(0.6, "rgba(6, 182, 212, 0.08)");
+        atmoGrad.addColorStop(0.85, "rgba(14, 165, 233, 0.18)");
+        atmoGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
+        ctx.fillStyle = atmoGrad;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 1.08, 0, Math.PI * 2);
+        ctx.fill();
+
         // 1. Orbital Ring
         ctx.strokeStyle = "rgba(6, 182, 212, 0.18)";
         ctx.lineWidth = 1;
@@ -145,6 +156,17 @@ export function OrbitalHud() {
         ctx.moveTo(x, y + 3);
         ctx.lineTo(x, y + chSize);
         ctx.stroke();
+
+        // 6. Real-time Telemetry Coordinates Readout
+        const mapCenter = map.getCenter();
+        const latStr = `${Math.abs(mapCenter.lat).toFixed(1)}°${mapCenter.lat >= 0 ? "N" : "S"}`;
+        const lngStr = `${Math.abs(mapCenter.lng).toFixed(1)}°${mapCenter.lng >= 0 ? "E" : "W"}`;
+        const zoomStr = `Z${map.getZoom().toFixed(1)}`;
+        ctx.font = "8.5px 'Martian Mono', monospace";
+        ctx.fillStyle = "rgba(6, 182, 212, 0.65)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(`GEO ${latStr} ${lngStr} // ${zoomStr}`, x, y + orbitR + 10);
       }
 
       ctx.restore();

@@ -97,22 +97,55 @@ function incidentFeatures(incidents: Incident[], now: number): FeatureCollection
 }
 
 function arcFeatures(selected: Incident | undefined, incidents: Incident[]): FeatureCollection<LineString> {
-  if (!selected) return EMPTY as FeatureCollection<LineString>;
-  const related = incidents.filter(
-    (other) =>
-      other.id !== selected.id &&
-      ((selected.actor && other.actor && other.actor.toLowerCase() === selected.actor.toLowerCase()) ||
-        (selected.cves.length > 0 && other.cves.some((cve) => selected.cves.includes(cve)))),
-  );
   const features: Feature<LineString>[] = [];
-  for (const other of related.slice(0, 40)) {
-    try {
-      const line = greatCircle([selected.lon, selected.lat], [other.lon, other.lat], { npoints: 64 });
-      if (line.geometry.type === "LineString") features.push({ ...line, properties: { id: other.id } } as Feature<LineString>);
-    } catch {
-      // Antipodal points have no unique great circle; skip them.
+
+  if (selected) {
+    const related = incidents.filter(
+      (other) =>
+        other.id !== selected.id &&
+        ((selected.actor && other.actor && other.actor.toLowerCase() === selected.actor.toLowerCase()) ||
+          (selected.cves.length > 0 && other.cves.some((cve) => selected.cves.includes(cve)))),
+    );
+    for (const other of related.slice(0, 40)) {
+      try {
+        const line = greatCircle([selected.lon, selected.lat], [other.lon, other.lat], { npoints: 64 });
+        if (line.geometry.type === "LineString") features.push({ ...line, properties: { id: other.id } } as Feature<LineString>);
+      } catch {
+        // Antipodal points have no unique great circle; skip them.
+      }
+    }
+    return { type: "FeatureCollection", features };
+  }
+
+  // When no incident is selected, render global campaign correlation corridors for active multi-victim actors
+  const actorGroups = new Map<string, Incident[]>();
+  for (const inc of incidents) {
+    if (inc.actor && inc.actor.trim().length > 1) {
+      const key = inc.actor.toLowerCase();
+      const list = actorGroups.get(key) ?? [];
+      list.push(inc);
+      actorGroups.set(key, list);
     }
   }
+
+  for (const [, group] of actorGroups) {
+    if (group.length >= 2 && features.length < 28) {
+      for (let i = 0; i < group.length - 1 && features.length < 28; i++) {
+        const a = group[i];
+        const b = group[i + 1];
+        if (a.lon === b.lon && a.lat === b.lat) continue;
+        try {
+          const line = greatCircle([a.lon, a.lat], [b.lon, b.lat], { npoints: 48 });
+          if (line.geometry.type === "LineString") {
+            features.push({ ...line, properties: { id: `${a.id}-${b.id}` } } as Feature<LineString>);
+          }
+        } catch {
+          // Skip antipodal or calculation exceptions
+        }
+      }
+    }
+  }
+
   return { type: "FeatureCollection", features };
 }
 
@@ -1017,7 +1050,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
       map.flyTo({ zoom: fittedZoom(map), pitch: 0, bearing: 0, duration: 1800, curve: 1.3, essential: true });
     }
     if (selected) {
-      // Draw the arcs in.
+      // Draw the focused incident arcs in.
       const start = performance.now();
       const step = (now: number) => {
         const t = Math.max(0, Math.min(1, (now - start) / 1400));
@@ -1036,6 +1069,25 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
         if (t < 1) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
+    } else {
+      // Subtle persistent campaign corridor lines for active threat groups
+      tryStyle(() =>
+        map.setPaintProperty(
+          "arcs",
+          "line-gradient",
+          [
+            "interpolate",
+            ["linear"],
+            ["line-progress"],
+            0,
+            "rgba(6, 182, 212, 0.25)",
+            0.5,
+            "rgba(255, 255, 255, 0.45)",
+            1,
+            "rgba(6, 182, 212, 0.25)",
+          ],
+        ),
+      );
     }
     return cancelFilter;
   }, [selectedId, ready, cinema, fittedZoom]);
