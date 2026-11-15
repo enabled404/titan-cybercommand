@@ -23,7 +23,10 @@ async function fetchDnsRecord(name: string, type: "A" | "TXT" | "MX"): Promise<D
   for (const url of urls) {
     try {
       const res = await fetch(url, {
-        headers: { Accept: "application/dns-json" },
+        headers: {
+          Accept: "application/dns-json",
+          "User-Agent": "TitanCyberCommand-Recon/1.0",
+        },
         signal: AbortSignal.timeout(3500),
       });
       if (res.ok) {
@@ -68,24 +71,25 @@ export async function GET(request: Request) {
 
     const ips: string[] = [];
     for (const ans of aRes?.Answer ?? []) {
-      if (ans.type === 1) ips.push(ans.data);
+      if (ans.type === 1 || ans.type === 28) ips.push(ans.data);
     }
 
     const txtStrings: string[] = [];
     for (const ans of txtRes?.Answer ?? []) {
-      if (ans.type === 16) txtStrings.push(String(ans.data).replace(/^"|"$/g, ""));
+      if (ans.type === 16) txtStrings.push(String(ans.data).replace(/^"|"$/g, "").replace(/\\"/g, '"'));
     }
 
     const dmarcStrings: string[] = [];
     for (const ans of dmarcRes?.Answer ?? []) {
-      if (ans.type === 16) dmarcStrings.push(String(ans.data).replace(/^"|"$/g, ""));
+      if (ans.type === 16) dmarcStrings.push(String(ans.data).replace(/^"|"$/g, "").replace(/\\"/g, '"'));
     }
 
     const mxList: string[] = [];
     for (const ans of mxRes?.Answer ?? []) {
       if (ans.type === 15) {
         const parts = ans.data.split(" ");
-        mxList.push(parts[parts.length - 1] || ans.data);
+        const host = (parts[parts.length - 1] || ans.data).replace(/\.$/, "");
+        mxList.push(host);
       }
     }
 
@@ -98,10 +102,10 @@ export async function GET(request: Request) {
 
     if (!nxdomain && isSubdomain) {
       for (const ans of apexTxtRes?.Answer ?? []) {
-        if (ans.type === 16) txtStrings.push(String(ans.data).replace(/^"|"$/g, ""));
+        if (ans.type === 16) txtStrings.push(String(ans.data).replace(/^"|"$/g, "").replace(/\\"/g, '"'));
       }
       for (const ans of apexDmarcRes?.Answer ?? []) {
-        if (ans.type === 16) dmarcStrings.push(String(ans.data).replace(/^"|"$/g, ""));
+        if (ans.type === 16) dmarcStrings.push(String(ans.data).replace(/^"|"$/g, "").replace(/\\"/g, '"'));
       }
     }
 

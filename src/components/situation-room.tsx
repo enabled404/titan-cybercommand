@@ -160,6 +160,34 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const wargameSim = useSituation((s) => s.wargameSim);
   const setWargameSim = useSituation((s) => s.setWargameSim);
 
+  // WarGames autonomous cascade progression and automated countermeasure defense
+  useEffect(() => {
+    if (!wargameSim?.active || wargameSim.mitigated) return;
+    let autoMitigateTimer: number | null = null;
+    const interval = window.setInterval(() => {
+      const cur = useSituation.getState().wargameSim;
+      if (!cur?.active || cur.mitigated) return;
+      if (cur.step < 3) {
+        soundEngine.playAlert();
+        setWargameSim({ ...cur, step: cur.step + 1 });
+      } else if (autoMitigateTimer === null) {
+        autoMitigateTimer = window.setTimeout(() => {
+          const latest = useSituation.getState().wargameSim;
+          if (latest?.active && !latest.mitigated) {
+            soundEngine.playEmpDischarge();
+            soundEngine.playImpact(4);
+            setWargameSim({ ...latest, mitigated: true });
+          }
+        }, 2500);
+      }
+    }, 2800);
+
+    return () => {
+      window.clearInterval(interval);
+      if (autoMitigateTimer !== null) window.clearTimeout(autoMitigateTimer);
+    };
+  }, [wargameSim?.active, wargameSim?.mitigated, setWargameSim]);
+
   // The visitor's stack lives in localStorage; load it after hydration so server and client HTML agree.
   useEffect(() => {
     void useStack.persist.rehydrate();
@@ -233,6 +261,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   useEffect(() => {
     const focusSearch = () => {
       setSidebarOpen(true);
+      if (window.matchMedia("(max-width: 767px)").matches) setSheetOpen(true);
       requestAnimationFrame(() => omnibox.current?.focus());
     };
     const onKey = (event: KeyboardEvent) => {

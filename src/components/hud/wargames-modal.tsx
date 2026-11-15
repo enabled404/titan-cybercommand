@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Crosshair, Play, ShieldCheck, Stop, X } from "@phosphor-icons/react";
 import { soundEngine } from "@/lib/audio/sound-engine";
 import { useMapInstance } from "@/components/map/map-instance";
@@ -92,72 +92,35 @@ const SCENARIOS: Scenario[] = [
 ];
 
 export function WargamesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [selectedScenario, setSelectedScenario] = useState<Scenario>(SCENARIOS[0]);
-  const [isSimulating, setIsSimulating] = useState<boolean>(false);
-  const [simStep, setSimStep] = useState<number>(0);
-  const [mitigated, setMitigated] = useState<boolean>(false);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string>(SCENARIOS[0].id);
   const map = useMapInstance((s) => s.map);
+  const wargameSim = useSituation((s) => s.wargameSim);
+  const setWargameSim = useSituation((s) => s.setWargameSim);
+
+  const activeScenarioId = wargameSim?.scenarioId || selectedScenarioId;
+  const selectedScenario = SCENARIOS.find((sc) => sc.id === activeScenarioId) || SCENARIOS[0];
+
+  const isSimulating = Boolean(wargameSim?.active);
+  const simStep = wargameSim?.step ?? 0;
+  const mitigated = Boolean(wargameSim?.mitigated);
 
   const handleClose = useCallback(() => {
-    setIsSimulating(false);
-    setSimStep(0);
-    setMitigated(false);
-    useSituation.getState().setWargameSim(null);
     soundEngine.playClick();
     onClose();
   }, [onClose]);
 
-  useEffect(() => {
-    if (open && isSimulating) {
-      useSituation.getState().setWargameSim({
-        active: true,
-        scenarioId: selectedScenario.id,
-        code: selectedScenario.code,
-        title: selectedScenario.title,
-        coords: selectedScenario.targetCoords,
-        mitigated,
-        step: simStep,
-      });
-    } else {
-      useSituation.getState().setWargameSim(null);
-    }
-  }, [open, isSimulating, selectedScenario, mitigated, simStep]);
-
-  useEffect(() => {
-    if (!open || !isSimulating || mitigated) return;
-
-    let autoMitigateTimer: number | null = null;
-    const interval = setInterval(() => {
-      setSimStep((prev) => {
-        if (prev < selectedScenario.stages.length - 1) {
-          soundEngine.playAlert();
-          return prev + 1;
-        }
-        // Cascade reached maximum contagion; automatically engage countermeasure defense
-        // after a 2.5s dramatic crescendo so the flow decisively concludes on defense winning!
-        if (autoMitigateTimer === null) {
-          autoMitigateTimer = window.setTimeout(() => {
-            setMitigated(true);
-            soundEngine.playEmpDischarge();
-            soundEngine.playImpact(4);
-          }, 2500);
-        }
-        return prev;
-      });
-    }, 2800);
-
-    return () => {
-      clearInterval(interval);
-      if (autoMitigateTimer !== null) clearTimeout(autoMitigateTimer);
-    };
-  }, [open, isSimulating, mitigated, selectedScenario]);
-
   const handleStartSimulation = () => {
-    setIsSimulating(true);
-    setSimStep(0);
-    setMitigated(false);
     soundEngine.playKlaxon();
     soundEngine.playAttackLaunch(selectedScenario.targetCoords[0]);
+    setWargameSim({
+      active: true,
+      scenarioId: selectedScenario.id,
+      code: selectedScenario.code,
+      title: selectedScenario.title,
+      coords: selectedScenario.targetCoords,
+      mitigated: false,
+      step: 0,
+    });
 
     if (map) {
       map.flyTo({
@@ -171,16 +134,14 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
   };
 
   const handleMitigate = () => {
-    setMitigated(true);
+    if (!wargameSim) return;
     soundEngine.playEmpDischarge();
     soundEngine.playImpact(4);
+    setWargameSim({ ...wargameSim, mitigated: true });
   };
 
   const handleStopSimulation = () => {
-    setIsSimulating(false);
-    setSimStep(0);
-    setMitigated(false);
-    useSituation.getState().setWargameSim(null);
+    setWargameSim(null);
     soundEngine.playClick();
   };
 
@@ -243,7 +204,7 @@ export function WargamesModal({ open, onClose }: { open: boolean; onClose: () =>
                     type="button"
                     onClick={() => {
                       if (isSimulating) handleStopSimulation();
-                      setSelectedScenario(sc);
+                      setSelectedScenarioId(sc.id);
                       soundEngine.playClick();
                     }}
                     className={cn(
