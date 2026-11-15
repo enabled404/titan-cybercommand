@@ -854,7 +854,6 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    // Leaving cinema also changes the padding; the fly-home below replaces this ease a frame later.
     const sidebarChanged = previousLeftPadding.current !== padding.left;
     previousLeftPadding.current = padding.left;
     // MapLibre owns this element, so keep its credits clear of the sidebar and its reopen control.
@@ -865,16 +864,17 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
       credits.style.top = `${mobile ? padding.top : padding.left ? padding.top - 2 : padding.top + 48}px`;
     }
     const state = useSituation.getState();
-    const hero = !state.selectedId && !state.selectedCve && !state.cinema && !userZoomedRef.current;
+    if (state.cinema) return;
+    const hero = !state.selectedId && !state.selectedCve && !userZoomedRef.current;
     map.easeTo({
       padding: { left: padding.left, right: padding.right, bottom: padding.bottom, top: padding.top },
       ...(hero ? { zoom: fittedZoom(map), pitch: 0 } : {}),
       // Follow the resize handle immediately instead of repeatedly restarting a camera animation.
-      duration: sidebarChanged || window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700,
+      duration: sidebarChanged || window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500,
     });
   }, [padding.left, padding.right, padding.bottom, padding.top, ready, fittedZoom]);
 
-  // Leaving cinema mode always returns to the hero framing, whatever the visitor did before.
+  // Leaving cinema mode always returns smoothly to the hero framing without tile storms.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
@@ -886,13 +886,12 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
         userZoomedRef.current = false;
         map.stop();
         const p = paddingRef.current;
-        map.flyTo({
+        map.easeTo({
           padding: { left: p.left, right: p.right, bottom: p.bottom, top: p.top },
           zoom: fittedZoom(map),
           pitch: 0,
           bearing: 0,
-          duration: 2200,
-          curve: 1.4,
+          duration: 800,
           essential: true,
         });
       });

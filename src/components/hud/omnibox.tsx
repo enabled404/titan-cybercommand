@@ -55,8 +55,9 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
   const router = useRouter();
   const select = useSituation((s) => s.select);
   const selectCve = useSituation((s) => s.selectCve);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
+  const [focused, setFocused] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [prompt, setPrompt] = useState(0);
@@ -189,7 +190,7 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
     }
   };
 
-  const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setOpen(true);
@@ -218,15 +219,19 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
   return (
     <div className="relative">
       <div
+        onClick={() => inputRef.current?.focus()}
         className={cn(
-          "group relative flex items-start gap-3 rounded-[16px] bg-space px-4 ring-1 ring-inset ring-input transition-[box-shadow,background-color] duration-200 focus-within:ring-2 focus-within:ring-ink",
+          "group relative flex cursor-text items-center gap-3 rounded-[16px] bg-space px-4 ring-1 ring-inset ring-input transition-[box-shadow,background-color] duration-200 focus-within:ring-2 focus-within:ring-ink",
           large ? "py-[15px]" : "py-3",
         )}
       >
-        <MagnifyingGlass className={cn("mt-[3px] shrink-0 text-ink-3", large ? "size-[18px]" : "size-4")} />
-        <textarea
+        <MagnifyingGlass className={cn("shrink-0 text-ink-3", large ? "size-[18px]" : "size-4")} />
+        <input
           ref={inputRef}
-          rows={1}
+          type="text"
+          id="main-omnibox-input"
+          name="query"
+          autoComplete="off"
           value={value}
           onChange={(event) => {
             setValue(event.target.value);
@@ -234,10 +239,12 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
             setOpen(true);
           }}
           onFocus={() => {
+            setFocused(true);
             setOpen(true);
             onFocusChange?.(true);
           }}
           onBlur={() => {
+            setFocused(false);
             window.setTimeout(() => setOpen(false), 160);
             onFocusChange?.(false);
           }}
@@ -248,12 +255,12 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
           role="combobox"
           spellCheck={false}
           className={cn(
-            "max-h-28 min-h-[24px] w-full resize-none bg-transparent leading-6 text-ink outline-none placeholder:text-transparent",
+            "min-h-[24px] w-full bg-transparent leading-6 text-ink outline-none placeholder:text-ink-4",
             large ? "text-[16.5px]" : "text-[15px]",
           )}
-          placeholder="Search or ask"
+          placeholder={focused ? "Search incidents, vendors, CVEs..." : ""}
         />
-        {!value ? (
+        {!value && !focused ? (
           <span
             className={cn(
               "pointer-events-none absolute leading-6 text-ink-4",
@@ -265,7 +272,7 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
             {reduced ? prompts[0] : typed}
           </span>
         ) : null}
-        <kbd className="mt-[2px] hidden shrink-0 rounded-[6px] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10.5px] text-ink-4 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] sm:block">
+        <kbd className="hidden shrink-0 rounded-[6px] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10.5px] text-ink-4 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] sm:block">
           ⌘K
         </kbd>
       </div>

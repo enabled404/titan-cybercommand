@@ -166,4 +166,35 @@ describe("DNS policy helpers & scoring", () => {
       }),
     ).toEqual({ score: 0, grade: "F" });
   });
+
+  it("handles valid posture scoring when SPF and DMARC are present", () => {
+    const res = scoreReconPosture({
+      nxdomain: false,
+      spfValid: true,
+      dmarcEnforced: true,
+      dmarcPresent: true,
+      incidentCount: 0,
+      cveCount: 0,
+    });
+    expect(res.score).toBe(100);
+    expect(res.grade).toBe("A+");
+  });
+});
+
+describe("/api/recon endpoint", () => {
+  it("rejects missing or malformed domains with 400", async () => {
+    const { GET } = await import("@/app/api/recon/route");
+    const req = new Request("http://localhost:3000/api/recon?domain=");
+    const res = await GET(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid target domain name");
+  });
+
+  it("rejects IP literals with 400", async () => {
+    const { GET } = await import("@/app/api/recon/route");
+    const req = new Request("http://localhost:3000/api/recon?domain=127.0.0.1");
+    const res = await GET(req);
+    expect(res.status).toBe(400);
+  });
 });

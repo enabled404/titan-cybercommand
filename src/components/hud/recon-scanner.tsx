@@ -57,16 +57,23 @@ interface ReconResult {
 }
 
 async function queryDoH(name: string, type: "A" | "TXT" | "MX", signal: AbortSignal): Promise<DnsJsonResponse | null> {
-  try {
-    const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`, {
-      headers: { Accept: "application/dns-json" },
-      signal,
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as DnsJsonResponse;
-  } catch {
-    return null;
+  const enc = encodeURIComponent(name);
+  const urls = [
+    `https://dns.google/resolve?name=${enc}&type=${type}`,
+    `https://cloudflare-dns.com/dns-query?name=${enc}&type=${type}`,
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: "application/dns-json" },
+        signal,
+      });
+      if (res.ok) return (await res.json()) as DnsJsonResponse;
+    } catch {
+      // Try next provider
+    }
   }
+  return null;
 }
 
 export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; onClose: () => void; snapshot: Snapshot }) {
@@ -114,68 +121,106 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
     try {
       const apexDomain = deriveApexDomain(cleanDomain);
       const isSubdomain = apexDomain !== cleanDomain;
-      const queries: [
-        Promise<DnsJsonResponse | null>,
-        Promise<DnsJsonResponse | null>,
-        Promise<DnsJsonResponse | null>,
-        Promise<DnsJsonResponse | null>,
-        Promise<DnsJsonResponse | null>,
-        Promise<DnsJsonResponse | null>,
-      ] = [
-        queryDoH(cleanDomain, "A", controller.signal),
-        queryDoH(cleanDomain, "TXT", controller.signal),
-        queryDoH(`_dmarc.${cleanDomain}`, "TXT", controller.signal),
-        queryDoH(cleanDomain, "MX", controller.signal),
-        isSubdomain ? queryDoH(apexDomain, "TXT", controller.signal) : Promise.resolve(null),
-        isSubdomain ? queryDoH(`_dmarc.${apexDomain}`, "TXT", controller.signal) : Promise.resolve(null),
-      ];
 
-      const [dnsRes, txtRes, dmarcRes, mxRes, apexTxtRes, apexDmarcRes] = await Promise.all(queries);
+      let ips: string[] = [];
+      let mxList: string[] = [];
+      let txtStrings: string[] = [];
+      let dmarcStrings: string[] = [];
+      let nxdomain = false;
+      let partial = false;
+
+      // Primary: Call the internal backend resolver (bypasses client-side DoH blockers & adblockers)
+      let backendResolved = false;
+      try {
+        const res = await fetch(`/api/recon?domain=${encodeURIComponent(cleanDomain)}`, {
+          signal: controller.signal,
+          headers: { Accept: "application/json" },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && !data.error) {
+            ips = data.ips ?? [];
+            mxList = data.mx ?? [];
+            txtStrings = data.txt ?? [];
+            dmarcStrings = data.dmarc ?? [];
+            nxdomain = Boolean(data.nxdomain);
+            partial = Boolean(data.partial);
+            backendResolved = true;
+          }
+        }
+      } catch {
+        // Fallback to client DoH below
+      }
+
+      // Secondary fallback: Direct DoH if backend resolution was unreachable
+      if (!backendResolved) {
+        const queries: [
+          Promise<DnsJsonResponse | null>,
+          Promise<DnsJsonResponse | null>,
+          Promise<DnsJsonResponse | null>,
+          Promise<DnsJsonResponse | null>,
+          Promise<DnsJsonResponse | null>,
+          Promise<DnsJsonResponse | null>,
+        ] = [
+          queryDoH(cleanDomain, "A", controller.signal),
+          queryDoH(cleanDomain, "TXT", controller.signal),
+          queryDoH(`_dmarc.${cleanDomain}`, "TXT", controller.signal),
+          queryDoH(cleanDomain, "MX", controller.signal),
+          isSubdomain ? queryDoH(apexDomain, "TXT", controller.signal) : Promise.resolve(null),
+          isSubdomain ? queryDoH(`_dmarc.${apexDomain}`, "TXT", controller.signal) : Promise.resolve(null),
+        ];
+
+        const [dnsRes, txtRes, dmarcRes, mxRes, apexTxtRes, apexDmarcRes] = await Promise.all(queries);
+        if (controller.signal.aborted) return;
+
+        const anyDnsSucceeded = Boolean(dnsRes || txtRes || dmarcRes || mxRes || apexTxtRes || apexDmarcRes);
+        if (!anyDnsSucceeded) {
+          setError("Unable to reach passive DNS resolvers. Verify network connectivity or try again.");
+          return;
+        }
+
+        for (const ans of dnsRes?.Answer ?? []) {
+          if (ans.type === 1) ips.push(ans.data);
+        }
+
+        const subdomainTxt: string[] = [];
+        for (const ans of txtRes?.Answer ?? []) {
+          if (ans.type === 16) subdomainTxt.push(String(ans.data).replace(/^"|"$/g, ""));
+        }
+
+        const subdomainDmarc: string[] = [];
+        for (const ans of dmarcRes?.Answer ?? []) {
+          if (ans.type === 16) subdomainDmarc.push(String(ans.data).replace(/^"|"$/g, ""));
+        }
+
+        for (const ans of mxRes?.Answer ?? []) {
+          if (ans.type === 15) {
+            const parts = ans.data.split(" ");
+            mxList.push(parts[parts.length - 1] || ans.data);
+          }
+        }
+
+        nxdomain =
+          dnsRes?.Status === 3 &&
+          ips.length === 0 &&
+          subdomainTxt.length === 0 &&
+          mxList.length === 0 &&
+          subdomainDmarc.length === 0;
+
+        txtStrings = [...subdomainTxt];
+        dmarcStrings = [...subdomainDmarc];
+        if (!nxdomain && isSubdomain) {
+          for (const ans of apexTxtRes?.Answer ?? []) {
+            if (ans.type === 16) txtStrings.push(String(ans.data).replace(/^"|"$/g, ""));
+          }
+          for (const ans of apexDmarcRes?.Answer ?? []) {
+            if (ans.type === 16) dmarcStrings.push(String(ans.data).replace(/^"|"$/g, ""));
+          }
+        }
+        partial = !dnsRes || !mxRes || !txtRes || !dmarcRes;
+      }
+
       if (controller.signal.aborted) return;
-
-      const anyDnsSucceeded = Boolean(dnsRes || txtRes || dmarcRes || mxRes || apexTxtRes || apexDmarcRes);
-      if (!anyDnsSucceeded) {
-        setError("Unable to reach passive DNS-over-HTTPS resolver. Verify network connectivity or try again.");
-        return;
-      }
-
-      const ips: string[] = [];
-      for (const ans of dnsRes?.Answer ?? []) {
-        if (ans.type === 1) ips.push(ans.data);
-      }
-
-      const subdomainTxt: string[] = [];
-      for (const ans of txtRes?.Answer ?? []) {
-        if (ans.type === 16) subdomainTxt.push(String(ans.data));
-      }
-
-      const subdomainDmarc: string[] = [];
-      for (const ans of dmarcRes?.Answer ?? []) {
-        if (ans.type === 16) subdomainDmarc.push(String(ans.data));
-      }
-
-      const mxList: string[] = [];
-      for (const ans of mxRes?.Answer ?? []) {
-        if (ans.type === 15) mxList.push(ans.data.split(" ").pop() || ans.data);
-      }
-
-      const nxdomain =
-        dnsRes?.Status === 3 &&
-        ips.length === 0 &&
-        subdomainTxt.length === 0 &&
-        mxList.length === 0 &&
-        subdomainDmarc.length === 0;
-
-      const txtStrings = [...subdomainTxt];
-      const dmarcStrings = [...subdomainDmarc];
-      if (!nxdomain && isSubdomain) {
-        for (const ans of apexTxtRes?.Answer ?? []) {
-          if (ans.type === 16) txtStrings.push(String(ans.data));
-        }
-        for (const ans of apexDmarcRes?.Answer ?? []) {
-          if (ans.type === 16) dmarcStrings.push(String(ans.data));
-        }
-      }
 
       const hasSpf = extractSpfPresent(txtStrings);
       const hasDmarcEnforced = extractDmarcEnforced(dmarcStrings);
@@ -194,7 +239,7 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
       setResult({
         domain: cleanDomain,
         nxdomain,
-        dnsFailed: !dnsRes || !mxRes || !txtRes || !dmarcRes,
+        dnsFailed: partial,
         ipAddresses: ips.slice(0, 4),
         mxRecords: mxList.slice(0, 3),
         spfValid: hasSpf,
