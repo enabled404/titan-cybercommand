@@ -76,7 +76,9 @@ function resolveThreatOrigin(target?: Incident): { lon: number; lat: number; lab
     actor.includes("medusa") ||
     actor.includes("darkgate") ||
     actor.includes("apt28") ||
+    actor.includes("apt29") ||
     actor.includes("fancy bear") ||
+    actor.includes("sandworm") ||
     actor.includes("russian")
   ) {
     const actorUpper = (target?.actor || "RANSOMWARE").toUpperCase();
@@ -88,7 +90,25 @@ function resolveThreatOrigin(target?: Incident): { lon: number; lat: number; lab
     return ruHubs[Math.floor(Math.random() * ruHubs.length)];
   }
 
-  // 2. Chinese state-sponsored APT groups
+  // 2. Eastern European bulletproof hosting & extortion syndicates (N0n, Alduin, BYOD)
+  if (
+    actor.includes("n0n") ||
+    actor.includes("alduin") ||
+    actor.includes("byod") ||
+    actor.includes("whitearmor") ||
+    actor.includes("redact") ||
+    actor.includes("mortem")
+  ) {
+    const actorUpper = (target?.actor || "CARTEL").toUpperCase();
+    const bulHubs = [
+      { lon: 23.3219, lat: 42.6977, label: `${actorUpper} / SOFIA RELAY`, country: "BG" },
+      { lon: 28.8638, lat: 47.0105, label: `${actorUpper} / CHISINAU C2`, country: "MD" },
+      { lon: 76.8512, lat: 43.222, label: `${actorUpper} / ALMATY FAST-FLUX`, country: "KZ" },
+    ];
+    return bulHubs[Math.floor(Math.random() * bulHubs.length)];
+  }
+
+  // 3. Chinese state-sponsored APT groups
   if (
     actor.includes("typhoon") ||
     actor.includes("volt") ||
@@ -97,6 +117,7 @@ function resolveThreatOrigin(target?: Incident): { lon: number; lat: number; lab
     actor.includes("chimera") ||
     actor.includes("aoqin") ||
     actor.includes("crafty falcon") ||
+    actor.includes("apt41") ||
     actor.includes("china") ||
     actor.includes("chinese")
   ) {
@@ -108,19 +129,19 @@ function resolveThreatOrigin(target?: Incident): { lon: number; lat: number; lab
     return cnHubs[Math.floor(Math.random() * cnHubs.length)];
   }
 
-  // 3. North Korean state-sponsored APT groups
+  // 4. North Korean state-sponsored APT groups
   if (actor.includes("lazarus") || actor.includes("kimsuky") || actor.includes("korea") || actor.includes("dprk")) {
     const actorUpper = (target?.actor || "LAZARUS").toUpperCase();
     return { lon: 125.7625, lat: 39.0392, label: `${actorUpper} / PYONGYANG`, country: "KP" };
   }
 
-  // 4. Iranian state-sponsored APT groups
-  if (actor.includes("kitten") || actor.includes("oilrig") || actor.includes("muddywater") || actor.includes("iran")) {
+  // 5. Iranian state-sponsored APT groups
+  if (actor.includes("kitten") || actor.includes("oilrig") || actor.includes("muddywater") || actor.includes("peach") || actor.includes("iran")) {
     const actorUpper = (target?.actor || "APT33").toUpperCase();
     return { lon: 51.389, lat: 35.6892, label: `${actorUpper} / TEHRAN`, country: "IR" };
   }
 
-  // 5. Distributed cybercrime syndicates (ShinyHunters, Scattered Spider)
+  // 6. Distributed cybercrime syndicates (ShinyHunters, Scattered Spider)
   if (actor.includes("shiny") || actor.includes("scattered") || actor.includes("spider") || actor.includes("lapsus")) {
     const actorUpper = (target?.actor || "CYBERCRIME").toUpperCase();
     const proxyHubs = [
@@ -130,15 +151,21 @@ function resolveThreatOrigin(target?: Incident): { lon: number; lat: number; lab
     return proxyHubs[Math.floor(Math.random() * proxyHubs.length)];
   }
 
-  // 6. Named actor not in predefined catalog
+  // 7. Filter candidate transit hubs to avoid domestic / close-loop collisions
+  const candidateHubs = target?.country
+    ? INTERNET_TRANSIT_HUBS.filter((h) => h.country !== target.country)
+    : INTERNET_TRANSIT_HUBS;
+  const hubs = candidateHubs.length > 0 ? candidateHubs : INTERNET_TRANSIT_HUBS;
+
+  // 8. Named actor not in predefined catalog
   if (target?.actor) {
     const actorUpper = target.actor.toUpperCase();
-    const fallback = INTERNET_TRANSIT_HUBS[Math.floor(Math.random() * INTERNET_TRANSIT_HUBS.length)];
+    const fallback = hubs[Math.floor(Math.random() * hubs.length)];
     return { lon: fallback.lon, lat: fallback.lat, label: `${actorUpper} / ${fallback.label.split(" / ")[1]}`, country: fallback.country };
   }
 
-  // 7. Global backbone routing exchange
-  return INTERNET_TRANSIT_HUBS[Math.floor(Math.random() * INTERNET_TRANSIT_HUBS.length)];
+  // 9. Global backbone routing exchange
+  return hubs[Math.floor(Math.random() * hubs.length)];
 }
 
 function resolveThreatVector(target?: Incident): {
@@ -446,7 +473,7 @@ export function BallisticEngine({
           });
           soundEngine.playAttackLaunch(origin.lon);
         }
-      } else if (!reduced && !cinema && layers.ballistics && now - lastSpawnRef.current > 550 && attacksRef.current.length < 20 && incidents.length > 0) {
+      } else if (!reduced && layers.ballistics && now - lastSpawnRef.current > (cinema ? 1400 : 550) && attacksRef.current.length < 22 && incidents.length > 0) {
         lastSpawnRef.current = now;
         const target = incidents[Math.floor(Math.random() * incidents.length)];
         const origin = resolveThreatOrigin(target);
@@ -487,6 +514,11 @@ export function BallisticEngine({
         soundEngine.playAttackLaunch(origin.lon);
       }
 
+      // Precompute screen-space center for spherical radial normal projection
+      const centerProj = map.project(center);
+      const curZoom = map.getZoom();
+      const globeBlend = Math.max(0, Math.min(1, (5.2 - curZoom) / 1.5));
+
       // 1. Render and update ballistic attacks
       const activeAttacks: BallisticAttack[] = [];
 
@@ -511,7 +543,7 @@ export function BallisticEngine({
 
         const distFromCenter = angularDistance(center.lng, center.lat, curLon, curLat);
 
-        // A. Draw Subtle Holographic Arc Ray across Great Circle
+        // A. Draw Subtle Holographic Arc Ray across Great Circle with spherical curvature
         if (atk.points.length > 2) {
           ctx.beginPath();
           let started = false;
@@ -522,12 +554,22 @@ export function BallisticEngine({
               try {
                 const sp = map.project([pt[0], pt[1]]);
                 const ptProgress = i / (atk.points.length - 1);
-                const arcY = sp.y - Math.sin(ptProgress * Math.PI) * atk.arcHeight;
+                const alt = Math.sin(ptProgress * Math.PI) * atk.arcHeight;
+                const rdx = sp.x - centerProj.x;
+                const rdy = sp.y - centerProj.y;
+                const rdist = Math.hypot(rdx, rdy);
+                const normX = rdist > 0.5 ? rdx / rdist : 0;
+                const normY = rdist > 0.5 ? rdy / rdist : -1;
+                const dirX = normX * globeBlend;
+                const dirY = normY * globeBlend - (1 - globeBlend);
+                const dirLen = Math.hypot(dirX, dirY) || 1;
+                const arcX = sp.x + (dirX / dirLen) * alt;
+                const arcY = sp.y + (dirY / dirLen) * alt;
                 if (!started) {
-                  ctx.moveTo(sp.x, arcY);
+                  ctx.moveTo(arcX, arcY);
                   started = true;
                 } else {
-                  ctx.lineTo(sp.x, arcY);
+                  ctx.lineTo(arcX, arcY);
                 }
               } catch {
                 // Projection safety
@@ -538,7 +580,9 @@ export function BallisticEngine({
             ctx.strokeStyle = atk.color;
             ctx.lineWidth = 1;
             ctx.globalAlpha = 0.16;
+            ctx.setLineDash([2, 4]);
             ctx.stroke();
+            ctx.setLineDash([]);
           }
         }
 
@@ -547,8 +591,16 @@ export function BallisticEngine({
           try {
             const p = map.project([curLon, curLat]);
             const altOffset = Math.sin(progress * Math.PI) * atk.arcHeight;
-            const screenX = p.x;
-            const screenY = p.y - altOffset;
+            const rdx = p.x - centerProj.x;
+            const rdy = p.y - centerProj.y;
+            const rdist = Math.hypot(rdx, rdy);
+            const normX = rdist > 0.5 ? rdx / rdist : 0;
+            const normY = rdist > 0.5 ? rdy / rdist : -1;
+            const dirX = normX * globeBlend;
+            const dirY = normY * globeBlend - (1 - globeBlend);
+            const dirLen = Math.hypot(dirX, dirY) || 1;
+            const screenX = p.x + (dirX / dirLen) * altOffset;
+            const screenY = p.y + (dirY / dirLen) * altOffset;
 
             // Append trail point
             atk.trail.push({ x: screenX, y: screenY, time: now });
@@ -567,57 +619,46 @@ export function BallisticEngine({
               });
             }
 
-            // Draw glowing luminous laser trail (triple-pass laser bloom)
+            // Draw glowing luminous laser trail (triple-pass laser bloom with additive photon glow)
             if (atk.trail.length > 1) {
               ctx.lineCap = "round";
+              ctx.lineJoin = "round";
+              ctx.globalCompositeOperation = "lighter";
 
               // Pass 1: Outer radiant glow bloom
-              ctx.lineWidth = 4.8;
-              for (let i = 0; i < atk.trail.length - 1; i++) {
-                const p1 = atk.trail[i];
-                const p2 = atk.trail[i + 1];
-                const ageRatio = (now - p1.time) / 550;
-                const alpha = (1 - ageRatio) * 0.25;
-
-                ctx.strokeStyle = atk.color;
-                ctx.globalAlpha = alpha;
-                ctx.beginPath();
-                ctx.moveTo(p1.x, p1.y);
-                ctx.lineTo(p2.x, p2.y);
-                ctx.stroke();
+              ctx.lineWidth = 5.2;
+              ctx.strokeStyle = atk.color;
+              ctx.globalAlpha = 0.35;
+              ctx.beginPath();
+              ctx.moveTo(atk.trail[0].x, atk.trail[0].y);
+              for (let i = 1; i < atk.trail.length; i++) {
+                ctx.lineTo(atk.trail[i].x, atk.trail[i].y);
               }
+              ctx.stroke();
 
               // Pass 2: High-energy core laser beam
-              ctx.lineWidth = 1.8;
-              for (let i = 0; i < atk.trail.length - 1; i++) {
-                const p1 = atk.trail[i];
-                const p2 = atk.trail[i + 1];
-                const ageRatio = (now - p1.time) / 550;
-                const alpha = (1 - ageRatio) * 0.9;
-
-                ctx.strokeStyle = atk.color;
-                ctx.globalAlpha = alpha;
-                ctx.beginPath();
-                ctx.moveTo(p1.x, p1.y);
-                ctx.lineTo(p2.x, p2.y);
-                ctx.stroke();
+              ctx.lineWidth = 2.0;
+              ctx.strokeStyle = atk.color;
+              ctx.globalAlpha = 0.88;
+              ctx.beginPath();
+              ctx.moveTo(atk.trail[0].x, atk.trail[0].y);
+              for (let i = 1; i < atk.trail.length; i++) {
+                ctx.lineTo(atk.trail[i].x, atk.trail[i].y);
               }
+              ctx.stroke();
 
-              // Pass 3: White-hot center filament
-              ctx.lineWidth = 0.8;
-              for (let i = 0; i < atk.trail.length - 1; i++) {
-                const p1 = atk.trail[i];
-                const p2 = atk.trail[i + 1];
-                const ageRatio = (now - p1.time) / 550;
-                const alpha = (1 - ageRatio) * 0.85;
-
-                ctx.strokeStyle = "#ffffff";
-                ctx.globalAlpha = alpha;
-                ctx.beginPath();
-                ctx.moveTo(p1.x, p1.y);
-                ctx.lineTo(p2.x, p2.y);
-                ctx.stroke();
+              // Pass 3: White-hot center plasma filament
+              ctx.lineWidth = 0.9;
+              ctx.strokeStyle = "#ffffff";
+              ctx.globalAlpha = 0.95;
+              ctx.beginPath();
+              ctx.moveTo(atk.trail[0].x, atk.trail[0].y);
+              for (let i = 1; i < atk.trail.length; i++) {
+                ctx.lineTo(atk.trail[i].x, atk.trail[i].y);
               }
+              ctx.stroke();
+
+              ctx.globalCompositeOperation = "source-over";
             }
 
             // Draw drifting embers
@@ -637,21 +678,24 @@ export function BallisticEngine({
             }
             atk.embers = aliveEmbers;
 
-            // Draw glowing white plasma missile head
+            // Draw glowing white plasma missile head with additive photon corona
+            ctx.save();
+            ctx.globalCompositeOperation = "lighter";
             ctx.globalAlpha = 1;
             ctx.fillStyle = "#ffffff";
             ctx.beginPath();
-            ctx.arc(screenX, screenY, 2.8, 0, Math.PI * 2);
+            ctx.arc(screenX, screenY, 3.0, 0, Math.PI * 2);
             ctx.fill();
 
             // Outer radiant corona glow
-            const grad = ctx.createRadialGradient(screenX, screenY, 1, screenX, screenY, 11);
+            const grad = ctx.createRadialGradient(screenX, screenY, 1, screenX, screenY, 13);
             grad.addColorStop(0, atk.color);
             grad.addColorStop(1, "rgba(0,0,0,0)");
             ctx.fillStyle = grad;
             ctx.beginPath();
-            ctx.arc(screenX, screenY, 11, 0, Math.PI * 2);
+            ctx.arc(screenX, screenY, 13, 0, Math.PI * 2);
             ctx.fill();
+            ctx.restore();
 
             // Floating tactical HUD vector tag mid-flight
             if (progress > 0.3 && progress < 0.8) {
@@ -726,12 +770,15 @@ export function BallisticEngine({
               }
 
               // Ground flash core on initial impact
-              if (progress < 0.25) {
-                const flashAlpha = (1 - progress / 0.25);
-                ctx.fillStyle = "#ffffff";
-                ctx.globalAlpha = flashAlpha;
+              if (progress < 0.28) {
+                const flashAlpha = 1 - progress / 0.28;
+                const flashGrad = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 14);
+                flashGrad.addColorStop(0, `rgba(255, 255, 255, ${flashAlpha})`);
+                flashGrad.addColorStop(0.4, shk.color);
+                flashGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+                ctx.fillStyle = flashGrad;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, 14, 0, Math.PI * 2);
                 ctx.fill();
               }
             } catch {

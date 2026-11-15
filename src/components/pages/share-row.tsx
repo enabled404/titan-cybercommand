@@ -1,16 +1,32 @@
 "use client";
 
-import { Export, LinkSimple, LinkedinLogo, XLogo } from "@phosphor-icons/react";
+import { Export, FileCode, FileText, LinkSimple, LinkedinLogo, XLogo } from "@phosphor-icons/react";
 import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import { CHIP } from "@/components/pages/styles";
+import { exportIntelDossier, exportStix21 } from "@/lib/export-intel";
+import type { Incident } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const noop = () => () => undefined;
 
-/** Copy, X, LinkedIn, and the native share sheet (iMessage, WhatsApp) where the browser has one. */
-export function ShareRow({ url, text, title, grid = false, className }: { url: string; text: string; title: string; grid?: boolean; className?: string }) {
+/** Copy, X, LinkedIn, STIX 2.1 export, Dossier export, and the native share sheet. */
+export function ShareRow({
+  url,
+  text,
+  title,
+  grid = false,
+  className,
+  incident,
+}: {
+  url: string;
+  text: string;
+  title: string;
+  grid?: boolean;
+  className?: string;
+  incident?: Incident;
+}) {
   const canShare = useSyncExternalStore(
     noop,
     () => typeof navigator.share === "function",
@@ -30,6 +46,26 @@ export function ShareRow({ url, text, title, grid = false, className }: { url: s
       >
         <LinkSimple className="size-3.5" /> Copy link
       </button>
+      {incident && (
+        <>
+          <button
+            type="button"
+            className={button}
+            onClick={() => exportIntelDossier(incident)}
+            title="Export formatted Markdown intel dossier"
+          >
+            <FileText className="size-3.5 text-cyan-400" /> Dossier (.md)
+          </button>
+          <button
+            type="button"
+            className={button}
+            onClick={() => exportStix21(incident)}
+            title="Export machine-readable STIX 2.1 Threat Intelligence JSON"
+          >
+            <FileCode className="size-3.5 text-emerald-400" /> STIX 2.1 (.json)
+          </button>
+        </>
+      )}
       <a href={`https://x.com/intent/post?text=${enc(text)}&url=${enc(url)}`} target="_blank" rel="noreferrer" aria-label="Post on X" className={button}>
         <XLogo className="size-3.5" /> Post
       </a>

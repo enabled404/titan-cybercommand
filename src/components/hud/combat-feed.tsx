@@ -17,9 +17,10 @@ export function CombatFeedDrawer({
   shiftUp?: boolean;
   shiftLeft?: boolean;
 } = {}) {
-  const { intercepts, totalIntercepted, attacksPerSec, isOpen, toggleOpen } = useCombatFeed();
+  const { intercepts, totalIntercepted, isOpen, toggleOpen } = useCombatFeed();
   const map = useMapInstance((s) => s.map);
   const select = useSituation((s) => s.select);
+  const totalMonitored = totalIntercepted > 0 ? totalIntercepted : incidents.length;
 
   return (
     <div
@@ -45,7 +46,7 @@ export function CombatFeedDrawer({
           </span>
           <span className="font-bold text-cyan-300">COMBAT TELEMETRY</span>
           <span className="text-ink-4">|</span>
-          <span className="text-ink-3">{attacksPerSec} ATK/S</span>
+          <span className="text-ink-3">{intercepts.length} ACTIVE</span>
           <CaretUp size={12} className="text-ink-4" />
         </button>
       )}
@@ -68,10 +69,10 @@ export function CombatFeedDrawer({
 
             <div className="flex items-center gap-3">
               <span className="font-mono text-[10px] tabular text-ink-3">
-                <span className="text-cyan-400 font-bold">{attacksPerSec}</span> ATK/S
+                <span className="text-cyan-400 font-bold">{intercepts.length}</span> ACTIVE CORRIDORS
               </span>
               <span className="font-mono text-[10px] tabular text-ink-4">
-                {totalIntercepted.toLocaleString()} TOTAL
+                {totalMonitored.toLocaleString()} MONITORED
               </span>
               <button
                 type="button"

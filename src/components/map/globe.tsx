@@ -707,6 +707,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
   const clusterRef = useRef(onCluster);
   const incidentsRef = useRef(incidents);
   const layersRef = useRef(layers);
+  const arcAnimFrameRef = useRef<number | null>(null);
   const byId = useMemo(() => new Map(incidents.map((incident) => [incident.id, incident])), [incidents]);
   const byIdRef = useRef(byId);
   // Map event handlers read the latest props through refs, synced after each commit.
@@ -967,6 +968,8 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
     const map = mapRef.current;
     if (!map || !ready) return;
     (map.getSource("incidents") as GeoJSONSource | undefined)?.setData(incidentFeatures(incidents, Date.now()));
+    const selected = selectedId ? byIdRef.current.get(selectedId) : undefined;
+    (map.getSource("arcs") as GeoJSONSource | undefined)?.setData(arcFeatures(selected, incidents));
     if (arrivedRef.current || !incidents.length) return;
     arrivedRef.current = true;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches || new URLSearchParams(window.location.search).has("still");
@@ -986,7 +989,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [incidents, ready]);
+  }, [incidents, ready, selectedId]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1037,6 +1040,10 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
+    if (arcAnimFrameRef.current) {
+      cancelAnimationFrame(arcAnimFrameRef.current);
+      arcAnimFrameRef.current = null;
+    }
     const previous = lastSelectedRef.current;
     if (previous && previous !== selectedId) map.setFeatureState({ source: "incidents", id: previous }, { selected: false });
     lastSelectedRef.current = selectedId;
@@ -1066,9 +1073,13 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
               : ["interpolate", ["linear"], ["line-progress"], 0, "#dedede", head, "#dedede", fade, "rgba(222,222,222,0)", 1, "rgba(222,222,222,0)"],
           ),
         );
-        if (t < 1) requestAnimationFrame(step);
+        if (t < 1) {
+          arcAnimFrameRef.current = requestAnimationFrame(step);
+        } else {
+          arcAnimFrameRef.current = null;
+        }
       };
-      requestAnimationFrame(step);
+      arcAnimFrameRef.current = requestAnimationFrame(step);
     } else {
       // Subtle persistent campaign corridor lines for active threat groups
       tryStyle(() =>
@@ -1089,7 +1100,13 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
         ),
       );
     }
-    return cancelFilter;
+    return () => {
+      cancelFilter();
+      if (arcAnimFrameRef.current) {
+        cancelAnimationFrame(arcAnimFrameRef.current);
+        arcAnimFrameRef.current = null;
+      }
+    };
   }, [selectedId, ready, cinema, fittedZoom]);
 
   // Pulse fresh incidents and slowly spin the globe when nobody is touching it.

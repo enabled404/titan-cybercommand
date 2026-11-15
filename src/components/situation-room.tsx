@@ -188,6 +188,12 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
     };
   }, [wargameSim?.active, wargameSim?.mitigated, setWargameSim]);
 
+  // Synchronize authentic threat intelligence baseline count
+  useEffect(() => {
+    const totalThreats = snapshot.incidents.length + (snapshot.stats?.kevAdded30d ?? 0) + snapshot.outages.length;
+    useCombatFeed.getState().setBaseline(totalThreats);
+  }, [snapshot.incidents.length, snapshot.stats?.kevAdded30d, snapshot.outages.length]);
+
   // The visitor's stack lives in localStorage; load it after hydration so server and client HTML agree.
   useEffect(() => {
     void useStack.persist.rehydrate();
