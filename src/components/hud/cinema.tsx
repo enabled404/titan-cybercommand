@@ -91,6 +91,7 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
       setCurrent(incident);
       setPhase("flying");
       const precise = incident.geoBasis === "stated" || incident.geoBasis === "hq";
+      map.stop();
       map.flyTo({
         center: [incident.lon, incident.lat],
         zoom: precise ? 5.2 : 4.4,

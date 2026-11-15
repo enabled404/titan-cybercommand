@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCircle, Copy, MagnifyingGlass, ShieldCheck, ShieldWarning, WarningCircle, X } from "@phosphor-icons/react";
+import { Check, CheckCircle, Copy, Crosshair, MagnifyingGlass, ShieldCheck, ShieldWarning, WarningCircle, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { useMapInstance } from "@/components/map/map-instance";
@@ -56,6 +56,29 @@ interface ReconResult {
   cves: string[];
 }
 
+function withTimeout(signal: AbortSignal, ms: number): AbortSignal {
+  if (typeof AbortSignal.any === "function" && typeof AbortSignal.timeout === "function") {
+    try {
+      return AbortSignal.any([signal, AbortSignal.timeout(ms)]);
+    } catch {
+      // Fall through to manual controller
+    }
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort(new DOMException("TimeoutError", "TimeoutError"));
+  }, ms);
+  signal.addEventListener(
+    "abort",
+    () => {
+      clearTimeout(timer);
+      controller.abort(signal.reason);
+    },
+    { once: true },
+  );
+  return controller.signal;
+}
+
 async function queryDoH(name: string, type: "A" | "TXT" | "MX", signal: AbortSignal): Promise<DnsJsonResponse | null> {
   const enc = encodeURIComponent(name);
   const urls = [
@@ -66,7 +89,7 @@ async function queryDoH(name: string, type: "A" | "TXT" | "MX", signal: AbortSig
     try {
       const res = await fetch(url, {
         headers: { Accept: "application/dns-json" },
-        signal,
+        signal: withTimeout(signal, 3000),
       });
       if (res.ok) return (await res.json()) as DnsJsonResponse;
     } catch {
@@ -133,7 +156,7 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
       let backendResolved = false;
       try {
         const res = await fetch(`/api/recon?domain=${encodeURIComponent(cleanDomain)}`, {
-          signal: controller.signal,
+          signal: withTimeout(controller.signal, 8000),
           headers: { Accept: "application/json" },
         });
         if (res.ok) {
@@ -421,6 +444,24 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
           </div>
         )}
 
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <div className="relative flex size-20 items-center justify-center">
+              <span className="absolute inset-0 rounded-full border border-cyan-500/20 motion-safe:animate-ping [animation-duration:2s]" />
+              <span className="absolute inset-2 rounded-full border border-cyan-400/40 motion-safe:animate-pulse" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-cyan-500/10 text-cyan-400">
+                <MagnifyingGlass size={24} weight="bold" className="motion-safe:animate-spin [animation-duration:4s]" />
+              </div>
+            </div>
+            <p className="mt-4 font-mono text-xs font-bold tracking-widest uppercase text-cyan-400">
+              SCANNING TARGET TELEMETRY
+            </p>
+            <p className="mt-1 max-w-xs font-mono text-[11px] text-ink-4">
+              Resolving authoritative DNS records, SPF, and DMARC enforcement policies...
+            </p>
+          </div>
+        )}
+
         {!result && !loading && !error && (
           <div className="flex flex-col items-center justify-center py-12 text-center text-ink-3">
             <ShieldCheck size={48} weight="duotone" className="mb-3 text-ink-4 opacity-50" />
@@ -448,17 +489,34 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
                     <span>{copied ? "COPIED" : "COPY DOSSIER"}</span>
                   </button>
                   {reconTarget && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        soundEngine.playClick();
-                        setReconTarget(null);
-                      }}
-                      className="press flex min-h-6 items-center gap-1 rounded border border-cyan-500/30 bg-cyan-500/10 px-2 font-mono text-[10px] text-cyan-300 transition-colors hover:bg-cyan-500/20"
-                      title="Clear active OSINT reticle from globe"
-                    >
-                      CLEAR PIN
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundEngine.playClick();
+                          onClose();
+                          if (map) {
+                            map.flyTo({ center: reconTarget.coords, zoom: 4.8, pitch: 42, duration: 1500, essential: true });
+                          }
+                        }}
+                        className="press flex min-h-6 items-center gap-1 rounded border border-cyan-500/40 bg-cyan-500/20 px-2 font-mono text-[10px] text-cyan-300 transition-colors hover:bg-cyan-500/30"
+                        title="Close modal and view target on 3D globe"
+                      >
+                        <Crosshair size={11} weight="bold" />
+                        <span>VIEW ON GLOBE</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundEngine.playClick();
+                          setReconTarget(null);
+                        }}
+                        className="press flex min-h-6 items-center gap-1 rounded border border-white/10 bg-white/5 px-2 font-mono text-[10px] text-ink-3 transition-colors hover:bg-white/10"
+                        title="Clear active OSINT reticle from globe"
+                      >
+                        CLEAR PIN
+                      </button>
+                    </>
                   )}
                 </div>
                 <div className="mt-0.5 font-mono text-lg font-bold text-ink">{result.domain}</div>

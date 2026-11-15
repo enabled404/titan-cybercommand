@@ -830,6 +830,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
   // Hero framing: the globe is fitted to the free space (right of the panel, below the nav) and
   // returns there when a dossier closes. Once the visitor zooms by hand we leave the camera alone.
   const userZoomedRef = useRef(false);
+  const wasCinemaRef = useRef(false);
   const calibrationRef = useRef<number | null>(null);
   const paddingRef = useRef(padding);
   useLayoutEffect(() => {
@@ -864,7 +865,14 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
       credits.style.top = `${mobile ? padding.top : padding.left ? padding.top - 2 : padding.top + 48}px`;
     }
     const state = useSituation.getState();
-    if (state.cinema) return;
+    if (state.cinema) {
+      wasCinemaRef.current = true;
+      return;
+    }
+    if (wasCinemaRef.current) {
+      wasCinemaRef.current = false;
+      return; // Handled smoothly by the cinema exit subscriber below
+    }
     const hero = !state.selectedId && !state.selectedCve && !userZoomedRef.current;
     map.easeTo({
       padding: { left: padding.left, right: padding.right, bottom: padding.bottom, top: padding.top },

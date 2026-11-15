@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowElbowDownLeft, MagnifyingGlass, Plus, ShieldWarning, Sparkle } from "@phosphor-icons/react";
+import { ArrowElbowDownLeft, MagnifyingGlass, Plus, ShieldWarning, Sparkle, X } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
@@ -272,9 +272,25 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
             {reduced ? prompts[0] : typed}
           </span>
         ) : null}
-        <kbd className="hidden shrink-0 rounded-[6px] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10.5px] text-ink-4 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] sm:block">
-          ⌘K
-        </kbd>
+        {value ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setValue("");
+              setActive(0);
+              inputRef.current?.focus();
+            }}
+            aria-label="Clear search input"
+            className="flex size-5 shrink-0 items-center justify-center rounded-full text-ink-4 hover:bg-white/10 hover:text-ink transition-colors"
+          >
+            <X size={12} weight="bold" />
+          </button>
+        ) : (
+          <kbd className="hidden shrink-0 rounded-[6px] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10.5px] text-ink-4 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] sm:block">
+            ⌘K
+          </kbd>
+        )}
       </div>
 
       {open && rows.length > 0 ? (

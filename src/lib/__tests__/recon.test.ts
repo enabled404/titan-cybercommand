@@ -197,4 +197,8 @@ describe("/api/recon endpoint", () => {
     const res = await GET(req);
     expect(res.status).toBe(400);
   });
+
+  it("handles punycode domain normalization", () => {
+    expect(normalizeReconDomain("xn--e1afmkfd.xn--p1ai")).toBe("xn--e1afmkfd.xn--p1ai");
+  });
 });
