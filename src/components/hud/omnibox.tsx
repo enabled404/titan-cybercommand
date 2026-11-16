@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowElbowDownLeft, MagnifyingGlass, Plus, ShieldWarning, Sparkle, X } from "@phosphor-icons/react";
+import { ArrowElbowDownLeft, MagnifyingGlass, Plus, ShieldWarning, Sparkle, Target, X } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
@@ -9,6 +9,7 @@ import { StatusMark } from "@/components/kit/status-mark";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { allCountries, countryName } from "@/lib/countries";
 import { STATUS_LABEL, relativeTime } from "@/lib/format";
+import { CURATED_THREAT_ACTORS } from "@/lib/threat-actors";
 import type { Incident, Vuln } from "@/lib/types";
 import { plural, productLabel } from "@/lib/og/copy";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ type Row =
   | { kind: "check"; key: string; query: string }
   | { kind: "incident"; key: string; incident: Incident }
   | { kind: "vuln"; key: string; vuln: Vuln }
+  | { kind: "actor"; key: string; name: string; origin: string; nexus: string }
   | { kind: "country"; key: string; iso: string; name: string; count: number }
   | { kind: "ask"; key: string; query: string };
 
@@ -55,6 +57,7 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
   const router = useRouter();
   const select = useSituation((s) => s.select);
   const selectCve = useSituation((s) => s.selectCve);
+  const selectActor = useSituation((s) => s.selectActor);
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
@@ -147,7 +150,21 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
         mentions: scoredIncidents.length - named,
         query: q,
       });
-    out.push(...incidentHits, ...vulnHits, ...countryHits);
+    const matchedActors = CURATED_THREAT_ACTORS.filter(
+      (a) =>
+        norm(a.name).includes(nq) ||
+        a.aliases.some((alias) => norm(alias).includes(nq)),
+    )
+      .slice(0, 3)
+      .map((a) => ({
+        kind: "actor" as const,
+        key: `act-${a.id}`,
+        name: a.name,
+        origin: a.origin,
+        nexus: a.nexus,
+      }));
+
+    out.push(...matchedActors, ...incidentHits, ...vulnHits, ...countryHits);
     // Products and vendors: the live lists hold the newest flaws; the check covers every exploited one.
     if (looksLikeName && q.length >= 3) out.push({ kind: "check", key: "check", query: q });
     if (cveMatch && !vulnHits.length)
@@ -165,6 +182,9 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
     switch (row.kind) {
       case "incident":
         select(row.incident.id);
+        break;
+      case "actor":
+        selectActor(row.name);
         break;
       case "vuln":
         selectCve(row.vuln.cve);
@@ -417,6 +437,25 @@ function RowBody({ row }: { row: Row }) {
           </span>
           <span className="text-[14px] text-ink">
             {row.name} <span className="text-ink-3">· {row.count} incidents in 30 days</span>
+          </span>
+        </>
+      );
+    case "actor":
+      return (
+        <>
+          <span className="flex size-7 items-center justify-center rounded-[8px] bg-cyan-500/15 text-cyan-300 ring-1 ring-inset ring-cyan-500/30">
+            <Target className="size-3.5" />
+          </span>
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 text-[14px] text-ink font-semibold">
+              <span>{row.name}</span>
+              <span className="rounded bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-300">
+                APT DOSSIER
+              </span>
+            </span>
+            <span className="block truncate text-[12px] text-ink-3">
+              {row.nexus} · {row.origin}
+            </span>
           </span>
         </>
       );

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, FileCode, FileText, LinkSimple, ShieldCheck, Target, X } from "@phosphor-icons/react";
+import { ArrowUpRight, FileCode, FileText, LinkSimple, ShareNetwork, ShieldCheck, Target, X } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { AiBrief } from "@/components/hud/ai-brief";
 import { DeepResearch } from "@/components/hud/deep-research";
 import { FixButtons, IncidentAgentButtons } from "@/components/hud/fix-buttons";
+import { KillChainTimeline } from "@/components/hud/kill-chain-timeline";
+import { ShareCardModal } from "@/components/hud/share-card-modal";
 import { VulnTags } from "@/components/hud/story";
 import { OrgLogo } from "@/components/kit/org-logo";
 import { Segmented } from "@/components/kit/segmented";
@@ -89,12 +91,32 @@ function StatusChip({ status }: { status: IncidentStatus }) {
 
 const CHIP = "inline-flex h-7 items-center rounded-full bg-white/[0.04] px-2.5 text-[12px] text-ink-2 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]";
 
-function ShareRow({ url, text, incident }: { url: string; text: string; incident?: Incident }) {
+function ShareRow({
+  url,
+  text,
+  incident,
+  onOpenSocialCard,
+}: {
+  url: string;
+  text: string;
+  incident?: Incident;
+  onOpenSocialCard?: () => void;
+}) {
   const enc = encodeURIComponent;
   const cls =
     "press flex h-8 items-center gap-1.5 rounded-full bg-white/[0.035] px-3 text-[12.5px] text-ink-2 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] transition-colors hover:bg-white/[0.06] hover:text-ink";
   return (
     <div className="flex flex-wrap gap-2">
+      {onOpenSocialCard && (
+        <button
+          type="button"
+          className="press flex h-8 items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/15 px-3 text-[12.5px] font-semibold text-cyan-200 shadow-sm transition-colors hover:bg-cyan-500/25"
+          onClick={onOpenSocialCard}
+          title="Export formatted high-resolution social media cyber intel card"
+        >
+          <ShareNetwork className="size-3.5 text-cyan-400" /> Export Card
+        </button>
+      )}
       <button
         type="button"
         className={cls}
@@ -155,7 +177,9 @@ function Checklist({ items }: { items: string[] }) {
 export function IncidentPanel({ incident, related }: { incident: Incident; related: Incident[] }) {
   const select = useSituation((s) => s.select);
   const selectCve = useSituation((s) => s.selectCve);
+  const selectActor = useSituation((s) => s.selectActor);
   const [audience, setAudience] = useState<"people" | "teams">("people");
+  const [shareCardOpen, setShareCardOpen] = useState(false);
   const guidance = guidanceFor(incident);
   const url = `${SITE_URL}/incident/${incident.id}`;
   const primary = incident.sources[0]?.url ?? url;
@@ -182,6 +206,20 @@ export function IncidentPanel({ incident, related }: { incident: Incident; relat
           <p className="mt-2 text-[13px] leading-snug text-ink-3">{statusSentence(incident)}</p>
         </div>
 
+        {incident.actor && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => selectActor(incident.actor ?? null)}
+              className="press inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 font-mono text-[11px] text-cyan-300 hover:bg-cyan-500/20"
+              title={`View full profile for ${incident.actor}`}
+            >
+              <Target size={12} weight="bold" />
+              <span>THREAT ACTOR: <strong className="text-white">{incident.actor.toUpperCase()}</strong> (DOSSIER)</span>
+            </button>
+          </div>
+        )}
+
         <p className="mt-5 text-[17px] font-medium leading-snug tracking-[-0.005em] text-ink">{incident.title}</p>
         {incident.summary ? <p className="mt-2 text-[14px] leading-relaxed text-ink-2">{incident.summary}</p> : null}
 
@@ -200,6 +238,10 @@ export function IncidentPanel({ incident, related }: { incident: Incident; relat
           <DeepResearch kind="incident" id={incident.id} subject={incident.victim} />
         </div>
       </div>
+
+      <Section title="Kill chain progression">
+        <KillChainTimeline incident={incident} />
+      </Section>
 
       <Section
         title="What to do"
@@ -302,11 +344,17 @@ export function IncidentPanel({ incident, related }: { incident: Incident; relat
       </Section>
 
       <Section title="Share">
-        <ShareRow url={url} text={`${incident.title}. Every cyber incident, live:`} incident={incident} />
+        <ShareRow
+          url={url}
+          text={`${incident.title}. Every cyber incident, live:`}
+          incident={incident}
+          onOpenSocialCard={() => setShareCardOpen(true)}
+        />
         <Link href={`/incident/${incident.id}`} className="mt-4 inline-flex items-center gap-1 text-[13px] text-ink-3 hover:text-ink">
           Open the incident page <ArrowUpRight className="size-3.5" />
         </Link>
       </Section>
+      <ShareCardModal incident={incident} open={shareCardOpen} onClose={() => setShareCardOpen(false)} />
     </Shell>
   );
 }

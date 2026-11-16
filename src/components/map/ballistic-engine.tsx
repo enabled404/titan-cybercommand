@@ -279,10 +279,12 @@ export function BallisticEngine({
   const map = useMapInstance((s) => s.map);
   const ready = useMapInstance((s) => s.ready);
   const selectedId = useSituation((s) => s.selectedId);
+  const selectedActor = useSituation((s) => s.selectedActor);
   const layers = useSituation((s) => s.layers);
   const cinema = useSituation((s) => s.cinema);
   const wargameSim = useSituation((s) => s.wargameSim);
   const reconTarget = useSituation((s) => s.reconTarget);
+  const replay = useSituation((s) => s.replay);
   const selectedIncident = incidents.find((i) => i.id === selectedId);
 
   const wargameSimRef = useRef(wargameSim);
@@ -294,6 +296,16 @@ export function BallisticEngine({
   useEffect(() => {
     reconTargetRef.current = reconTarget;
   }, [reconTarget]);
+
+  const selectedActorRef = useRef(selectedActor);
+  useEffect(() => {
+    selectedActorRef.current = selectedActor;
+  }, [selectedActor]);
+
+  const replayRef = useRef(replay);
+  useEffect(() => {
+    replayRef.current = replay;
+  }, [replay]);
 
   const attacksRef = useRef<BallisticAttack[]>([]);
   const shockwavesRef = useRef<ImpactShockwave[]>([]);
@@ -473,9 +485,16 @@ export function BallisticEngine({
           });
           soundEngine.playAttackLaunch(origin.lon);
         }
-      } else if (!reduced && layers.ballistics && now - lastSpawnRef.current > (cinema ? 1400 : 550) && attacksRef.current.length < 22 && incidents.length > 0) {
+      } else if (!reduced && layers.ballistics && now - lastSpawnRef.current > (cinema ? 900 : 320) && attacksRef.current.length < 24 && incidents.length > 0) {
         lastSpawnRef.current = now;
-        const target = incidents[Math.floor(Math.random() * incidents.length)];
+        const actorFilter = selectedActorRef.current?.toLowerCase();
+        let target = incidents[Math.floor(Math.random() * incidents.length)];
+        if (actorFilter) {
+          const actorMatches = incidents.filter((i) => i.actor && i.actor.toLowerCase().includes(actorFilter));
+          if (actorMatches.length > 0) {
+            target = actorMatches[Math.floor(Math.random() * actorMatches.length)];
+          }
+        }
         const origin = resolveThreatOrigin(target);
         const proto = resolveThreatVector(target);
 
@@ -543,7 +562,7 @@ export function BallisticEngine({
 
         const distFromCenter = angularDistance(center.lng, center.lat, curLon, curLat);
 
-        // A. Draw Subtle Holographic Arc Ray across Great Circle with spherical curvature
+        // A. Draw Luminous Multi-Pass Glowing Arc Ray across Great Circle
         if (atk.points.length > 2) {
           ctx.beginPath();
           let started = false;
@@ -577,12 +596,58 @@ export function BallisticEngine({
             }
           }
           if (started) {
+            ctx.save();
+            // Pass 1: Vibrant ambient glowing aura
+            ctx.globalCompositeOperation = "lighter";
             ctx.strokeStyle = atk.color;
-            ctx.lineWidth = 1;
-            ctx.globalAlpha = 0.16;
-            ctx.setLineDash([2, 4]);
+            ctx.lineWidth = 3.6;
+            ctx.globalAlpha = 0.38;
+            ctx.stroke();
+
+            // Pass 2: High-contrast core trajectory line
+            ctx.lineWidth = 1.4;
+            ctx.globalAlpha = 0.85;
+            ctx.stroke();
+
+            // Pass 3: White-hot animated energy pulse traveling along the arc
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 1.8;
+            ctx.globalAlpha = 0.95;
+            ctx.setLineDash([8, 22]);
+            ctx.lineDashOffset = -(now * 0.045 + (atk.startTime % 1000) * 0.05);
             ctx.stroke();
             ctx.setLineDash([]);
+            ctx.restore();
+          }
+
+          // Threat Actor Origin Hub Pulsing Beacon
+          const originDist = angularDistance(center.lng, center.lat, atk.origin.lon, atk.origin.lat);
+          if (originDist <= 88) {
+            try {
+              const op = map.project([atk.origin.lon, atk.origin.lat]);
+              ctx.save();
+              ctx.globalCompositeOperation = "lighter";
+              const pulseProg = (now * 0.0018 + (atk.startTime % 1000) * 0.001) % 1;
+              const beaconRadius = 3 + pulseProg * 13;
+
+              // Outer radar ping
+              ctx.strokeStyle = atk.color;
+              ctx.lineWidth = 1.1;
+              ctx.globalAlpha = (1 - pulseProg) * 0.75;
+              ctx.beginPath();
+              ctx.arc(op.x, op.y, beaconRadius, 0, Math.PI * 2);
+              ctx.stroke();
+
+              // Center origin hub pin
+              ctx.fillStyle = atk.color;
+              ctx.globalAlpha = 0.9;
+              ctx.beginPath();
+              ctx.arc(op.x, op.y, 2.2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+            } catch {
+              // Projection edge safety
+            }
           }
         }
 
@@ -727,7 +792,7 @@ export function BallisticEngine({
             severity: atk.severity,
             label: atk.target.label,
             startTime: now,
-            duration: 950,
+            duration: 1400,
           });
           soundEngine.playImpact(atk.severity);
         } else {
@@ -749,11 +814,14 @@ export function BallisticEngine({
           if (distFromCenter <= 88) {
             try {
               const p = map.project([shk.lon, shk.lat]);
-              const radius = 3 + progress * (32 + shk.severity * 8);
-              const alpha = (1 - progress);
+              const radius = 3 + progress * (36 + shk.severity * 10);
+              const alpha = 1 - progress;
 
-              // Concentric expanding ring 1 (primary)
-              ctx.lineWidth = 1.6;
+              ctx.save();
+              ctx.globalCompositeOperation = "lighter";
+
+              // Concentric expanding ring 1 (primary high-energy shockwave)
+              ctx.lineWidth = 2.4;
               ctx.strokeStyle = shk.color;
               ctx.globalAlpha = alpha * 0.95;
               ctx.beginPath();
@@ -761,26 +829,36 @@ export function BallisticEngine({
               ctx.stroke();
 
               // Secondary inner ring
-              if (progress > 0.12) {
-                ctx.lineWidth = 1.0;
-                ctx.globalAlpha = alpha * 0.7;
+              if (progress > 0.08) {
+                ctx.lineWidth = 1.4;
+                ctx.globalAlpha = alpha * 0.8;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, radius * 0.6, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, radius * 0.62, 0, Math.PI * 2);
+                ctx.stroke();
+              }
+
+              // Tertiary outer ripple ring
+              if (progress > 0.18) {
+                ctx.lineWidth = 0.9;
+                ctx.globalAlpha = alpha * 0.55;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, radius * 1.25, 0, Math.PI * 2);
                 ctx.stroke();
               }
 
               // Ground flash core on initial impact
               if (progress < 0.28) {
                 const flashAlpha = 1 - progress / 0.28;
-                const flashGrad = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 14);
+                const flashGrad = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 18);
                 flashGrad.addColorStop(0, `rgba(255, 255, 255, ${flashAlpha})`);
-                flashGrad.addColorStop(0.4, shk.color);
+                flashGrad.addColorStop(0.35, shk.color);
                 flashGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
                 ctx.fillStyle = flashGrad;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 14, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
                 ctx.fill();
               }
+              ctx.restore();
             } catch {
               // Ignore projection edge
             }

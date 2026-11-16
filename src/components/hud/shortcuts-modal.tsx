@@ -13,6 +13,7 @@ interface Props {
 const SHORTCUTS = [
   { key: "W", desc: "Launch WarGames cascading disaster simulator" },
   { key: "R", desc: "Launch Target Recon passive OSINT scanner" },
+  { key: "Y", desc: "Launch 24-hour time-travel attack replay" },
   { key: "V", desc: "Watch master demo briefing video & export artifacts" },
   { key: "P / C", desc: "Toggle Cinematic Auto-Patrol / Panoramic view" },
   { key: "T", desc: "Toggle Live Combat Intercept Telemetry drawer" },
