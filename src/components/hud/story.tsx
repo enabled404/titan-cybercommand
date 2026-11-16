@@ -6,6 +6,7 @@ import Link from "next/link";
 import { forwardRef, memo, useMemo, useState } from "react";
 
 import { AllowanceHint } from "@/components/auth/allowance-hint";
+import { AmIAffectedHero } from "@/components/hud/am-i-affected-hero";
 import { AnswerCard } from "@/components/hud/ai-brief";
 import { Omnibox, type OmniboxHandle } from "@/components/hud/omnibox";
 import { PatchStrip } from "@/components/hud/patch-strip";
@@ -16,7 +17,7 @@ import { StatusMark } from "@/components/kit/status-mark";
 import { countryName } from "@/lib/countries";
 import { STATUS_LABEL, epssPercent, relativeTime } from "@/lib/format";
 import type { IncidentDay, IncidentSummary } from "@/lib/incident-view";
-import type { Incident, MalwarePackage, Outage, Vuln } from "@/lib/types";
+import type { Incident, MalwarePackage, Outage, Snapshot, Vuln } from "@/lib/types";
 import { useNow } from "@/lib/perf/use-now";
 import { productLabel } from "@/lib/og/copy";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ interface StoryProps {
   generatedAt: string;
   onSearchFocus?: (focused: boolean) => void;
   onClose?: () => void;
+  snapshot?: Snapshot;
 }
 
 /** Small mono caps label used for every section and tile heading. */
@@ -52,7 +54,7 @@ function Eyebrow({ children, className }: { children: React.ReactNode; className
 
 /** The left column: the picture at a glance, the way in (search), then the live lists. */
 const StoryPanel = forwardRef<OmniboxHandle, StoryProps>(function Story(props, ref) {
-  const { incidents, allIncidents, incidentSummary, incidentDays, vulns, trending, kev, fresh, malware, outages, generatedAt, onSearchFocus, onClose } = props;
+  const { incidents, allIncidents, incidentSummary, incidentDays, vulns, trending, kev, fresh, malware, outages, generatedAt, onSearchFocus, onClose, snapshot } = props;
   // One clock for every "time ago" label: the snapshot time on the server and during hydration.
   const now = useNow(Date.parse(generatedAt));
   const [question, setQuestion] = useState<string | null>(null);
@@ -97,6 +99,12 @@ const StoryPanel = forwardRef<OmniboxHandle, StoryProps>(function Story(props, r
         </div>
         <Header generatedAt={generatedAt} now={now} />
         <Pulse summary={incidentSummary} days={incidentDays} />
+
+        {snapshot && (
+          <div className="mt-3">
+            <AmIAffectedHero snapshot={snapshot} />
+          </div>
+        )}
 
         <div className="mt-3">
           <Omnibox ref={ref} incidents={allIncidents} vulns={vulns} onAsk={setQuestion} onFocusChange={onSearchFocus} size="md" />

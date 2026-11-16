@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
-import { Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass } from "@phosphor-icons/react";
+import { ClockCounterClockwise, Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass } from "@phosphor-icons/react";
 
 import { AuthButton } from "@/components/auth/auth-button";
 import { AudioButton } from "@/components/hud/audio-button";
@@ -60,6 +60,8 @@ export function TopBar({
   onOpenDemo,
   onTogglePatrol,
   isPatrolActive,
+  onToggleReplay,
+  isReplayActive,
 }: {
   ticker?: React.ReactNode;
   stats?: PostureStats;
@@ -69,9 +71,11 @@ export function TopBar({
   onOpenDemo?: () => void;
   onTogglePatrol?: () => void;
   isPatrolActive?: boolean;
+  onToggleReplay?: () => void;
+  isReplayActive?: boolean;
 }) {
   const [opsOpen, setOpsOpen] = useState(false);
-  const hasTacticalOps = Boolean(onOpenRecon || onOpenWargames || onTogglePatrol || onOpenDemo);
+  const hasTacticalOps = Boolean(onOpenRecon || onOpenWargames || onTogglePatrol || onOpenDemo || onToggleReplay);
 
   return (
     <header className="pointer-events-auto flex h-14 items-center justify-between gap-2 bg-space/90 px-3 backdrop-blur-md border-b border-white/[0.06] sm:gap-3 sm:px-4">
@@ -134,6 +138,27 @@ export function TopBar({
               >
                 <Crosshair size={12} weight="bold" />
                 <span>WARGAMES</span>
+              </button>
+            )}
+
+            {onToggleReplay && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  onToggleReplay();
+                }}
+                className={cn(
+                  "press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] transition-colors",
+                  isReplayActive
+                    ? "bg-cyan-500/25 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.4)]"
+                    : "text-ink-3 hover:bg-white/10 hover:text-ink",
+                )}
+                title="Replay last 24h of attacks in 30 seconds (Y)"
+                aria-label={isReplayActive ? "Stop 24h Replay" : "Start 24h Attack Replay"}
+              >
+                <ClockCounterClockwise size={12} weight="bold" />
+                <span>{isReplayActive ? "REPLAYING" : "24H REPLAY"}</span>
               </button>
             )}
 
@@ -222,7 +247,28 @@ export function TopBar({
                       <span>WarGames Sim (W)</span>
                     </button>
                   )}
-                  {onTogglePatrol && (
+                  {onToggleReplay && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  onToggleReplay();
+                }}
+                className={cn(
+                  "press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] transition-colors",
+                  isReplayActive
+                    ? "bg-cyan-500/25 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.4)]"
+                    : "text-ink-3 hover:bg-white/10 hover:text-ink",
+                )}
+                title="Replay last 24h of attacks in 30 seconds (Y)"
+                aria-label={isReplayActive ? "Stop 24h Replay" : "Start 24h Attack Replay"}
+              >
+                <ClockCounterClockwise size={12} weight="bold" />
+                <span>{isReplayActive ? "REPLAYING" : "24H REPLAY"}</span>
+              </button>
+            )}
+
+            {onTogglePatrol && (
                     <button
                       type="button"
                       onClick={() => {

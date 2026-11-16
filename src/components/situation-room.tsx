@@ -43,6 +43,8 @@ const Globe = dynamic(() => import("@/components/map/globe").then((mod) => mod.G
 // Only needed once something is selected, so they stay out of the first load.
 const IncidentPanel = dynamic(() => import("@/components/hud/detail-panel").then((mod) => mod.IncidentPanel));
 const CvePanel = dynamic(() => import("@/components/hud/detail-panel").then((mod) => mod.CvePanel));
+const ThreatActorModal = dynamic(() => import("@/components/hud/threat-actor-modal").then((mod) => mod.ThreatActorModal));
+const ReplayDock = dynamic(() => import("@/components/hud/replay-dock").then((mod) => mod.ReplayDock));
 
 const PANEL = 460;
 /** Space the patch dock takes from the bottom edge on desktop. */
@@ -152,13 +154,17 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const country = useSituation((s) => s.country);
   const selectedId = useSituation((s) => s.selectedId);
   const selectedCve = useSituation((s) => s.selectedCve);
+  const selectedActor = useSituation((s) => s.selectedActor);
   const select = useSituation((s) => s.select);
   const selectCve = useSituation((s) => s.selectCve);
+  const selectActor = useSituation((s) => s.selectActor);
   const cinema = useSituation((s) => s.cinema);
   const setCinema = useSituation((s) => s.setCinema);
   const tacticalCrt = useSituation((s) => s.tacticalCrt);
   const wargameSim = useSituation((s) => s.wargameSim);
   const setWargameSim = useSituation((s) => s.setWargameSim);
+  const replay = useSituation((s) => s.replay);
+  const setReplay = useSituation((s) => s.setReplay);
 
   // WarGames autonomous cascade progression and automated countermeasure defense
   useEffect(() => {
@@ -310,6 +316,9 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       } else if (event.key.toLowerCase() === "r") {
         event.preventDefault();
         setReconOpen((prev) => !prev);
+      } else if (event.key.toLowerCase() === "y") {
+        event.preventDefault();
+        setReplay({ active: !replay.active, playing: !replay.active, progress: 0 });
       } else if (event.key.toLowerCase() === "m") {
         event.preventDefault();
         toggleMute();
@@ -334,7 +343,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute]);
+  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute, replay.active, setReplay]);
 
   const onHover = useCallback((incident: Incident | null, point: { x: number; y: number } | null) => {
     setHovered(incident && point ? { incident, x: point.x, y: point.y } : null);
@@ -411,6 +420,8 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
             onOpenDemo={() => setDemoOpen(true)}
             onTogglePatrol={() => setCinema(!cinema)}
             isPatrolActive={cinema}
+            onToggleReplay={() => setReplay({ active: !replay.active, playing: !replay.active, progress: 0 })}
+            isReplayActive={replay.active}
           />
         </div>
 
@@ -437,6 +448,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
             malware={snapshot.malware}
             outages={snapshot.outages}
             generatedAt={snapshot.generatedAt}
+            snapshot={snapshot}
             onClose={() => setSidebarOpen(false)}
             onSearchFocus={(focused) => {
               if (focused && mobile) setSheetOpen(true);
@@ -467,6 +479,8 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       <ReconScannerModal open={reconOpen} onClose={() => setReconOpen(false)} snapshot={snapshot} />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
+      <ThreatActorModal actorName={selectedActor} open={Boolean(selectedActor)} onClose={() => selectActor(null)} snapshot={snapshot} />
+      <ReplayDock incidents={filtered} now={now} />
       {!cinema && <CombatFeedDrawer incidents={filtered} shiftUp={patchDockOpen && patchDockFits} shiftLeft={panelOpen} />}
 
       {wargameSim?.active && !wargamesOpen && !cinema && (

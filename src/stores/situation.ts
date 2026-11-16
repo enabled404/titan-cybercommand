@@ -26,9 +26,17 @@ export interface ReconTargetState {
   grade: string;
 }
 
+export interface ReplayState {
+  active: boolean;
+  playing: boolean;
+  progress: number;
+  speed: number;
+}
+
 interface SituationState {
   selectedId: string | null;
   selectedCve: string | null;
+  selectedActor: string | null;
   hoveredId: string | null;
   window: TimeWindow;
   statuses: Set<IncidentStatus>;
@@ -41,8 +49,11 @@ interface SituationState {
   railOpen: boolean;
   wargameSim: WargameSimState | null;
   reconTarget: ReconTargetState | null;
+  replay: ReplayState;
+  amIAffectedOpen: boolean;
   select: (id: string | null) => void;
   selectCve: (cve: string | null) => void;
+  selectActor: (actor: string | null) => void;
   hover: (id: string | null) => void;
   setWindow: (window: TimeWindow) => void;
   toggleStatus: (status: IncidentStatus) => void;
@@ -54,11 +65,14 @@ interface SituationState {
   setRailOpen: (open: boolean) => void;
   setWargameSim: (sim: WargameSimState | null) => void;
   setReconTarget: (target: ReconTargetState | null) => void;
+  setReplay: (update: Partial<ReplayState> | null) => void;
+  setAmIAffectedOpen: (open: boolean) => void;
 }
 
 export const useSituation = create<SituationState>((set, get) => ({
   selectedId: null,
   selectedCve: null,
+  selectedActor: null,
   hoveredId: null,
   window: "7d",
   statuses: new Set<IncidentStatus>(INCIDENT_STATUSES),
@@ -72,15 +86,18 @@ export const useSituation = create<SituationState>((set, get) => ({
   railOpen: true,
   wargameSim: null,
   reconTarget: null,
+  replay: { active: false, playing: false, progress: 0, speed: 1 },
+  amIAffectedOpen: false,
   // Opening a dossier checks the free allowance: a few a day without an account, then Titan Cyber Command asks for a Valyu sign-in.
   select: (id) => {
     if (id && id !== get().selectedId && !useAccess.getState().allowOpen(`i:${id}`)) return;
-    set({ selectedId: id, selectedCve: null });
+    set({ selectedId: id, selectedCve: null, selectedActor: null });
   },
   selectCve: (cve) => {
     if (cve && cve !== get().selectedCve && !useAccess.getState().allowOpen(`cve:${cve}`)) return;
-    set({ selectedCve: cve, selectedId: null });
+    set({ selectedCve: cve, selectedId: null, selectedActor: null });
   },
+  selectActor: (actor) => set({ selectedActor: actor }),
   hover: (id) => set({ hoveredId: id }),
   setWindow: (window) => set({ window }),
   toggleStatus: (status) =>
@@ -98,6 +115,11 @@ export const useSituation = create<SituationState>((set, get) => ({
   setRailOpen: (railOpen) => set({ railOpen }),
   setWargameSim: (wargameSim) => set({ wargameSim }),
   setReconTarget: (reconTarget) => set({ reconTarget }),
+  setReplay: (update) =>
+    set((state) => ({
+      replay: update === null ? { active: false, playing: false, progress: 0, speed: 1 } : { ...state.replay, ...update },
+    })),
+  setAmIAffectedOpen: (open) => set({ amIAffectedOpen: open }),
 }));
 
 export const WINDOW_MS: Record<TimeWindow, number> = {
