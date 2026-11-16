@@ -99,4 +99,31 @@ describe("Incident Kill Chain Timeline Generator", () => {
     expect(steps[0].mitreId).toBe("T1078");
     expect(steps[3].status).toBe("ACTIVE");
   });
+
+  it("handles missing or invalid date strings safely without throwing RangeError", () => {
+    const inc: Incident = {
+      id: "inc-invalid-date",
+      victim: "Test Org",
+      type: "cyberattack",
+      status: "confirmed",
+      date: "invalid-not-a-date",
+      updated: "",
+      summary: "",
+      geoBasis: "country",
+      cves: [],
+      country: "US",
+      lon: 0,
+      lat: 0,
+      origin: "news",
+      sources: [],
+      confidence: 0.5,
+      severity: 2,
+      title: "Test incident with malformed date",
+    };
+
+    expect(() => generateIncidentKillChain(inc)).not.toThrow();
+    const steps = generateIncidentKillChain(inc);
+    expect(steps.length).toBe(4);
+    expect(steps[0].timestamp).toContain("T - ");
+  });
 });

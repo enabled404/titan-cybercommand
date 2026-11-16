@@ -310,6 +310,7 @@ export function BallisticEngine({
   const attacksRef = useRef<BallisticAttack[]>([]);
   const shockwavesRef = useRef<ImpactShockwave[]>([]);
   const lastSpawnRef = useRef<number>(0);
+  const lastReplayCountRef = useRef<number>(0);
   const animFrameRef = useRef<number | null>(null);
   const [activeCount, setActiveCount] = useState(0);
   const activeCountRef = useRef(0);
@@ -451,6 +452,44 @@ export function BallisticEngine({
       const curWargame = wargameSimRef.current;
       const curRecon = reconTargetRef.current;
 
+      const spawnAttackForTarget = (target: Incident) => {
+        const origin = resolveThreatOrigin(target);
+        const proto = resolveThreatVector(target);
+        const points = computeGeodesicPoints([origin.lon, origin.lat], [target.lon, target.lat]);
+
+        const combatId = useCombatFeed.getState().addIntercept({
+          origin: origin.label,
+          originCountry: origin.country,
+          target: target.country ? `${target.victim} (${target.country})` : target.victim,
+          targetCountry: target.country,
+          vector: proto.label,
+          severity: target.severity || proto.severity,
+          color: proto.color,
+          status: "ENGAGED",
+          incidentId: target.id,
+          verificationStatus: target.status,
+          sourceName: target.sources?.[0]?.publisher || target.origin.toUpperCase(),
+          cve: target.cves?.[0],
+        });
+
+        attacksRef.current.push({
+          id: `atk-${now}-${Math.random().toString(36).slice(2, 6)}`,
+          combatId,
+          origin: { lon: origin.lon, lat: origin.lat, label: origin.label },
+          target: { lon: target.lon, lat: target.lat, label: target.country ? `${target.victim} (${target.country})` : target.victim },
+          color: proto.color,
+          protocol: proto.label,
+          severity: target.severity || proto.severity,
+          startTime: now,
+          duration: 2500 + Math.random() * 1400,
+          arcHeight: 50 + Math.random() * 80,
+          points,
+          trail: [],
+          embers: [],
+        });
+        soundEngine.playAttackLaunch(origin.lon);
+      };
+
       if (!reduced && curWargame?.active && !curWargame.mitigated) {
         if (now - lastSpawnRef.current > 380 && attacksRef.current.length < 24) {
           lastSpawnRef.current = now;
@@ -485,52 +524,32 @@ export function BallisticEngine({
           });
           soundEngine.playAttackLaunch(origin.lon);
         }
-      } else if (!reduced && layers.ballistics && now - lastSpawnRef.current > (cinema ? 900 : 320) && attacksRef.current.length < 24 && incidents.length > 0) {
-        lastSpawnRef.current = now;
-        const actorFilter = selectedActorRef.current?.toLowerCase();
-        let target = incidents[Math.floor(Math.random() * incidents.length)];
-        if (actorFilter) {
-          const actorMatches = incidents.filter((i) => i.actor && i.actor.toLowerCase().includes(actorFilter));
-          if (actorMatches.length > 0) {
-            target = actorMatches[Math.floor(Math.random() * actorMatches.length)];
+      } else if (!reduced && layers.ballistics && incidents.length > 0) {
+        // In replay mode, launch a synchronized attack trajectory to any newly unveiled victim
+        if (replayRef.current?.active && incidents.length > lastReplayCountRef.current) {
+          lastReplayCountRef.current = incidents.length;
+          const newest = incidents[incidents.length - 1];
+          if (newest && attacksRef.current.length < 24) {
+            spawnAttackForTarget(newest);
+          }
+        } else if (!replayRef.current?.active) {
+          lastReplayCountRef.current = incidents.length;
+        }
+
+        if (now - lastSpawnRef.current > (cinema ? 900 : 320) && attacksRef.current.length < 24) {
+          lastSpawnRef.current = now;
+          const actorFilter = selectedActorRef.current?.toLowerCase();
+          let target = incidents[Math.floor(Math.random() * incidents.length)];
+          if (actorFilter) {
+            const actorMatches = incidents.filter((i) => i.actor && i.actor.toLowerCase().includes(actorFilter));
+            if (actorMatches.length > 0) {
+              target = actorMatches[Math.floor(Math.random() * actorMatches.length)];
+            }
+          }
+          if (target) {
+            spawnAttackForTarget(target);
           }
         }
-        const origin = resolveThreatOrigin(target);
-        const proto = resolveThreatVector(target);
-
-        const points = computeGeodesicPoints([origin.lon, origin.lat], [target.lon, target.lat]);
-
-        const combatId = useCombatFeed.getState().addIntercept({
-          origin: origin.label,
-          originCountry: origin.country,
-          target: target.country ? `${target.victim} (${target.country})` : target.victim,
-          targetCountry: target.country,
-          vector: proto.label,
-          severity: target.severity || proto.severity,
-          color: proto.color,
-          status: "ENGAGED",
-          incidentId: target.id,
-          verificationStatus: target.status,
-          sourceName: target.sources?.[0]?.publisher || target.origin.toUpperCase(),
-          cve: target.cves?.[0],
-        });
-
-        attacksRef.current.push({
-          id: `atk-${now}-${Math.random().toString(36).slice(2, 6)}`,
-          combatId,
-          origin: { lon: origin.lon, lat: origin.lat, label: origin.label },
-          target: { lon: target.lon, lat: target.lat, label: target.country ? `${target.victim} (${target.country})` : target.victim },
-          color: proto.color,
-          protocol: proto.label,
-          severity: target.severity || proto.severity,
-          startTime: now,
-          duration: 2500 + Math.random() * 1400,
-          arcHeight: 50 + Math.random() * 80,
-          points,
-          trail: [],
-          embers: [],
-        });
-        soundEngine.playAttackLaunch(origin.lon);
       }
 
       // Precompute screen-space center for spherical radial normal projection

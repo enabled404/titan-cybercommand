@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUpRight, GlobeHemisphereWest, ShieldCheck } from "@phosphor-icons/react/ssr";
+import { ArrowDown, ArrowUpRight, GlobeHemisphereWest, ShieldCheck, Target } from "@phosphor-icons/react/ssr";
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { Suspense } from "react";
 import { AiBrief } from "@/components/hud/ai-brief";
 import { DeepResearch } from "@/components/hud/deep-research";
 import { IncidentAgentButtons } from "@/components/hud/fix-buttons";
+import { KillChainTimeline } from "@/components/hud/kill-chain-timeline";
 import { OrgLogo } from "@/components/kit/org-logo";
 import { StatusMark } from "@/components/kit/status-mark";
 import { Breadcrumbs } from "@/components/pages/breadcrumbs";
@@ -232,6 +233,18 @@ async function IncidentView({ id }: { id: string }) {
               {clean(incident.title)}
             </h2>
             {summary ? <p className="mt-3 max-w-[68ch] text-[15.5px] leading-relaxed text-ink-2 text-pretty">{summary}</p> : null}
+            {incident.actor && (
+              <div className="mt-4">
+                <Link
+                  href={`/?actor=${encodeURIComponent(incident.actor)}`}
+                  className="press inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 font-mono text-[11px] text-cyan-300 hover:bg-cyan-500/20"
+                  title={`View full threat actor dossier for ${incident.actor}`}
+                >
+                  <Target size={12} weight="bold" />
+                  <span>THREAT ACTOR: <strong className="text-white">{incident.actor.toUpperCase()}</strong> (DOSSIER)</span>
+                </Link>
+              </div>
+            )}
           </header>
 
           <Tile className="mt-6">
@@ -254,6 +267,10 @@ async function IncidentView({ id }: { id: string }) {
                 <IncidentAgentButtons victim={incident.victim} url={primary} prompt={incidentPrompt(incident.victim, primary)} />
               </div>
             </Guidance>
+          </div>
+
+          <div className="mt-3">
+            <KillChainTimeline incident={incident} />
           </div>
 
           <div className="mt-3">

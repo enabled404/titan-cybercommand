@@ -669,11 +669,19 @@ export const CURATED_THREAT_ACTORS: ThreatActorProfile[] = [
 
 export function getThreatActorProfile(nameOrAlias: string, snapshot?: Snapshot): ThreatActorProfile {
   const query = nameOrAlias.trim().toLowerCase();
+  const compactQuery = query.replace(/[^a-z0-9]/g, "");
   const direct = CURATED_THREAT_ACTORS.find(
     (actor) =>
       actor.name.toLowerCase() === query ||
       actor.id === query ||
-      actor.aliases.some((a) => a.toLowerCase() === query || query.includes(a.toLowerCase())),
+      actor.id.replace(/[^a-z0-9]/g, "") === compactQuery ||
+      actor.name.toLowerCase().replace(/[^a-z0-9]/g, "") === compactQuery ||
+      actor.aliases.some(
+        (a) =>
+          a.toLowerCase() === query ||
+          query.includes(a.toLowerCase()) ||
+          a.toLowerCase().replace(/[^a-z0-9]/g, "") === compactQuery,
+      ),
   );
 
   if (direct) {

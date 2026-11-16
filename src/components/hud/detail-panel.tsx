@@ -201,10 +201,19 @@ export function IncidentPanel({ incident, related }: { incident: Incident; relat
           </div>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
           <StatusChip status={incident.status} />
-          <p className="mt-2 text-[13px] leading-snug text-ink-3">{statusSentence(incident)}</p>
+          <button
+            type="button"
+            onClick={() => setShareCardOpen(true)}
+            className="press flex h-7 items-center gap-1.5 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-3 font-mono text-[11px] font-bold text-cyan-200 shadow-sm transition-colors hover:bg-cyan-500/25"
+            title="Export 1-click formatted social media incident card"
+          >
+            <ShareNetwork className="size-3.5 text-cyan-400" />
+            <span>EXPORT SOCIAL CARD</span>
+          </button>
         </div>
+        <p className="mt-2 text-[13px] leading-snug text-ink-3">{statusSentence(incident)}</p>
 
         {incident.actor && (
           <div className="mt-3">

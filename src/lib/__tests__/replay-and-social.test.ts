@@ -58,6 +58,7 @@ describe("Time-Travel Replay State and Posture Intelligence", () => {
       "src/lib/threat-actors.ts",
       "src/lib/kill-chain.ts",
       "src/components/hud/am-i-affected-hero.tsx",
+      "src/components/hud/am-i-affected-modal.tsx",
       "src/components/hud/share-card-modal.tsx",
       "src/components/hud/threat-actor-modal.tsx",
       "src/components/hud/kill-chain-timeline.tsx",
@@ -69,5 +70,42 @@ describe("Time-Travel Replay State and Posture Intelligence", () => {
       const content = readFileSync(fullPath, "utf-8");
       expect(content.includes("\u2014")).toBe(false);
     }
+  });
+
+  it("evaluates NXDOMAIN domains as Grade F zero score", () => {
+    const nx = scoreReconPosture({
+      nxdomain: true,
+      spfValid: false,
+      dmarcEnforced: false,
+      dmarcPresent: false,
+      incidentCount: 0,
+      cveCount: 0,
+    });
+    expect(nx.score).toBe(0);
+    expect(nx.grade).toBe("F");
+  });
+
+  it("filters incidents chronologically during time-travel replay progression", () => {
+    const baseTime = 1700000000000;
+    const testIncidents = [
+      { id: "inc-1", date: new Date(baseTime - 80_000_000).toISOString() }, // ~22h ago
+      { id: "inc-2", date: new Date(baseTime - 40_000_000).toISOString() }, // ~11h ago
+      { id: "inc-3", date: new Date(baseTime - 5_000_000).toISOString() },  // ~1.4h ago
+    ];
+
+    // At progress 0 (24h ago): 0 attacks passed
+    const simTime0 = baseTime - 86_400_000;
+    const filter0 = testIncidents.filter((i) => Date.parse(i.date) <= simTime0);
+    expect(filter0.length).toBe(0);
+
+    // At progress 0.5 (12h ago): only inc-1 passed
+    const simTime50 = baseTime - 0.5 * 86_400_000;
+    const filter50 = testIncidents.filter((i) => Date.parse(i.date) <= simTime50);
+    expect(filter50.map((i) => i.id)).toEqual(["inc-1"]);
+
+    // At progress 1.0 (now): all passed
+    const simTime100 = baseTime;
+    const filter100 = testIncidents.filter((i) => Date.parse(i.date) <= simTime100);
+    expect(filter100.length).toBe(3);
   });
 });

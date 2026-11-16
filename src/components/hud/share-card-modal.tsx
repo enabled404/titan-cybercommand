@@ -28,8 +28,13 @@ export function ShareCardModal({
     if (!open || !incident) return;
 
     let mounted = true;
-    const timer = window.setTimeout(() => {
+    const renderCard = async () => {
       try {
+        if (typeof document !== "undefined" && document.fonts?.ready) {
+          await document.fonts.ready;
+        }
+        if (!mounted) return;
+
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -135,11 +140,16 @@ export function ShareCardModal({
         ctx.fillStyle = "#94a3b8";
         ctx.fillText("TARGET / VICTIM ORGANISATION", 120, 240);
 
-        // Victim Name (Huge)
-        ctx.font = "bold 78px sans-serif";
-        ctx.fillStyle = "#f8fafc";
+        // Victim Name (Huge, responsive scaling)
         const victimName = incident.victim.toUpperCase();
-        ctx.fillText(victimName.length > 28 ? victimName.slice(0, 26) + "..." : victimName, 120, 330);
+        let fontSize = 76;
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        while (ctx.measureText(victimName).width > w - 240 && fontSize > 36) {
+          fontSize -= 4;
+          ctx.font = `bold ${fontSize}px sans-serif`;
+        }
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillText(victimName, 120, 330);
 
         // Sector & Geographic Location
         const country = incident.country ? countryName(incident.country) : "GLOBAL";
@@ -257,11 +267,12 @@ export function ShareCardModal({
       } finally {
         if (mounted) setGenerating(false);
       }
-    }, 50);
+    };
+
+    void renderCard();
 
     return () => {
       mounted = false;
-      window.clearTimeout(timer);
     };
   }, [open, incident]);
 
@@ -298,6 +309,7 @@ export function ShareCardModal({
           window.setTimeout(() => setCopied(false), 2500);
         } catch {
           // If direct clipboard write is not supported, download instead
+          toast("Direct clipboard copy restricted by browser permissions. Downloading PNG instead.");
           downloadCard();
         }
       });

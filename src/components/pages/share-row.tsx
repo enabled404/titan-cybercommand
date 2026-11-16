@@ -1,9 +1,10 @@
 "use client";
 
-import { Export, FileCode, FileText, LinkSimple, LinkedinLogo, XLogo } from "@phosphor-icons/react";
-import { useSyncExternalStore } from "react";
+import { Export, FileCode, FileText, LinkSimple, LinkedinLogo, ShareNetwork, XLogo } from "@phosphor-icons/react";
+import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
+import { ShareCardModal } from "@/components/hud/share-card-modal";
 import { CHIP } from "@/components/pages/styles";
 import { exportIntelDossier, exportStix21 } from "@/lib/export-intel";
 import type { Incident } from "@/lib/types";
@@ -27,6 +28,7 @@ export function ShareRow({
   className?: string;
   incident?: Incident;
 }) {
+  const [shareCardOpen, setShareCardOpen] = useState(false);
   const canShare = useSyncExternalStore(
     noop,
     () => typeof navigator.share === "function",
@@ -35,17 +37,28 @@ export function ShareRow({
   const enc = encodeURIComponent;
   const button = cn(CHIP, grid && "h-8 justify-center");
   return (
-    <div className={cn(grid ? "grid grid-cols-2 gap-1.5" : "flex flex-wrap gap-1.5", className)}>
-      <button
-        type="button"
-        className={button}
-        onClick={async () => {
-          await navigator.clipboard.writeText(url);
-          toast("Link copied");
-        }}
-      >
-        <LinkSimple className="size-3.5" /> Copy link
-      </button>
+    <>
+      <div className={cn(grid ? "grid grid-cols-2 gap-1.5" : "flex flex-wrap gap-1.5", className)}>
+        {incident && (
+          <button
+            type="button"
+            className={cn(button, "border border-cyan-500/30 bg-cyan-500/15 font-semibold text-cyan-200 hover:bg-cyan-500/25")}
+            onClick={() => setShareCardOpen(true)}
+            title="Export formatted high-resolution social media cyber intel card"
+          >
+            <ShareNetwork className="size-3.5 text-cyan-400" /> Export Card
+          </button>
+        )}
+        <button
+          type="button"
+          className={button}
+          onClick={async () => {
+            await navigator.clipboard.writeText(url);
+            toast("Link copied");
+          }}
+        >
+          <LinkSimple className="size-3.5" /> Copy link
+        </button>
       {incident && (
         <>
           <button
@@ -77,6 +90,10 @@ export function ShareRow({
           <Export className="size-3.5" /> More
         </button>
       ) : null}
-    </div>
+      </div>
+      {incident && (
+        <ShareCardModal incident={incident} open={shareCardOpen} onClose={() => setShareCardOpen(false)} />
+      )}
+    </>
   );
 }
