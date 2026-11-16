@@ -150,19 +150,37 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
         mentions: scoredIncidents.length - named,
         query: q,
       });
-    const matchedActors = CURATED_THREAT_ACTORS.filter(
+    const matchedCurated = CURATED_THREAT_ACTORS.filter(
       (a) =>
         norm(a.name).includes(nq) ||
         a.aliases.some((alias) => norm(alias).includes(nq)),
-    )
-      .slice(0, 3)
-      .map((a) => ({
+    );
+    const seenActorNames = new Set(matchedCurated.map((a) => a.name.toLowerCase()));
+    const uncuratedHits: { kind: "actor"; key: string; name: string; origin: string; nexus: string }[] = [];
+    if (nq.length >= 3) {
+      for (const inc of incidents) {
+        if (inc.actor && norm(inc.actor).includes(nq) && !seenActorNames.has(inc.actor.toLowerCase())) {
+          seenActorNames.add(inc.actor.toLowerCase());
+          uncuratedHits.push({
+            kind: "actor",
+            key: `act-inc-${inc.actor.toLowerCase()}`,
+            name: inc.actor,
+            origin: "Threat Intelligence Telemetry",
+            nexus: "Tracked Threat Syndicate",
+          });
+        }
+      }
+    }
+    const matchedActors = [
+      ...matchedCurated.map((a) => ({
         kind: "actor" as const,
         key: `act-${a.id}`,
         name: a.name,
         origin: a.origin,
         nexus: a.nexus,
-      }));
+      })),
+      ...uncuratedHits,
+    ].slice(0, 3);
 
     out.push(...matchedActors, ...incidentHits, ...vulnHits, ...countryHits);
     // Products and vendors: the live lists hold the newest flaws; the check covers every exploited one.

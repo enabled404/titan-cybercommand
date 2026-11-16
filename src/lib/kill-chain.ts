@@ -20,9 +20,11 @@ export function generateIncidentKillChain(incident: Incident): KillChainStep[] {
   const isSupplyChain = incident.type === "supply_chain";
   const isDdos = incident.type === "ddos";
 
-  const dateBase = new Date(incident.date);
+  const parsedTime = Date.parse(incident.date);
+  const baseTime = Number.isNaN(parsedTime) ? 0 : parsedTime;
   const fmt = (offsetHours: number) => {
-    const d = new Date(dateBase.getTime() - offsetHours * 3600_000);
+    if (baseTime === 0) return `T - ${offsetHours}h`;
+    const d = new Date(baseTime - offsetHours * 3600_000);
     return d.toISOString().replace("T", " ").slice(0, 16) + " UTC";
   };
 

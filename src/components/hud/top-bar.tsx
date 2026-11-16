@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
-import { ClockCounterClockwise, Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass } from "@phosphor-icons/react";
+import { ClockCounterClockwise, Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass, ShieldCheck } from "@phosphor-icons/react";
 
 import { AuthButton } from "@/components/auth/auth-button";
 import { AudioButton } from "@/components/hud/audio-button";
@@ -54,6 +54,8 @@ function ActiveNavLinks() {
 export function TopBar({
   ticker,
   stats,
+  onOpenAmIAffected,
+  isAmIAffectedActive,
   onOpenWargames,
   onOpenRecon,
   onOpenShortcuts,
@@ -65,6 +67,8 @@ export function TopBar({
 }: {
   ticker?: React.ReactNode;
   stats?: PostureStats;
+  onOpenAmIAffected?: () => void;
+  isAmIAffectedActive?: boolean;
   onOpenWargames?: () => void;
   onOpenRecon?: () => void;
   onOpenShortcuts?: () => void;
@@ -75,7 +79,7 @@ export function TopBar({
   isReplayActive?: boolean;
 }) {
   const [opsOpen, setOpsOpen] = useState(false);
-  const hasTacticalOps = Boolean(onOpenRecon || onOpenWargames || onTogglePatrol || onOpenDemo || onToggleReplay);
+  const hasTacticalOps = Boolean(onOpenAmIAffected || onOpenRecon || onOpenWargames || onTogglePatrol || onOpenDemo || onToggleReplay);
 
   return (
     <header className="pointer-events-auto flex h-14 items-center justify-between gap-2 bg-space/90 px-3 backdrop-blur-md border-b border-white/[0.06] sm:gap-3 sm:px-4">
@@ -109,6 +113,26 @@ export function TopBar({
         {/* Tactical Operations Segmented Dock (only on interactive Situation Room) */}
         {hasTacticalOps && (
           <div className="glass-pill hidden items-center gap-0.5 rounded-full p-0.5 lg:flex">
+            {onOpenAmIAffected && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  onOpenAmIAffected();
+                }}
+                className={cn(
+                  "press flex h-7 items-center gap-1 rounded-full px-2.5 font-mono text-[11px] font-bold transition-colors",
+                  isAmIAffectedActive
+                    ? "bg-cyan-500/25 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.4)]"
+                    : "text-cyan-300 hover:bg-cyan-500/15 hover:text-cyan-200",
+                )}
+                title="Launch 'Am I Affected?' domain posture and CVE exposure scanner (A)"
+                aria-label="Am I Affected? Domain Exposure Scanner"
+              >
+                <ShieldCheck size={12} weight="bold" />
+                <span>AM I AFFECTED?</span>
+              </button>
+            )}
             {onOpenRecon && (
               <button
                 type="button"
@@ -219,6 +243,20 @@ export function TopBar({
                 className="w-48 rounded-xl border border-white/10 bg-surface/95 p-1.5 shadow-2xl backdrop-blur-md font-mono text-xs"
               >
                 <div className="space-y-1">
+                  {onOpenAmIAffected && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playClick();
+                        setOpsOpen(false);
+                        onOpenAmIAffected();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 font-bold text-cyan-300 transition-colors hover:bg-cyan-500/15"
+                    >
+                      <ShieldCheck size={14} weight="bold" />
+                      <span>Am I Affected? (A)</span>
+                    </button>
+                  )}
                   {onOpenRecon && (
                     <button
                       type="button"

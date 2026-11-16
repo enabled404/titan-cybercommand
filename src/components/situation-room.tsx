@@ -45,6 +45,7 @@ const IncidentPanel = dynamic(() => import("@/components/hud/detail-panel").then
 const CvePanel = dynamic(() => import("@/components/hud/detail-panel").then((mod) => mod.CvePanel));
 const ThreatActorModal = dynamic(() => import("@/components/hud/threat-actor-modal").then((mod) => mod.ThreatActorModal));
 const ReplayDock = dynamic(() => import("@/components/hud/replay-dock").then((mod) => mod.ReplayDock));
+const AmIAffectedModal = dynamic(() => import("@/components/hud/am-i-affected-modal").then((mod) => mod.AmIAffectedModal));
 
 const PANEL = 460;
 /** Space the patch dock takes from the bottom edge on desktop. */
@@ -90,7 +91,7 @@ function useIsMobile() {
  * Keeps one query param and one selection in sync both ways. Opening a dossier adds a history entry, so
  * Back closes it instead of leaving the site; moving between dossiers replaces it.
  */
-function useParamSync(name: "i" | "cve", value: string | null, apply: (next: string | null) => void) {
+function useParamSync(name: "i" | "cve" | "actor" | "affected", value: string | null, apply: (next: string | null) => void) {
   const [param, setParam] = useQueryState(name);
   const lastValue = useRef(value);
   const lastParam = useRef<string | null | undefined>(undefined);
@@ -121,10 +122,16 @@ function useParamSync(name: "i" | "cve", value: string | null, apply: (next: str
 function DeepLinks() {
   const selectedId = useSituation((s) => s.selectedId);
   const selectedCve = useSituation((s) => s.selectedCve);
+  const selectedActor = useSituation((s) => s.selectedActor);
+  const amIAffectedOpen = useSituation((s) => s.amIAffectedOpen);
   const select = useSituation((s) => s.select);
   const selectCve = useSituation((s) => s.selectCve);
+  const selectActor = useSituation((s) => s.selectActor);
+  const setAmIAffectedOpen = useSituation((s) => s.setAmIAffectedOpen);
   useParamSync("i", selectedId, select);
   useParamSync("cve", selectedCve, selectCve);
+  useParamSync("actor", selectedActor, selectActor);
+  useParamSync("affected", amIAffectedOpen ? "1" : null, (val) => setAmIAffectedOpen(Boolean(val)));
   return null;
 }
 
@@ -165,6 +172,8 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const setWargameSim = useSituation((s) => s.setWargameSim);
   const replay = useSituation((s) => s.replay);
   const setReplay = useSituation((s) => s.setReplay);
+  const amIAffectedOpen = useSituation((s) => s.amIAffectedOpen);
+  const setAmIAffectedOpen = useSituation((s) => s.setAmIAffectedOpen);
 
   // WarGames autonomous cascade progression and automated countermeasure defense
   useEffect(() => {
@@ -226,7 +235,23 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
     () => incidentView(snapshot.incidents, { now, windowMs: WINDOW_MS[window_], country, statuses }),
     [snapshot.incidents, statuses, window_, now, country],
   );
-  const filtered = incidentData.incidents;
+  const baseFiltered = incidentData.incidents;
+
+  // Time-travel replay: filter incidents chronologically based on scrubber progress
+  const filtered = useMemo(() => {
+    if (!replay.active) return baseFiltered;
+    const windowStart = now - 86_400_000;
+    const simTime = now - (1 - Math.max(0, Math.min(1, replay.progress))) * 86_400_000;
+    const matches = baseFiltered.filter((inc) => {
+      const t = Date.parse(inc.date);
+      return !isNaN(t) && t >= windowStart && t <= simTime;
+    });
+    if (matches.length === 0 && baseFiltered.length > 0) {
+      const sliceCount = Math.max(1, Math.round(baseFiltered.length * replay.progress));
+      return baseFiltered.slice(0, sliceCount);
+    }
+    return matches;
+  }, [baseFiltered, replay.active, replay.progress, now]);
 
   const countryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -313,6 +338,9 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       } else if (event.key.toLowerCase() === "w") {
         event.preventDefault();
         setWargamesOpen((prev) => !prev);
+      } else if (event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        setAmIAffectedOpen(!amIAffectedOpen);
       } else if (event.key.toLowerCase() === "r") {
         event.preventDefault();
         setReconOpen((prev) => !prev);
@@ -343,7 +371,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute, replay.active, setReplay]);
+  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute, replay.active, setReplay, amIAffectedOpen, setAmIAffectedOpen]);
 
   const onHover = useCallback((incident: Incident | null, point: { x: number; y: number } | null) => {
     setHovered(incident && point ? { incident, x: point.x, y: point.y } : null);
@@ -414,6 +442,8 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
           <TopBar
             ticker={<CveTicker items={snapshot.fresh} generatedAt={snapshot.generatedAt} onSelect={selectCve} />}
             stats={snapshot.stats}
+            onOpenAmIAffected={() => setAmIAffectedOpen(true)}
+            isAmIAffectedActive={amIAffectedOpen}
             onOpenWargames={() => setWargamesOpen(true)}
             onOpenRecon={() => setReconOpen(true)}
             onOpenShortcuts={() => setShortcutsOpen(true)}
@@ -477,11 +507,33 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
 
       <WargamesModal open={wargamesOpen} onClose={() => setWargamesOpen(false)} />
       <ReconScannerModal open={reconOpen} onClose={() => setReconOpen(false)} snapshot={snapshot} />
+      <AmIAffectedModal open={amIAffectedOpen} onClose={() => setAmIAffectedOpen(false)} snapshot={snapshot} />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
       <ThreatActorModal actorName={selectedActor} open={Boolean(selectedActor)} onClose={() => selectActor(null)} snapshot={snapshot} />
-      <ReplayDock incidents={filtered} now={now} />
+      <ReplayDock incidents={baseFiltered} now={now} />
       {!cinema && <CombatFeedDrawer incidents={filtered} shiftUp={patchDockOpen && patchDockFits} shiftLeft={panelOpen} />}
+
+      {!cinema && !wargameSim?.active && (
+        <div className="pointer-events-auto fixed top-[66px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-cyan-500/30 bg-space/90 px-3.5 py-1 font-mono text-xs shadow-lg backdrop-blur-md transition-all hover:border-cyan-400 hover:bg-space">
+          <span className="relative flex size-2 items-center justify-center">
+            <span className="absolute inset-0 rounded-full bg-cyan-400/50 motion-safe:animate-ping" />
+            <span className="size-1.5 rounded-full bg-cyan-400" />
+          </span>
+          <span className="text-ink-3">AM I AFFECTED?</span>
+          <button
+            type="button"
+            onClick={() => {
+              soundEngine.playClick();
+              setAmIAffectedOpen(true);
+            }}
+            className="press flex items-center gap-1 font-bold text-cyan-400 hover:text-cyan-300 hover:underline"
+          >
+            <span>Scan domain posture</span>
+            <kbd className="rounded border border-white/20 bg-white/10 px-1 py-0.5 text-[10px] text-ink">A</kbd>
+          </button>
+        </div>
+      )}
 
       {wargameSim?.active && !wargamesOpen && !cinema && (
         <div className="pointer-events-auto fixed top-[76px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-full border border-confirmed/40 bg-space/95 px-4 py-2 font-mono text-xs shadow-2xl backdrop-blur-md">

@@ -38,7 +38,45 @@ interface ExposureReport {
 
 const SAMPLE_DOMAINS = ["apple.com", "cloudflare.com", "microsoft.com", "defense.gov", "tesla.com"];
 
-export function AmIAffectedHero({ snapshot }: { snapshot: Snapshot }) {
+interface DnsAnswer {
+  type: number;
+  data: string;
+}
+
+interface DnsResponse {
+  Status?: number;
+  Answer?: DnsAnswer[];
+}
+
+async function queryDoH(name: string, type: "A" | "TXT" | "MX", signal: AbortSignal): Promise<DnsResponse | null> {
+  const enc = encodeURIComponent(name);
+  const urls = [
+    `https://dns.google/resolve?name=${enc}&type=${type}`,
+    `https://cloudflare-dns.com/dns-query?name=${enc}&type=${type}`,
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: "application/dns-json" },
+        signal,
+      });
+      if (res.ok) return (await res.json()) as DnsResponse;
+    } catch {
+      // Try next resolver
+    }
+  }
+  return null;
+}
+
+export function AmIAffectedHero({
+  snapshot,
+  isModal = false,
+  onClose,
+}: {
+  snapshot: Snapshot;
+  isModal?: boolean;
+  onClose?: () => void;
+}) {
   const [domainInput, setDomainInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<ExposureReport | null>(null);
@@ -89,10 +127,34 @@ export function AmIAffectedHero({ snapshot }: { snapshot: Snapshot }) {
         dmarcStrings = data.dmarc ?? [];
         nxdomain = Boolean(data.nxdomain);
       } else {
-        // Fallback minimal DNS synthesis if network fails
-        ips = ["1.1.1.1"];
-        txtStrings = ["v=spf1 include:_spf.google.com ~all"];
-        dmarcStrings = ["v=DMARC1; p=reject;"];
+        // Authentic client-side DoH resolution fallback directly to Google & Cloudflare
+        const [aRes, txtRes, dmarcRes, mxRes] = await Promise.all([
+          queryDoH(clean, "A", controller.signal),
+          queryDoH(clean, "TXT", controller.signal),
+          queryDoH(`_dmarc.${clean}`, "TXT", controller.signal),
+          queryDoH(clean, "MX", controller.signal),
+        ]);
+        const anyAnswer = Boolean(aRes || txtRes || dmarcRes || mxRes);
+        if (!anyAnswer) {
+          throw new Error("Unable to resolve DNS records for this domain. Please verify target domain.");
+        }
+        for (const ans of aRes?.Answer ?? []) {
+          if (ans.type === 1 || ans.type === 28) ips.push(ans.data);
+        }
+        for (const ans of txtRes?.Answer ?? []) {
+          if (ans.type === 16) txtStrings.push(String(ans.data).replace(/^"|"$/g, "").replace(/\\"/g, '"'));
+        }
+        for (const ans of dmarcRes?.Answer ?? []) {
+          if (ans.type === 16) dmarcStrings.push(String(ans.data).replace(/^"|"$/g, "").replace(/\\"/g, '"'));
+        }
+        for (const ans of mxRes?.Answer ?? []) {
+          if (ans.type === 15) {
+            const parts = ans.data.split(" ");
+            const host = (parts[parts.length - 1] || ans.data).replace(/\.$/, "");
+            mxList.push(host);
+          }
+        }
+        nxdomain = Boolean(aRes?.Status === 3 && ips.length === 0 && txtStrings.length === 0 && mxList.length === 0);
       }
 
       const spfValid = extractSpfPresent(txtStrings);
@@ -123,6 +185,15 @@ export function AmIAffectedHero({ snapshot }: { snapshot: Snapshot }) {
 
       // Compute actionable "What to patch first" guidance
       const priorities: ExposureReport["patchPriorities"] = [];
+
+      // 0. NXDOMAIN Priority
+      if (nxdomain) {
+        priorities.push({
+          priority: "P1 CRITICAL",
+          title: "Non-Existent Public Domain (NXDOMAIN)",
+          action: "Domain has no active public DNS records. Check spelling or secure ownership to block phishing impersonation.",
+        });
+      }
 
       // 1. Critical CVE priorities
       for (const item of matchedCveObjects) {
@@ -229,7 +300,14 @@ export function AmIAffectedHero({ snapshot }: { snapshot: Snapshot }) {
   };
 
   return (
-    <div className="relative mb-3 overflow-hidden rounded-[20px] border border-cyan-500/30 bg-gradient-to-b from-cyan-950/20 via-surface-2 to-surface p-3.5 shadow-xl transition-all">
+    <div
+      className={cn(
+        "relative overflow-hidden transition-all",
+        isModal
+          ? "border-0 bg-transparent p-1 shadow-none"
+          : "mb-3 rounded-[20px] border border-cyan-500/30 bg-gradient-to-b from-cyan-950/20 via-surface-2 to-surface p-3.5 shadow-xl",
+      )}
+    >
       {/* Top Banner Header */}
       <div className="flex items-center justify-between gap-2 pb-2">
         <div className="flex items-center gap-2">
@@ -454,6 +532,7 @@ export function AmIAffectedHero({ snapshot }: { snapshot: Snapshot }) {
               onClick={() => {
                 setReport(null);
                 setDomainInput("");
+                if (onClose) onClose();
               }}
               className="font-mono text-[11px] text-ink-4 hover:text-ink"
             >

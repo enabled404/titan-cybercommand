@@ -20,6 +20,18 @@ describe("Threat Actor Intelligence Dossiers", () => {
     expect(actor.origin).toContain("Russia");
   });
 
+  it("normalizes spaced and punctuated queries like 'APT 28' and 'apt-28'", () => {
+    const actor1 = getThreatActorProfile("APT 28");
+    expect(actor1.id).toBe("apt28");
+    expect(actor1.name).toBe("APT28");
+
+    const actor2 = getThreatActorProfile("apt-28");
+    expect(actor2.id).toBe("apt28");
+
+    const actor3 = getThreatActorProfile("APT 29");
+    expect(actor3.id).toBe("apt29");
+  });
+
   it("retrieves profile for Lazarus Group", () => {
     const actor = getThreatActorProfile("Lazarus Group");
     expect(actor.id).toBe("lazarus-group");

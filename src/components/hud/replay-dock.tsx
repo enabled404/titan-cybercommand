@@ -20,12 +20,21 @@ export function ReplayDock({ incidents, now }: { incidents: Incident[]; now: num
   // Incidents in the last 24 hours sorted chronologically (oldest to newest)
   const window24hIncidents = useMemo(() => {
     const cutoff = now - 86_400_000;
-    return incidents
+    const direct24h = incidents
       .filter((inc) => {
         const t = Date.parse(inc.date);
         return !isNaN(t) && t >= cutoff && t <= now;
       })
       .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+
+    if (direct24h.length >= 4) return direct24h;
+
+    // Gracefully include recent incidents if strict 24h count is sparse
+    const recent = incidents
+      .filter((inc) => !isNaN(Date.parse(inc.date)))
+      .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
+      .slice(0, 16);
+    return recent.sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
   }, [incidents, now]);
 
   // Animation playback loop
