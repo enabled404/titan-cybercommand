@@ -37,6 +37,7 @@ interface SituationState {
   selectedId: string | null;
   selectedCve: string | null;
   selectedActor: string | null;
+  actorFilter: string | null;
   hoveredId: string | null;
   window: TimeWindow;
   statuses: Set<IncidentStatus>;
@@ -55,6 +56,7 @@ interface SituationState {
   select: (id: string | null) => void;
   selectCve: (cve: string | null) => void;
   selectActor: (actor: string | null) => void;
+  setActorFilter: (actor: string | null) => void;
   hover: (id: string | null) => void;
   setWindow: (window: TimeWindow) => void;
   toggleStatus: (status: IncidentStatus) => void;
@@ -75,6 +77,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   selectedId: null,
   selectedCve: null,
   selectedActor: null,
+  actorFilter: null,
   hoveredId: null,
   window: "7d",
   statuses: new Set<IncidentStatus>(INCIDENT_STATUSES),
@@ -101,6 +104,7 @@ export const useSituation = create<SituationState>((set, get) => ({
     set({ selectedCve: cve, selectedId: null, selectedActor: null });
   },
   selectActor: (actor) => set({ selectedActor: actor }),
+  setActorFilter: (actor) => set({ actorFilter: actor }),
   hover: (id) => set({ hoveredId: id }),
   setWindow: (window) => set({ window }),
   toggleStatus: (status) =>

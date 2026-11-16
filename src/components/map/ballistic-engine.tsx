@@ -280,6 +280,7 @@ export function BallisticEngine({
   const ready = useMapInstance((s) => s.ready);
   const selectedId = useSituation((s) => s.selectedId);
   const selectedActor = useSituation((s) => s.selectedActor);
+  const actorFilter = useSituation((s) => s.actorFilter || s.selectedActor);
   const layers = useSituation((s) => s.layers);
   const cinema = useSituation((s) => s.cinema);
   const wargameSim = useSituation((s) => s.wargameSim);
@@ -301,6 +302,11 @@ export function BallisticEngine({
   useEffect(() => {
     selectedActorRef.current = selectedActor;
   }, [selectedActor]);
+
+  const actorFilterRef = useRef(actorFilter);
+  useEffect(() => {
+    actorFilterRef.current = actorFilter;
+  }, [actorFilter]);
 
   const replayRef = useRef(replay);
   useEffect(() => {
@@ -525,13 +531,16 @@ export function BallisticEngine({
           soundEngine.playAttackLaunch(origin.lon);
         }
       } else if (!reduced && layers.ballistics && incidents.length > 0) {
-        // In replay mode, launch a synchronized attack trajectory to any newly unveiled victim
+        // In replay mode, launch a synchronized attack trajectory to any newly unveiled victims
         if (replayRef.current?.active && incidents.length > lastReplayCountRef.current) {
+          const diff = incidents.length - lastReplayCountRef.current;
           lastReplayCountRef.current = incidents.length;
-          // In newest-first filtered incidents list, the newly arrived attack is index 0
-          const newest = incidents[0] || incidents[incidents.length - 1];
-          if (newest && attacksRef.current.length < 24) {
-            spawnAttackForTarget(newest);
+          // In newest-first filtered incidents list, the newly arrived attacks are the first `diff` items
+          const newlyAdded = incidents.slice(0, Math.min(diff, 4));
+          for (const target of newlyAdded) {
+            if (attacksRef.current.length < 24) {
+              spawnAttackForTarget(target);
+            }
           }
         } else if (replayRef.current?.active && incidents.length < lastReplayCountRef.current) {
           // Seeking backward in scrubber resets threshold so playing forward launches attacks again
@@ -540,12 +549,13 @@ export function BallisticEngine({
           lastReplayCountRef.current = incidents.length;
         }
 
-        if (now - lastSpawnRef.current > (cinema ? 900 : 320) && attacksRef.current.length < 24) {
+        // Autonomous ambient spawning only runs when NOT in replay mode
+        if (!replayRef.current?.active && now - lastSpawnRef.current > (cinema ? 900 : 320) && attacksRef.current.length < 24) {
           lastSpawnRef.current = now;
-          const actorFilter = selectedActorRef.current?.toLowerCase();
+          const currentActor = actorFilterRef.current?.toLowerCase();
           let target = incidents[Math.floor(Math.random() * incidents.length)];
-          if (actorFilter) {
-            const actorMatches = incidents.filter((i) => i.actor && i.actor.toLowerCase().includes(actorFilter));
+          if (currentActor) {
+            const actorMatches = incidents.filter((i) => i.actor && i.actor.toLowerCase().includes(currentActor));
             if (actorMatches.length > 0) {
               target = actorMatches[Math.floor(Math.random() * actorMatches.length)];
             }

@@ -300,6 +300,7 @@ export function AmIAffectedHero({
     if (initialDomain && initialDomain.trim()) {
       const target = initialDomain.trim();
       const timer = window.setTimeout(() => {
+        setDomainInput(target);
         void runScan(target);
       }, 0);
       return () => window.clearTimeout(timer);

@@ -29,9 +29,10 @@ import { DemoModal } from "@/components/hud/demo-modal";
 import { CinemaMode } from "@/components/hud/cinema";
 import { useAudioStore } from "@/stores/audio";
 import { soundEngine } from "@/lib/audio/sound-engine";
-import { ShieldCheck, X } from "@phosphor-icons/react";
+import { Crosshair, ShieldCheck, X } from "@phosphor-icons/react";
 import type { Incident, Snapshot, Vuln } from "@/lib/types";
 import { incidentView } from "@/lib/incident-view";
+import { buildReplayDataset, filterReplayIncidents } from "@/lib/replay";
 import { cn } from "@/lib/utils";
 import { WINDOW_MS, useSituation } from "@/stores/situation";
 import { useStack } from "@/stores/stack";
@@ -124,14 +125,26 @@ function DeepLinks() {
   const selectedCve = useSituation((s) => s.selectedCve);
   const selectedActor = useSituation((s) => s.selectedActor);
   const amIAffectedOpen = useSituation((s) => s.amIAffectedOpen);
+  const amIAffectedTarget = useSituation((s) => s.amIAffectedTarget);
   const select = useSituation((s) => s.select);
   const selectCve = useSituation((s) => s.selectCve);
   const selectActor = useSituation((s) => s.selectActor);
   const setAmIAffectedOpen = useSituation((s) => s.setAmIAffectedOpen);
+  const setAmIAffectedTarget = useSituation((s) => s.setAmIAffectedTarget);
   useParamSync("i", selectedId, select);
   useParamSync("cve", selectedCve, selectCve);
   useParamSync("actor", selectedActor, selectActor);
-  useParamSync("affected", amIAffectedOpen ? "1" : null, (val) => setAmIAffectedOpen(Boolean(val)));
+  useParamSync("affected", amIAffectedOpen ? (amIAffectedTarget || "1") : null, (val) => {
+    if (val) {
+      if (val !== "1") {
+        setAmIAffectedTarget(val);
+      }
+      setAmIAffectedOpen(true);
+    } else {
+      setAmIAffectedOpen(false);
+      setAmIAffectedTarget(null);
+    }
+  });
   return null;
 }
 
@@ -174,8 +187,11 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const setReplay = useSituation((s) => s.setReplay);
   const amIAffectedOpen = useSituation((s) => s.amIAffectedOpen);
   const setAmIAffectedOpen = useSituation((s) => s.setAmIAffectedOpen);
+  const amIAffectedTarget = useSituation((s) => s.amIAffectedTarget);
+  const setAmIAffectedTarget = useSituation((s) => s.setAmIAffectedTarget);
+  const actorFilter = useSituation((s) => s.actorFilter);
+  const setActorFilter = useSituation((s) => s.setActorFilter);
   const [heroDomain, setHeroDomain] = useState("");
-  const [amIAffectedTarget, setAmIAffectedTarget] = useState<string | undefined>(undefined);
   const heroInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleHeroSubmit = (e: React.FormEvent) => {
@@ -186,7 +202,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       setAmIAffectedTarget(clean);
       setAmIAffectedOpen(true);
     } else {
-      setAmIAffectedTarget(undefined);
+      setAmIAffectedTarget(null);
       setAmIAffectedOpen(true);
     }
   };
@@ -254,25 +270,11 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const baseFiltered = incidentData.incidents;
 
   // Time-travel replay: filter incidents chronologically based on scrubber progress
+  const replayDataset = useMemo(() => buildReplayDataset(baseFiltered, now), [baseFiltered, now]);
   const filtered = useMemo(() => {
     if (!replay.active) return baseFiltered;
-    const windowStart = now - 86_400_000;
-    const simTime = now - (1 - Math.max(0, Math.min(1, replay.progress))) * 86_400_000;
-    const pool24h = baseFiltered.filter((inc) => {
-      const t = Date.parse(inc.date);
-      return !isNaN(t) && t >= windowStart && t <= now;
-    });
-
-    if (pool24h.length > 0) {
-      const landed = pool24h.filter((inc) => Date.parse(inc.date) <= simTime);
-      return landed.sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
-    }
-
-    // Fallback if no incidents fall strictly in 24h window: reveal chronologically
-    const chronological = [...baseFiltered].sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
-    const sliceCount = Math.round(chronological.length * replay.progress);
-    return chronological.slice(0, sliceCount).reverse();
-  }, [baseFiltered, replay.active, replay.progress, now]);
+    return filterReplayIncidents(replayDataset, replay.progress);
+  }, [baseFiltered, replay.active, replay.progress, replayDataset]);
 
   const countryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -536,10 +538,10 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         open={amIAffectedOpen}
         onClose={() => {
           setAmIAffectedOpen(false);
-          setAmIAffectedTarget(undefined);
+          setAmIAffectedTarget(null);
         }}
         snapshot={snapshot}
-        initialDomain={amIAffectedTarget}
+        initialDomain={amIAffectedTarget || undefined}
       />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
@@ -619,6 +621,22 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
             aria-label="Stop simulation"
           >
             <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {actorFilter && !cinema && (
+        <div className="pointer-events-auto fixed bottom-14 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-cyan-500/50 bg-space/95 px-3 py-1 font-mono text-[11px] shadow-2xl backdrop-blur-xl">
+          <Crosshair size={13} className="text-cyan-400" />
+          <span className="text-ink-3">ARCS CONCENTRATED:</span>
+          <span className="font-bold text-cyan-300">{actorFilter.toUpperCase()}</span>
+          <button
+            type="button"
+            onClick={() => setActorFilter(null)}
+            className="ml-1 rounded-full p-0.5 text-ink-4 hover:bg-white/10 hover:text-ink"
+            title="Clear actor focus"
+          >
+            <X size={12} />
           </button>
         </div>
       )}

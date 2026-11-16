@@ -25,7 +25,7 @@ export function ThreatActorModal({
 }) {
   const selectCve = useSituation((s) => s.selectCve);
   const select = useSituation((s) => s.select);
-  const selectActor = useSituation((s) => s.selectActor);
+  const setActorFilter = useSituation((s) => s.setActorFilter);
 
   const profile = useMemo(() => {
     if (!actorName) return null;
@@ -262,7 +262,7 @@ export function ThreatActorModal({
           <button
             type="button"
             onClick={() => {
-              selectActor(profile.name);
+              setActorFilter(profile.name);
               soundEngine.playAttackLaunch(0);
               toast.info(`Attack arcs concentrated on ${profile.name}`);
               handleClose();
