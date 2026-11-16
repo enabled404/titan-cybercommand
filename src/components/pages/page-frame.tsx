@@ -3,7 +3,7 @@ import Link from "next/link";
 import { TopBar } from "@/components/hud/top-bar";
 import { ValyuMark } from "@/components/icons/agents";
 import { EYEBROW } from "@/components/pages/styles";
-import { REPO_URL, VALYU_URL } from "@/lib/site";
+import { REPO_URL, TIP_JAR_URL, VALYU_URL } from "@/lib/site";
 
 const FOOTER_LINKS = [
   { href: "/", label: "Live map" },
@@ -53,6 +53,15 @@ export function PageFrame({ children, bar = <TopBar /> }: { children: React.Reac
               <a href={REPO_URL} target="_blank" rel="noreferrer" className={LINK}>
                 Open source
               </a>
+              {" "}&middot;{" "}
+              <a
+                href={TIP_JAR_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="text-amber-400 underline decoration-amber-400/30 underline-offset-[3px] transition-colors hover:text-amber-300"
+              >
+                Tip Jar
+              </a>
               .
             </p>
           </div>
@@ -66,6 +75,14 @@ export function PageFrame({ children, bar = <TopBar /> }: { children: React.Reac
                 {item.label}
               </Link>
             ))}
+            <a
+              href={TIP_JAR_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="press flex h-7 items-center rounded-full px-2.5 text-[12.5px] font-medium text-amber-400 hover:bg-amber-400/10 hover:text-amber-300"
+            >
+              Tip Jar
+            </a>
           </nav>
         </div>
       </footer>

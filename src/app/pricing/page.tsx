@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check } from "@phosphor-icons/react/ssr";
+import { ArrowUpRight, Check, Heart } from "@phosphor-icons/react/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,7 +8,7 @@ import { GithubIcon } from "@/components/icons/agents";
 import { AsciiImage } from "@/components/kit/ascii-image";
 import { SignInCta } from "@/components/pricing/sign-in-cta";
 import { ACCOUNTS } from "@/lib/mode";
-import { REPO_URL } from "@/lib/site";
+import { REPO_URL, TIP_JAR_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -166,6 +166,14 @@ export default function PricingPage() {
             <a href={REPO_URL} target="_blank" rel="noreferrer" className={SECONDARY}>
               <GithubIcon className="size-4" /> Run your own copy
             </a>
+            <a
+              href={TIP_JAR_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="press inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-amber-400/10 px-5 text-[14px] font-medium text-amber-400 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.3)] hover:bg-amber-400/20 hover:text-amber-300"
+            >
+              <Heart className="size-4" weight="fill" /> Support via Tip Jar
+            </a>
           </div>
         </section>
 
@@ -291,6 +299,14 @@ export default function PricingPage() {
             <Link href="/" className={SECONDARY}>
               Open the map
             </Link>
+            <a
+              href={TIP_JAR_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="press inline-flex h-11 items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-5 text-[14px] font-medium text-amber-400 hover:bg-amber-400/20 hover:text-amber-300"
+            >
+              <Heart className="size-4" weight="fill" /> Tip Jar
+            </a>
           </div>
         </section>
       </div>
