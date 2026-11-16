@@ -132,6 +132,7 @@ describe("correlateReconIntel", () => {
   it("matches exact domain, subdomains, and whole-word victim names", () => {
     const corr = correlateReconIntel("portal.acme.example", BASE_SNAPSHOT);
     expect(corr.incidents.map((i) => i.title)).toEqual(["Acme Cloud disclosure"]);
+    expect(corr.cves).toEqual(["CVE-2025-0001"]);
   });
 
   it("extracts apex across multi-part SLDs", () => {

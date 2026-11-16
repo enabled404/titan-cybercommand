@@ -29,6 +29,7 @@ export function ShareCardModal({
 
     let mounted = true;
     const renderCard = async () => {
+      setGenerating(true);
       try {
         if (typeof document !== "undefined" && document.fonts?.ready) {
           await document.fonts.ready;
@@ -216,9 +217,10 @@ export function ShareCardModal({
 
         ctx.font = "34px sans-serif";
         ctx.fillStyle = "#e2e8f0";
-        const titleText = incident.title;
-        // Simple word wrap
-        const words = titleText.split(" ");
+        const briefText = incident.summary ? incident.summary : incident.title;
+        // Clean markdown links or formatting if present
+        const cleanText = briefText.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[*_`#]/g, "");
+        const words = cleanText.split(" ");
         let line = "";
         let lineY = 780;
         for (const word of words) {
@@ -228,12 +230,12 @@ export function ShareCardModal({
             ctx.fillText(line, 120, lineY);
             line = word + " ";
             lineY += 50;
-            if (lineY > 900) break;
+            if (lineY > 980) break;
           } else {
             line = testLine;
           }
         }
-        if (line && lineY <= 900) {
+        if (line && lineY <= 980) {
           ctx.fillText(line, 120, lineY);
         }
 
@@ -300,20 +302,24 @@ export function ShareCardModal({
     if (!canvas) return;
     soundEngine.playClick();
     try {
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          setCopied(true);
-          toast.success("Image copied to clipboard! Ready to paste into X, Slack, or Discord.");
-          window.setTimeout(() => setCopied(false), 2500);
-        } catch {
-          // If direct clipboard write is not supported, download instead
-          toast("Direct clipboard copy restricted by browser permissions. Downloading PNG instead.");
-          downloadCard();
-        }
-      });
+      if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+        const item = new ClipboardItem({
+          "image/png": new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error("Failed to create PNG blob"));
+            }, "image/png");
+          }),
+        });
+        await navigator.clipboard.write([item]);
+        setCopied(true);
+        toast.success("Image copied to clipboard! Ready to paste into X, Slack, or Discord.");
+        window.setTimeout(() => setCopied(false), 2500);
+      } else {
+        downloadCard();
+      }
     } catch {
+      toast("Direct clipboard copy restricted by browser permissions. Downloading PNG instead.");
       downloadCard();
     }
   };

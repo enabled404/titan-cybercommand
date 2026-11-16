@@ -72,12 +72,14 @@ export function AmIAffectedHero({
   snapshot,
   isModal = false,
   onClose,
+  initialDomain,
 }: {
   snapshot: Snapshot;
   isModal?: boolean;
   onClose?: () => void;
+  initialDomain?: string;
 }) {
-  const [domainInput, setDomainInput] = useState("");
+  const [domainInput, setDomainInput] = useState(initialDomain || "");
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<ExposureReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -211,7 +213,30 @@ export function AmIAffectedHero({
             action: `High-severity vulnerability in ${item.vuln.product}. Upgrade perimeter firmware or isolate network interface.`,
             cve: item.cve,
           });
+        } else if (item.vuln) {
+          priorities.push({
+            priority: "P2 HIGH",
+            title: `Perimeter Flaw: ${item.cve}`,
+            action: `Vulnerability identified in ${item.vuln.product}. Verify patch status and network perimeter controls.`,
+            cve: item.cve,
+          });
+        } else {
+          priorities.push({
+            priority: "P1 CRITICAL",
+            title: `Breach Correlated Exploit: ${item.cve}`,
+            action: `Vulnerability cited in verified breach intelligence for this organization. Audit edge gateways immediately.`,
+            cve: item.cve,
+          });
         }
+      }
+
+      // Incident historical match guidance
+      if (intel.incidents.length > 0) {
+        priorities.push({
+          priority: "P2 HIGH",
+          title: "Verified Cyber Breach Response",
+          action: `Domain matched ${intel.incidents.length} verified security incident(s). Rotate administrative credentials and inspect gateway logs.`,
+        });
       }
 
       // 2. Email Perimeter Security Priorities
@@ -270,6 +295,17 @@ export function AmIAffectedHero({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (initialDomain && initialDomain.trim()) {
+      const target = initialDomain.trim();
+      const timer = window.setTimeout(() => {
+        void runScan(target);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDomain]);
 
   const copyExecutiveSummary = () => {
     if (!report) return;
@@ -436,7 +472,7 @@ export function AmIAffectedHero({
                 DMARC {report.dmarcEnforced ? "ENFORCED" : "AT RISK"}
               </span>
               <span className="font-mono text-[10px] text-ink-4">
-                SPF: {report.spfValid ? "VALID" : "UNSET"} · IPS: {report.ipAddresses.length}
+                SPF: {report.spfValid ? "VALID" : "UNSET"} · MX: {report.mxRecords[0]?.split(".")[0]?.toUpperCase() || "DIRECT"} · IPS: {report.ipAddresses.length}
               </span>
             </div>
           </div>

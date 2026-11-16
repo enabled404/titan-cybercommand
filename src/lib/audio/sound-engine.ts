@@ -14,6 +14,8 @@ class SoundEngine {
   private isMuted: boolean = true;
   private volume: number = 0.4;
   private isInitialized: boolean = false;
+  private lastLaunchTime: number = 0;
+  private lastImpactTime: number = 0;
 
   private init() {
     if (this.isInitialized || typeof window === "undefined") return;
@@ -124,6 +126,10 @@ class SoundEngine {
 
     try {
       const now = this.ctx.currentTime;
+      // Prevent sound saturation during high-speed barrage / 4x replay
+      if (now - this.lastLaunchTime < 0.11) return;
+      this.lastLaunchTime = now;
+
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       const panner = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
@@ -173,6 +179,10 @@ class SoundEngine {
 
     try {
       const now = this.ctx.currentTime;
+      // Prevent low-end clipping from multiple simultaneous impacts
+      if (now - this.lastImpactTime < 0.08) return;
+      this.lastImpactTime = now;
+
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
 

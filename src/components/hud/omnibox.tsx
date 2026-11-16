@@ -9,6 +9,7 @@ import { StatusMark } from "@/components/kit/status-mark";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { allCountries, countryName } from "@/lib/countries";
 import { STATUS_LABEL, relativeTime } from "@/lib/format";
+import { normalizeReconDomain } from "@/lib/recon";
 import { CURATED_THREAT_ACTORS } from "@/lib/threat-actors";
 import type { Incident, Vuln } from "@/lib/types";
 import { plural, productLabel } from "@/lib/og/copy";
@@ -20,6 +21,7 @@ const PROMPTS = ["Was my bank hacked?", "Search a company, app or vendor", "Fort
 
 type Row =
   | { kind: "verdict"; key: string; found: number; flaws: number; exploited: number; mentions: number; query: string }
+  | { kind: "exposure"; key: string; domain: string }
   | { kind: "check"; key: string; query: string }
   | { kind: "incident"; key: string; incident: Incident }
   | { kind: "vuln"; key: string; vuln: Vuln }
@@ -140,6 +142,14 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
         : [];
     const out: Row[] = [];
     const looksLikeName = !cveMatch && q.split(/\s+/).length <= 4 && !/[?]$/.test(q);
+    const cleanDomain = normalizeReconDomain(q);
+    if (cleanDomain) {
+      out.push({
+        kind: "exposure",
+        key: `exp-${cleanDomain}`,
+        domain: cleanDomain,
+      });
+    }
     if (looksLikeName && q.length >= 2)
       out.push({
         kind: "verdict",
@@ -198,6 +208,10 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
   const run = (row: Row) => {
     setOpen(false);
     switch (row.kind) {
+      case "exposure":
+        useSituation.getState().setAmIAffectedTarget(row.domain);
+        useSituation.getState().setAmIAffectedOpen(true);
+        break;
       case "incident":
         select(row.incident.id);
         break;
@@ -222,6 +236,10 @@ export const Omnibox = forwardRef<OmniboxHandle, OmniboxProps>(function Omnibox(
         else ask(lookupQuestion(row.query));
         break;
       }
+      case "exposure":
+        useSituation.getState().setAmIAffectedTarget(row.domain);
+        useSituation.getState().setAmIAffectedOpen(true);
+        break;
       case "check":
         router.push(`/check?add=${encodeURIComponent(row.query)}`);
         break;
@@ -404,6 +422,25 @@ function RowBody({ row }: { row: Row }) {
         </>
       );
     }
+    case "exposure":
+      return (
+        <>
+          <span className="flex size-7 items-center justify-center rounded-[8px] bg-cyan-500/20 text-cyan-400 ring-1 ring-inset ring-cyan-500/40">
+            <ShieldWarning className="size-4" />
+          </span>
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 text-[14px] font-semibold text-ink">
+              <span>Am I Affected?</span>
+              <span className="rounded bg-cyan-500/15 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-300">
+                POSTURE SCAN
+              </span>
+            </span>
+            <span className="block truncate text-[12px] text-ink-3">
+              Scan {row.domain} for DNS posture, linked CVEs and remediation priority
+            </span>
+          </span>
+        </>
+      );
     case "check":
       return (
         <>

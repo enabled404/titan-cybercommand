@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getThreatActorProfile, CURATED_THREAT_ACTORS } from "@/lib/threat-actors";
+import { buildThreatActorMarkdown, buildThreatActorStix21 } from "@/lib/export-intel";
 import type { Snapshot } from "@/lib/types";
 
 describe("Threat Actor Intelligence Dossiers", () => {
@@ -98,5 +99,44 @@ describe("Threat Actor Intelligence Dossiers", () => {
         expect(m.technique).toBeTruthy();
       }
     }
+  });
+
+  it("exports valid STIX 2.1 Threat Actor bundle with attack-pattern and vulnerability relationships", () => {
+    const actor = getThreatActorProfile("Volt Typhoon");
+    const bundle = buildThreatActorStix21(actor);
+
+    expect(bundle.type).toBe("bundle");
+    expect(bundle.id).toContain("bundle--threat-actor-volt-typhoon");
+    expect(bundle.objects.length).toBeGreaterThan(1);
+
+    interface StixObj {
+      type: string;
+      name?: string;
+      country?: string;
+      relationship_type?: string;
+    }
+
+    const objects = bundle.objects as StixObj[];
+    const threatActorObj = objects.find((o) => o.type === "threat-actor");
+    expect(threatActorObj).toBeDefined();
+    expect(threatActorObj?.name).toBe("Volt Typhoon");
+    expect(threatActorObj?.country).toBe("CN");
+
+    const attackPatterns = objects.filter((o) => o.type === "attack-pattern");
+    expect(attackPatterns.length).toBe(actor.mitreAttack.length);
+
+    const relationships = objects.filter((o) => o.type === "relationship");
+    expect(relationships.some((r) => r.relationship_type === "uses")).toBe(true);
+    expect(relationships.some((r) => r.relationship_type === "targets")).toBe(true);
+  });
+
+  it("exports valid formatted Markdown intelligence brief for threat actors", () => {
+    const actor = getThreatActorProfile("APT28");
+    const md = buildThreatActorMarkdown(actor);
+
+    expect(md).toContain("# TITAN CYBER COMMAND: THREAT ACTOR PROFILE");
+    expect(md).toContain("ADVERSARY: APT28");
+    expect(md).toContain("MITRE ATT&CK TECHNIQUES");
+    expect(md).toContain("WEAPONIZED CVES");
   });
 });

@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { ArrowRight, Crosshair, X } from "@phosphor-icons/react";
+import { ArrowRight, Crosshair, FileCode, FileText, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { TacticalDialog } from "@/components/ui/tactical-dialog";
 import { soundEngine } from "@/lib/audio/sound-engine";
+import { exportThreatActorMarkdown, exportThreatActorStix21 } from "@/lib/export-intel";
 import { getThreatActorProfile } from "@/lib/threat-actors";
 import type { Snapshot } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -256,20 +257,48 @@ export function ThreatActorModal({
       </div>
 
       {/* Footer controls */}
-      <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
-        <button
-          type="button"
-          onClick={() => {
-            selectActor(profile.name);
-            soundEngine.playAttackLaunch(0);
-            toast.info(`Attack arcs concentrated on ${profile.name}`);
-            handleClose();
-          }}
-          className="press flex items-center gap-1.5 rounded-xl bg-cyan-500 px-3.5 py-2 font-mono text-xs font-bold text-space shadow-md hover:bg-cyan-400"
-        >
-          <Crosshair size={14} weight="bold" />
-          <span>HIGHLIGHT ARCS ON GLOBE</span>
-        </button>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              selectActor(profile.name);
+              soundEngine.playAttackLaunch(0);
+              toast.info(`Attack arcs concentrated on ${profile.name}`);
+              handleClose();
+            }}
+            className="press flex items-center gap-1.5 rounded-xl bg-cyan-500 px-3.5 py-2 font-mono text-xs font-bold text-space shadow-md hover:bg-cyan-400"
+          >
+            <Crosshair size={14} weight="bold" />
+            <span>HIGHLIGHT ARCS</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundEngine.playClick();
+              exportThreatActorStix21(profile);
+            }}
+            className="press flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 font-mono text-xs text-ink-3 hover:text-ink"
+            title="Export full OASIS STIX 2.1 Threat Actor JSON"
+          >
+            <FileCode size={14} className="text-emerald-400" />
+            <span>STIX 2.1 (.json)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundEngine.playClick();
+              exportThreatActorMarkdown(profile);
+            }}
+            className="press flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 font-mono text-xs text-ink-3 hover:text-ink"
+            title="Export formatted Markdown intel dossier"
+          >
+            <FileText size={14} className="text-cyan-400" />
+            <span>Dossier (.md)</span>
+          </button>
+        </div>
 
         <button
           type="button"
