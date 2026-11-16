@@ -7,18 +7,18 @@ const CHROME_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrom
 const FRAMES_DIR = path.resolve("./temp-frames");
 const OUT_DIR = path.resolve("./docs");
 const PUBLIC_DOCS = path.resolve("./public/docs");
-const TARGET_URL = process.env.DEMO_URL || "http://localhost:3004";
+const TARGET_URL = process.env.DEMO_URL || "http://localhost:3004/?demo=1";
 
 async function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function record() {
-  console.log("=== TITAN CYBER COMMAND DEMO RECORDER (MASTER 1080P) ===");
+  console.log("=== TITAN CYBER COMMAND 30-SECOND MASTER SHOWCASE RECORDER ===");
   console.log(`Target URL: ${TARGET_URL}`);
 
-  // Delete older recordings
-  console.log("Cleaning up older recordings...");
+  // Clean previous frames and old recordings
+  console.log("Cleaning up prior frames and recordings...");
   [OUT_DIR, PUBLIC_DOCS].forEach((dir) => {
     if (fs.existsSync(dir)) {
       ["demo.mp4", "demo.webm", "demo.gif", "demo_raw.mp4"].forEach((f) => {
@@ -35,16 +35,18 @@ async function record() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   fs.mkdirSync(PUBLIC_DOCS, { recursive: true });
 
-  console.log("Launching Chrome...");
+  console.log("Launching headless Chrome with WebGL enabled...");
   const browser = await puppeteer.launch({
     executablePath: CHROME_PATH,
-    headless: true,
+    headless: "new",
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-gpu-vsync",
       "--window-size=1600,1000",
       "--hide-scrollbars",
+      "--enable-webgl",
+      "--ignore-gpu-blocklist",
     ],
   });
 
@@ -52,11 +54,11 @@ async function record() {
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
 
   console.log(`Navigating to ${TARGET_URL}...`);
-  await page.goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
+  await page.goto(TARGET_URL, { waitUntil: "networkidle2", timeout: 45000 });
 
-  // Allow globe and canvas layers to initialize
+  // Allow globe, Black Marble tiles, and ballistic canvas to initialize
   await page.waitForSelector(".maplibregl-canvas", { timeout: 20000 }).catch(() => {});
-  await sleep(5000);
+  await sleep(4000);
 
   let frameCount = 0;
   const captureFrame = async () => {
@@ -67,130 +69,222 @@ async function record() {
     return filePath;
   };
 
-  // Scene 1: Kinetic Great Circle Ballistic Swarm, Orbital HUD, and Live Combat Feed
-  console.log("Recording Scene 1: Great Circle Ballistic Swarm & Combat Stream (70 frames)...");
-  for (let i = 0; i < 70; i++) {
+  // ==========================================
+  // SCENE 1: Global Ballistic Swarm & Command Overview (90 frames ~ 5.6s)
+  // ==========================================
+  console.log("Recording Scene 1: Spherical Great Circle Swarm & Reticle (90 frames)...");
+  for (let i = 0; i < 90; i++) {
     const framePath = await captureFrame();
-    if (i === 25) {
+    if (i === 40) {
       const outShot = path.join(OUT_DIR, "screenshot.png");
       const pubShot = path.join(PUBLIC_DOCS, "screenshot.png");
       fs.copyFileSync(framePath, outShot);
       fs.copyFileSync(framePath, pubShot);
-      console.log(`Saved fresh 1440x900 screenshot poster -> ${outShot} and ${pubShot}`);
+      console.log(`Captured fresh master screenshot poster -> ${outShot}`);
     }
-    await sleep(50);
+    await sleep(40);
   }
 
-  // Scene 2: Target Recon OSINT Scanner
-  console.log("Recording Scene 2: Target Recon OSINT Scanner (60 frames)...");
+  // ==========================================
+  // SCENE 2: Tactical US Deep Zoom & Incident Dossier (100 frames ~ 6.2s)
+  // ==========================================
+  console.log("Recording Scene 2: Tactical US Zoom & Incident Pins (100 frames)...");
   try {
-    const buttons = await page.$$("button");
-    for (const b of buttons) {
-      const text = await page.evaluate((el) => el.textContent || "", b);
-      if (text.includes("RECON") || text.includes("Target Recon")) {
-        await b.click();
-        break;
-      }
-    }
-    await sleep(800);
+    // Collapse sidebar to show full map with city lights (matching user screenshot)
+    await page.evaluate(() => {
+      const closeBtn = document.querySelector("button[data-sidebar-close]");
+      closeBtn?.click();
+    });
+    await sleep(300);
 
-    // Click Tesla preset
-    const presetButtons = await page.$$("button");
-    for (const b of presetButtons) {
-      const text = await page.evaluate((el) => el.textContent || "", b);
-      if (text.includes("tesla.com")) {
-        await b.click();
-        break;
+    // Fly camera smoothly to the United States
+    await page.evaluate(() => {
+      const map = window.__map;
+      if (map) {
+        map.flyTo({
+          center: [-98.0, 38.5],
+          zoom: 3.75,
+          pitch: 34,
+          bearing: -4,
+          duration: 2200,
+          essential: true,
+        });
       }
-    }
-    await sleep(2000);
+    });
 
     for (let i = 0; i < 50; i++) {
       await captureFrame();
-      await sleep(60);
+      await sleep(40);
     }
 
-    // Close modal
+    // Click an incident tag to inspect dossier
+    await page.evaluate(() => {
+      const pins = Array.from(document.querySelectorAll("button, [role='button'], div"));
+      const targetPin = pins.find((el) => {
+        const txt = el.textContent || "";
+        return txt.includes("Home Instead") || txt.includes("Walgreen") || txt.includes("Alo Yoga") || txt.includes("VF");
+      });
+      targetPin?.click();
+    });
+
+    for (let i = 0; i < 50; i++) {
+      await captureFrame();
+      await sleep(40);
+    }
+
+    // Dismiss dossier
     await page.keyboard.press("Escape");
-    await sleep(500);
+    await sleep(300);
   } catch (err) {
-    console.log("Target Recon note:", err.message);
+    console.log("Scene 2 note:", err.message);
   }
 
-  // Scene 3: WarGames Cascading Disaster Simulation
-  console.log("Recording Scene 3: WarGames Disaster Simulation (70 frames)...");
+  // ==========================================
+  // SCENE 3: Target Recon Passive OSINT Live Probing (95 frames ~ 5.9s)
+  // ==========================================
+  console.log("Recording Scene 3: Target Recon OSINT Scanner (95 frames)...");
   try {
-    const buttons = await page.$$("button");
-    for (const b of buttons) {
-      const text = await page.evaluate((el) => el.textContent || "", b);
-      if (text.includes("WARGAMES") || text.includes("WarGames")) {
-        await b.click();
-        break;
-      }
-    }
-    await sleep(800);
+    // Open Recon modal
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const btn = buttons.find((b) => /\brecon\b/i.test(b.textContent || ""));
+      btn?.click();
+    });
+    await sleep(600);
 
-    // Initiate contagion cascade
-    const cascadeButtons = await page.$$("button");
-    for (const b of cascadeButtons) {
-      const text = await page.evaluate((el) => el.textContent || "", b);
-      if (text.includes("INITIATE WARGAME CASCADE")) {
-        await b.click();
-        break;
-      }
+    // Select tesla.com preset
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("dialog[open] button"));
+      const preset = buttons.find((b) => (b.textContent || "").includes("tesla.com"));
+      preset?.click();
+    });
+
+    for (let i = 0; i < 95; i++) {
+      await captureFrame();
+      await sleep(45);
     }
+
+    // Close Recon modal
+    await page.keyboard.press("Escape");
+    await sleep(400);
+  } catch (err) {
+    console.log("Scene 3 note:", err.message);
+  }
+
+  // ==========================================
+  // SCENE 4: WarGames Contagion Cascade & Countermeasure Victory (100 frames ~ 6.2s)
+  // ==========================================
+  console.log("Recording Scene 4: WarGames Cascade & Defense Active (100 frames)...");
+  try {
+    // Open WarGames modal
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const btn = buttons.find((b) => /\bwargames\b/i.test(b.textContent || ""));
+      btn?.click();
+    });
+    await sleep(600);
+
+    // Initiate Cascade
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("dialog[open] button"));
+      const initBtn = buttons.find((b) => (b.textContent || "").includes("INITIATE WARGAME CASCADE"));
+      initBtn?.click();
+    });
 
     for (let i = 0; i < 40; i++) {
       await captureFrame();
-      await sleep(60);
+      await sleep(40);
     }
 
-    // Deploy Countermeasures
-    const counterButtons = await page.$$("button");
-    for (const b of counterButtons) {
-      const text = await page.evaluate((el) => el.textContent || "", b);
-      if (text.includes("DEPLOY COUNTERMEASURE")) {
-        await b.click();
-        break;
-      }
-    }
-
-    for (let i = 0; i < 30; i++) {
-      await captureFrame();
-      await sleep(60);
-    }
-
+    // Close dialog to see floating map HUD on globe
     await page.keyboard.press("Escape");
-    await sleep(500);
+    await sleep(400);
+
+    for (let i = 0; i < 20; i++) {
+      await captureFrame();
+      await sleep(40);
+    }
+
+    // Click DEPLOY COUNTERMEASURE on floating map HUD
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const deployBtn = buttons.find((b) => (b.textContent || "").includes("DEPLOY COUNTERMEASURE"));
+      deployBtn?.click();
+    });
+
+    for (let i = 0; i < 40; i++) {
+      await captureFrame();
+      await sleep(40);
+    }
+
+    // Stop wargame simulation
+    await page.evaluate(() => {
+      const stopBtn = document.querySelector("button[aria-label=\"Stop simulation\"]");
+      stopBtn?.click();
+    });
+    await sleep(300);
   } catch (err) {
-    console.log("WarGames note:", err.message);
+    console.log("Scene 4 note:", err.message);
   }
 
-  // Scene 4: Cinematic Auto-Patrol & Incident Inspection
-  console.log("Recording Scene 4: Cinematic Auto-Patrol & Dossier (50 frames)...");
+  // ==========================================
+  // SCENE 5: Cinematic Drone Patrol & Interactive Omnibox Search (95 frames ~ 5.9s)
+  // ==========================================
+  console.log("Recording Scene 5: Cinematic Patrol & Omnibox Autocomplete (95 frames)...");
   try {
-    const patrolButtons = await page.$$("button");
-    for (const b of patrolButtons) {
-      const text = await page.evaluate((el) => el.textContent || "", b);
-      if (text.includes("PATROL") || text.includes("Patrol")) {
-        await b.click();
-        break;
-      }
+    // Activate Patrol mode
+    await page.keyboard.press("c");
+    await sleep(600);
+
+    for (let i = 0; i < 45; i++) {
+      await captureFrame();
+      await sleep(40);
     }
+
+    // Instant 25ms Escape exit
+    await page.keyboard.press("Escape");
+    await sleep(300);
+
+    // Restore hero camera view
+    await page.evaluate(() => {
+      const map = window.__map;
+      if (map) {
+        map.flyTo({
+          center: [15, 25],
+          zoom: 1.8,
+          pitch: 0,
+          bearing: 0,
+          duration: 1500,
+          essential: true,
+        });
+      }
+    });
+
+    // Reopen sidebar and focus Omnibox
+    await page.evaluate(() => {
+      const showBtn = Array.from(document.querySelectorAll("button")).find((b) => (b.textContent || "").includes("Show sidebar"));
+      showBtn?.click();
+    });
+    await sleep(200);
+
+    await page.focus("#main-omnibox-input");
+    await page.type("#main-omnibox-input", "Fortinet", { delay: 40 });
 
     for (let i = 0; i < 50; i++) {
       await captureFrame();
-      await sleep(50);
+      await sleep(40);
     }
   } catch (err) {
-    console.log("Patrol note:", err.message);
+    console.log("Scene 5 note:", err.message);
   }
 
   await browser.close();
-  console.log(`Captured total of ${frameCount} high-resolution frames.`);
+  console.log(`Captured total of ${frameCount} high-resolution frames (~${(frameCount / 16).toFixed(1)} seconds at 16fps).`);
 
-  // Encode with ffmpeg
-  console.log("Encoding video with ffmpeg into MP4, WebM, and GIF...");
+  // ==========================================
+  // ENCODING WITH FFMPEG (MP4, WebM, and GIF)
+  // ==========================================
+  console.log("Encoding video streams with ffmpeg...");
 
   const rawMp4 = path.join(OUT_DIR, "demo_raw.mp4");
   const mp4Path = path.join(OUT_DIR, "demo.mp4");
@@ -199,9 +293,9 @@ async function record() {
 
   const durationSec = (frameCount / 16).toFixed(2);
 
-  // 1. Generate video stream
+  // 1. Generate video stream (H.264 High Profile, faststart)
   execSync(
-    `/opt/homebrew/bin/ffmpeg -y -framerate 16 -i "${FRAMES_DIR}/frame_%05d.png" -c:v libx264 -profile:v high -level:v 4.2 -pix_fmt yuv420p -crf 18 -movflags +faststart "${rawMp4}"`,
+    `/opt/homebrew/bin/ffmpeg -y -framerate 16 -i "${FRAMES_DIR}/frame_%05d.png" -c:v libx264 -profile:v high -level:v 4.2 -pix_fmt yuv420p -crf 19 -movflags +faststart "${rawMp4}"`,
     { stdio: "inherit" }
   );
 
@@ -212,15 +306,15 @@ async function record() {
   );
   if (fs.existsSync(rawMp4)) fs.unlinkSync(rawMp4);
 
-  // 3. Generate WebM
+  // 3. Generate WebM (VP9)
   execSync(
-    `/opt/homebrew/bin/ffmpeg -y -framerate 16 -i "${FRAMES_DIR}/frame_%05d.png" -c:v libvpx-vp9 -b:v 0 -crf 26 "${webmPath}"`,
+    `/opt/homebrew/bin/ffmpeg -y -framerate 16 -i "${FRAMES_DIR}/frame_%05d.png" -c:v libvpx-vp9 -b:v 0 -crf 28 "${webmPath}"`,
     { stdio: "inherit" }
   );
 
   // 4. Generate high-quality optimized GIF for GitHub README preview
   execSync(
-    `/opt/homebrew/bin/ffmpeg -y -i "${mp4Path}" -vf "fps=12,scale=840:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer" "${gifPath}"`,
+    `/opt/homebrew/bin/ffmpeg -y -i "${mp4Path}" -vf "fps=12,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer" "${gifPath}"`,
     { stdio: "inherit" }
   );
 
@@ -229,9 +323,9 @@ async function record() {
   fs.copyFileSync(webmPath, path.join(PUBLIC_DOCS, "demo.webm"));
   fs.copyFileSync(gifPath, path.join(PUBLIC_DOCS, "demo.gif"));
 
-  // Clean up frames
+  // Clean up frames directory
   fs.rmSync(FRAMES_DIR, { recursive: true, force: true });
-  console.log("=== MASTER DEMO GENERATION & REPLACEMENT COMPLETE ===");
+  console.log("=== 30-SECOND MASTER DEMO GENERATION COMPLETE ===");
   console.log(`MP4: ${mp4Path} (${fs.statSync(mp4Path).size} bytes)`);
   console.log(`WebM: ${webmPath} (${fs.statSync(webmPath).size} bytes)`);
   console.log(`GIF: ${gifPath} (${fs.statSync(gifPath).size} bytes)`);

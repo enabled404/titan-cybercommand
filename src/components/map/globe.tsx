@@ -763,8 +763,12 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
       if (container && (canvas.clientWidth !== container.clientWidth || canvas.clientHeight !== container.clientHeight)) map.resize();
     });
     resizeObserver.observe(containerRef.current);
-    // Exposed for development and for the ?still screenshot mode, which browser tests drive.
-    if (process.env.NODE_ENV !== "production" || new URLSearchParams(window.location.search).has("still")) {
+    // Exposed for development, screenshot mode (?still), and automated demo recording (?demo).
+    if (
+      process.env.NODE_ENV !== "production" ||
+      new URLSearchParams(window.location.search).has("still") ||
+      new URLSearchParams(window.location.search).has("demo")
+    ) {
       (window as unknown as { __map: MapLibre }).__map = map;
     }
 
