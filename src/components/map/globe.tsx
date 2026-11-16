@@ -16,8 +16,9 @@ import {
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
 import { angularDistance, applyStyle, flyToIncident, globeCircle, tryStyle, useMapInstance } from "@/components/map/map-instance";
+import { soundEngine } from "@/lib/audio/sound-engine";
 import { STATUS_COLOR } from "@/lib/format";
-import type { Incident, Outage } from "@/lib/types";
+import type { BotnetC2Node, Incident, Outage } from "@/lib/types";
 import { useSituation } from "@/stores/situation";
 import submarineCables from "@/data/geo/submarine-cables.json";
 import worldBoundaries from "@/data/geo/world-boundaries.json";
@@ -27,6 +28,7 @@ const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] };
 interface GlobeProps {
   incidents: Incident[];
   outages: Outage[];
+  botnetC2s?: BotnetC2Node[];
   countryCounts: Record<string, number>;
   /** Screen space covered by panels, so the globe centres in what is left. */
   padding: { left: number; right: number; bottom: number; top: number };
@@ -156,6 +158,28 @@ function outageFeatures(outages: Outage[]): FeatureCollection<Point> {
       type: "Feature",
       geometry: { type: "Point", coordinates: [outage.lon, outage.lat] },
       properties: { id: outage.id, country: outage.country ?? "", title: outage.title },
+    })),
+  };
+}
+
+function botnetFeatures(nodes: BotnetC2Node[]): FeatureCollection<Point> {
+  return {
+    type: "FeatureCollection",
+    features: nodes.map((node) => ({
+      type: "Feature",
+      id: node.id,
+      geometry: { type: "Point", coordinates: [node.lon, node.lat] },
+      properties: {
+        id: node.id,
+        ip: node.ip,
+        port: node.port,
+        framework: node.framework,
+        label: `C2: ${node.framework.split(" ")[0]} (${node.ip})`,
+        asn: node.asn ?? "",
+        country: node.country,
+        city: node.city ?? "",
+        status: node.status,
+      },
     })),
   };
 }
@@ -595,6 +619,63 @@ function addLayers(map: MapLibre) {
     },
   });
 
+  map.addSource("botnet-c2", { type: "geojson", data: EMPTY, promoteId: "id" });
+  map.addLayer({
+    id: "botnet-c2-halo",
+    type: "circle",
+    source: "botnet-c2",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 8, 6, 18],
+      "circle-color": "#d946ef",
+      "circle-opacity": 0.22,
+      "circle-blur": 0.85,
+      "circle-pitch-alignment": "map",
+    },
+  });
+  map.addLayer({
+    id: "botnet-c2-pulse",
+    type: "circle",
+    source: "botnet-c2",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 5, 6, 12],
+      "circle-color": "rgba(0,0,0,0)",
+      "circle-stroke-color": "#f0abfc",
+      "circle-stroke-width": 1.4,
+      "circle-stroke-opacity": 0.85,
+      "circle-pitch-alignment": "map",
+    },
+  });
+  map.addLayer({
+    id: "botnet-c2-core",
+    type: "circle",
+    source: "botnet-c2",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 2.5, 6, 5],
+      "circle-color": "#fae8ff",
+      "circle-stroke-color": "#c026d3",
+      "circle-stroke-width": 1.2,
+      "circle-pitch-alignment": "map",
+    },
+  });
+  map.addLayer({
+    id: "botnet-c2-labels",
+    type: "symbol",
+    source: "botnet-c2",
+    minzoom: 4.5,
+    layout: {
+      "text-field": ["get", "label"],
+      "text-font": ["Noto Sans Bold"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 4.5, 9.5, 8, 12],
+      "text-offset": [0, 1.2],
+      "text-anchor": "top",
+    },
+    paint: {
+      "text-color": "#f0abfc",
+      "text-halo-color": "rgba(10,5,15,0.95)",
+      "text-halo-width": 1.4,
+    },
+  });
+
   map.addSource("incidents", { type: "geojson", data: EMPTY, promoteId: "id" });
   const sizeBySeverity = (base: number) => radiusExpr(base);
 
@@ -690,7 +771,7 @@ function addLayers(map: MapLibre) {
   });
 }
 
-export function Globe({ incidents, outages, countryCounts, padding, onHover, onCluster }: GlobeProps) {
+export function Globe({ incidents, outages, botnetC2s = [], countryCounts, padding, onHover, onCluster }: GlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibre | null>(null);
   const readyRef = useRef(false);
@@ -701,6 +782,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
   const ready = useMapInstance((s) => s.ready);
   const selectedId = useSituation((s) => s.selectedId);
   const select = useSituation((s) => s.select);
+  const selectC2 = useSituation((s) => s.selectC2);
   const cinema = useSituation((s) => s.cinema);
   const layers = useSituation((s) => s.layers);
   const hoverRef = useRef(onHover);
@@ -818,6 +900,14 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
       hoveredPin = id;
     };
     map.on("click", (event) => {
+      if (layersRef.current.botnets) {
+        const c2Hits = map.queryRenderedFeatures(event.point, { layers: ["botnet-c2-core", "botnet-c2-pulse"] });
+        if (c2Hits.length > 0 && c2Hits[0].properties?.id) {
+          soundEngine.playSonarPing();
+          selectC2(String(c2Hits[0].properties.id));
+          return;
+        }
+      }
       const hits = layersRef.current.incidents ? pinsNear(map, incidentsRef.current, event.point, reach) : [];
       // Pins stacked within a few pixels of each other cannot be told apart by aim: list them.
       const stacked = hits.filter((hit) => hit.distance - (hits[0]?.distance ?? 0) <= 8);
@@ -863,7 +953,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
       map?.remove();
       mapRef.current = null;
     };
-  }, [select, setMap, setReady]);
+  }, [select, selectC2, setMap, setReady]);
 
   // Hero framing: the globe is fitted to the free space (right of the panel, below the nav) and
   // returns there when a dossier closes. Once the visitor zooms by hand we leave the camera alone.
@@ -1003,6 +1093,12 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
     return applyStyle(map, () => map.setFilter("country-outage", ["in", ["get", "iso_3166_1"], ["literal", isos]]));
   }, [outages, ready]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    (map.getSource("botnet-c2") as GeoJSONSource | undefined)?.setData(botnetFeatures(botnetC2s));
+  }, [botnetC2s, ready]);
+
   // Country heat: share of incidents, capped so one country does not wash out the rest.
   useEffect(() => {
     const map = mapRef.current;
@@ -1037,6 +1133,7 @@ export function Globe({ incidents, outages, countryCounts, padding, onHover, onC
       set(["country-outage", "outage-ring"], layers.outages);
       set(["arcs"], layers.arcs);
       set(["submarine-cables-glow", "submarine-cables-line"], layers.cables);
+      set(["botnet-c2-halo", "botnet-c2-pulse", "botnet-c2-core", "botnet-c2-labels"], layers.botnets);
     });
   }, [layers, ready]);
 

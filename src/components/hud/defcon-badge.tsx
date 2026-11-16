@@ -1,6 +1,6 @@
 "use client";
 
-import { Siren } from "@phosphor-icons/react";
+import { Radioactive, Siren } from "@phosphor-icons/react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { soundEngine } from "@/lib/audio/sound-engine";
 import type { Snapshot } from "@/lib/types";
@@ -70,7 +70,7 @@ function computeCyberPosture(stats?: PostureStats) {
   };
 }
 
-export function DefconBadge({ stats }: { stats?: PostureStats }) {
+export function DefconBadge({ stats, onOpenThreatMatrix }: { stats?: PostureStats; onOpenThreatMatrix?: () => void }) {
   const posture = computeCyberPosture(stats);
 
   return (
@@ -137,7 +137,21 @@ export function DefconBadge({ stats }: { stats?: PostureStats }) {
           </div>
         )}
 
-        <div className="mt-3 rounded-lg bg-surface-2 p-2 text-[10.5px] text-ink-4 leading-normal font-sans">
+        {onOpenThreatMatrix && (
+          <button
+            type="button"
+            onClick={() => {
+              soundEngine.playClick();
+              onOpenThreatMatrix();
+            }}
+            className="press mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-950/30 py-1.5 font-mono text-[11px] font-bold text-red-300 hover:bg-red-950/60 transition-colors"
+          >
+            <Radioactive size={13} weight="bold" />
+            <span>OPEN THREAT MATRIX (M)</span>
+          </button>
+        )}
+
+        <div className="mt-2.5 rounded-lg bg-surface-2 p-2 text-[10.5px] text-ink-4 leading-normal font-sans">
           *Readiness tier is computed deterministically from current snapshot 24h incidents, 30d CISA KEV additions, 72h critical CVEs, and active outage feeds.
         </div>
       </PopoverContent>

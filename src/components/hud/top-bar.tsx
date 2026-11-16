@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
-import { Broadcast, ClockCounterClockwise, Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass, ShieldCheck } from "@phosphor-icons/react";
+import { Broadcast, ClockCounterClockwise, Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass, Radioactive, ShieldCheck } from "@phosphor-icons/react";
 
 import { AuthButton } from "@/components/auth/auth-button";
 import { AudioButton } from "@/components/hud/audio-button";
@@ -58,6 +58,8 @@ export function TopBar({
   isAmIAffectedActive,
   onOpenThreatRadar,
   isThreatRadarActive,
+  onOpenThreatMatrix,
+  isThreatMatrixActive,
   onOpenWargames,
   onOpenRecon,
   onOpenShortcuts,
@@ -73,6 +75,8 @@ export function TopBar({
   isAmIAffectedActive?: boolean;
   onOpenThreatRadar?: () => void;
   isThreatRadarActive?: boolean;
+  onOpenThreatMatrix?: () => void;
+  isThreatMatrixActive?: boolean;
   onOpenWargames?: () => void;
   onOpenRecon?: () => void;
   onOpenShortcuts?: () => void;
@@ -84,7 +88,7 @@ export function TopBar({
 }) {
   const [opsOpen, setOpsOpen] = useState(false);
   const hasTacticalOps = Boolean(
-    onOpenAmIAffected || onOpenThreatRadar || onOpenRecon || onOpenWargames || onTogglePatrol || onOpenDemo || onToggleReplay,
+    onOpenAmIAffected || onOpenThreatRadar || onOpenThreatMatrix || onOpenRecon || onOpenWargames || onTogglePatrol || onOpenDemo || onToggleReplay,
   );
 
   return (
@@ -103,7 +107,7 @@ export function TopBar({
           </span>
         </Link>
         <div className="hidden xs:block sm:block">
-          <DefconBadge stats={stats} />
+          <DefconBadge stats={stats} onOpenThreatMatrix={onOpenThreatMatrix} />
         </div>
       </div>
 
@@ -161,6 +165,26 @@ export function TopBar({
                 </span>
                 <Broadcast size={12} weight="bold" />
                 <span>THREAT RADAR</span>
+              </button>
+            )}
+            {onOpenThreatMatrix && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  onOpenThreatMatrix();
+                }}
+                className={cn(
+                  "press flex h-7 items-center gap-1.5 rounded-full px-2.5 font-mono text-[11px] font-bold transition-colors",
+                  isThreatMatrixActive
+                    ? "bg-red-500/25 text-red-200 shadow-[0_0_10px_rgba(239,68,68,0.4)]"
+                    : "text-red-400 hover:bg-red-500/15 hover:text-red-300",
+                )}
+                title="Launch Global Cyber Threat Matrix & Country Leaderboard (M)"
+                aria-label="Global Cyber Threat Matrix"
+              >
+                <Radioactive size={12} weight="bold" />
+                <span>MATRIX</span>
               </button>
             )}
             {onOpenRecon && (
@@ -299,6 +323,20 @@ export function TopBar({
                     >
                       <Broadcast size={14} weight="bold" />
                       <span>Threat Radar (B)</span>
+                    </button>
+                  )}
+                  {onOpenThreatMatrix && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playClick();
+                        setOpsOpen(false);
+                        onOpenThreatMatrix();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 font-bold text-red-400 transition-colors hover:bg-red-500/15"
+                    >
+                      <Radioactive size={14} weight="bold" />
+                      <span>Threat Matrix (M)</span>
                     </button>
                   )}
                   {onOpenRecon && (

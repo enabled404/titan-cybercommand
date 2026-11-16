@@ -18,6 +18,7 @@ const LAYERS = [
   { id: "arcs", label: "Links between victims of the same gang" },
   { id: "cables", label: "Subsea fiber optic cables" },
   { id: "ballistics", label: "Kinetic ballistic laser tracers" },
+  { id: "botnets", label: "Botnet C2 command servers" },
 ] as const;
 
 /** Map layers and the key to the map's marks. The status split itself lives in the left panel. */
@@ -70,6 +71,10 @@ export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt
             <span className="flex items-center gap-2">
               <span className="size-[9px] rounded-full ring-[1.5px] ring-outage" />
               Connectivity drop
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="size-[9px] rounded-full bg-fuchsia-500 ring-[1.5px] ring-fuchsia-400" />
+              Botnet C2 beacon
             </span>
           </div>
           <p suppressHydrationWarning className="border-t border-white/[0.06] px-2.5 pb-1.5 pt-2.5 text-[12px] leading-relaxed text-ink-4">

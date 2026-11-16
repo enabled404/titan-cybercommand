@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { angularDistance, useMapInstance } from "@/components/map/map-instance";
 import { soundEngine } from "@/lib/audio/sound-engine";
 import { useCombatFeed } from "@/stores/combat-feed";
-import type { Incident } from "@/lib/types";
+import type { BotnetC2Node, Incident } from "@/lib/types";
 import { useSituation } from "@/stores/situation";
 
 interface EmberParticle {
@@ -266,11 +266,13 @@ function computeGeodesicPoints(origin: [number, number], target: [number, number
 
 export function BallisticEngine({
   incidents,
+  botnetC2s = [],
   hudLeft = 452,
   hudBottom = 236,
   showHud = true,
 }: {
   incidents: Incident[];
+  botnetC2s?: BotnetC2Node[];
   hudLeft?: number;
   hudBottom?: number;
   showHud?: boolean;
@@ -287,6 +289,11 @@ export function BallisticEngine({
   const reconTarget = useSituation((s) => s.reconTarget);
   const replay = useSituation((s) => s.replay);
   const selectedIncident = incidents.find((i) => i.id === selectedId);
+
+  const botnetC2sRef = useRef(botnetC2s);
+  useEffect(() => {
+    botnetC2sRef.current = botnetC2s;
+  }, [botnetC2s]);
 
   const wargameSimRef = useRef(wargameSim);
   useEffect(() => {
@@ -316,6 +323,7 @@ export function BallisticEngine({
   const attacksRef = useRef<BallisticAttack[]>([]);
   const shockwavesRef = useRef<ImpactShockwave[]>([]);
   const lastSpawnRef = useRef<number>(0);
+  const lastC2SpawnRef = useRef<number>(0);
   const lastReplayCountRef = useRef<number>(0);
   const animFrameRef = useRef<number | null>(null);
   const [activeCount, setActiveCount] = useState(0);
@@ -562,6 +570,44 @@ export function BallisticEngine({
           }
           if (target) {
             spawnAttackForTarget(target);
+          }
+        }
+
+        // Periodic C2 botnet telemetry heartbeat tracers
+        if (layers.botnets && botnetC2sRef.current.length > 0 && now - lastC2SpawnRef.current > 4200 && attacksRef.current.length < 9) {
+          lastC2SpawnRef.current = now;
+          const c2 = botnetC2sRef.current[Math.floor(Math.random() * botnetC2sRef.current.length)];
+          const hub = INTERNET_TRANSIT_HUBS[Math.floor(Math.random() * INTERNET_TRANSIT_HUBS.length)];
+          if (c2 && hub) {
+            const points = computeGeodesicPoints([c2.lon, c2.lat], [hub.lon, hub.lat]);
+            const combatId = useCombatFeed.getState().addIntercept({
+              origin: `C2 / ${c2.city || "NODE"} (${c2.country})`,
+              originCountry: c2.country,
+              target: hub.label,
+              targetCountry: hub.country,
+              vector: "C2 BEACON HEARTBEAT",
+              severity: 2,
+              color: "#d946ef",
+              status: "ENGAGED",
+              sourceName: c2.framework,
+            });
+
+            attacksRef.current.push({
+              id: `c2-pulse-${now}-${Math.random().toString(36).slice(2, 6)}`,
+              combatId,
+              origin: { lon: c2.lon, lat: c2.lat, label: `${c2.framework} (${c2.ip})` },
+              target: { lon: hub.lon, lat: hub.lat, label: hub.label },
+              color: "#d946ef",
+              protocol: "C2 HEARTBEAT",
+              severity: 2,
+              startTime: now,
+              duration: 2600 + Math.random() * 800,
+              arcHeight: 45 + Math.random() * 50,
+              points,
+              trail: [],
+              embers: [],
+            });
+            soundEngine.playRadarPing();
           }
         }
       }
@@ -1053,7 +1099,7 @@ export function BallisticEngine({
       }
       syncCount(0);
     };
-  }, [ready, map, incidents, layers.ballistics, hasOverlayTarget, cinema]);
+  }, [ready, map, incidents, layers.ballistics, layers.botnets, hasOverlayTarget, cinema]);
 
   return (
     <>

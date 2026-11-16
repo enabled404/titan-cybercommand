@@ -332,6 +332,10 @@ class SoundEngine {
     }
   }
 
+  public playSonarPing() {
+    this.playRadarPing();
+  }
+
   /**
    * EMP / Defensive mitigation countermeasure discharge
    */
