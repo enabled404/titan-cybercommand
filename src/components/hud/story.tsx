@@ -11,13 +11,15 @@ import { AnswerCard } from "@/components/hud/ai-brief";
 import { Omnibox, type OmniboxHandle } from "@/components/hud/omnibox";
 import { PatchStrip } from "@/components/hud/patch-strip";
 import { StackPicker } from "@/components/hud/stack-picker";
+import { useMapInstance } from "@/components/map/map-instance";
 import { OrgLogo } from "@/components/kit/org-logo";
 import { Segmented } from "@/components/kit/segmented";
 import { StatusMark } from "@/components/kit/status-mark";
+import { soundEngine } from "@/lib/audio/sound-engine";
 import { countryName } from "@/lib/countries";
 import { STATUS_LABEL, epssPercent, relativeTime } from "@/lib/format";
 import type { IncidentDay, IncidentSummary } from "@/lib/incident-view";
-import type { Incident, MalwarePackage, Outage, Snapshot, Vuln } from "@/lib/types";
+import type { BotnetC2Node, Incident, MalwarePackage, Outage, Snapshot, Vuln } from "@/lib/types";
 import { useNow } from "@/lib/perf/use-now";
 import { productLabel } from "@/lib/og/copy";
 import { cn } from "@/lib/utils";
@@ -137,6 +139,7 @@ const StoryPanel = forwardRef<OmniboxHandle, StoryProps>(function Story(props, r
               label: "Wire",
               count: (snapshot?.stats?.breakingWireCount ?? 0) + (snapshot?.stats?.cisaAdvisoriesActive ?? 0),
             },
+            { value: "c2", label: "C2", count: snapshot?.botnetC2s?.length ?? 50 },
             { value: "malware", label: "Malware", count: malware.length },
             { value: "outages", label: "Outages", count: outages.length },
           ]}
@@ -147,6 +150,7 @@ const StoryPanel = forwardRef<OmniboxHandle, StoryProps>(function Story(props, r
         {tab === "incidents" ? <IncidentFeed incidents={incidents} now={now} /> : null}
         {tab === "exploited" ? <VulnRows fresh={newCritical} trending={exploited} kev={kev} now={now} /> : null}
         {tab === "wire" ? <WireRows snapshot={snapshot} now={now} /> : null}
+        {tab === "c2" ? <C2Rows botnets={snapshot?.botnetC2s ?? []} now={now} /> : null}
         {tab === "malware" ? <MalwareRows malware={malware} now={now} /> : null}
         {tab === "outages" ? <OutageRows outages={outages} now={now} /> : null}
       </div>
@@ -711,6 +715,70 @@ function WireRows({ snapshot, now }: { snapshot?: Snapshot; now: number }) {
           </ul>
         </section>
       )}
+    </div>
+  );
+}
+
+function C2Rows({ botnets, now }: { botnets: BotnetC2Node[]; now: number }) {
+  const map = useMapInstance((s) => s.map);
+  const selectC2 = useSituation((s) => s.selectC2);
+
+  const handleFly = (node: BotnetC2Node) => {
+    soundEngine.playClick();
+    selectC2(node.id);
+    if (map) {
+      map.flyTo({
+        center: [node.lon, node.lat],
+        zoom: 5.2,
+        duration: 1800,
+        essential: true,
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <section aria-label="Botnet C2 infrastructure">
+        <h3 className="sticky top-0 z-[1] flex items-baseline justify-between bg-surface px-3 pb-1.5 pt-2">
+          <Eyebrow className="text-fuchsia-400">Active C2 Beacons & Relays</Eyebrow>
+          <Eyebrow>{botnets.length}</Eyebrow>
+        </h3>
+        <ul className="space-y-1">
+          {botnets.map((node) => (
+            <li key={node.id}>
+              <div className="group flex flex-col gap-1 rounded-[14px] px-3 py-2 transition-colors duration-150 hover:bg-white/[0.04]">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="size-1.5 rounded-full bg-fuchsia-400" />
+                    <span className="font-mono text-[10px] font-bold text-fuchsia-300">
+                      {node.framework}
+                    </span>
+                  </div>
+                  <span suppressHydrationWarning className="font-mono text-[10px] text-ink-4">
+                    {relativeTime(node.lastSeen, now).replace(" ago", "")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-[12.5px] font-bold text-ink">
+                    {node.ip}:{node.port}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleFly(node)}
+                    className="press rounded border border-white/10 bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-fuchsia-300 hover:bg-fuchsia-500 hover:text-space transition-colors"
+                  >
+                    TRACK
+                  </button>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-ink-3">
+                  <span className="truncate max-w-[200px]">{node.asn}</span>
+                  <span className="text-ink-4">{node.country}</span>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

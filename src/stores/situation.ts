@@ -7,7 +7,7 @@ import { useAccess } from "@/stores/access";
 import { INCIDENT_STATUSES } from "@/lib/incident-view";
 
 export type TimeWindow = "24h" | "7d" | "30d";
-export type RailTab = "incidents" | "exploited" | "malware" | "outages" | "wire";
+export type RailTab = "incidents" | "exploited" | "malware" | "outages" | "wire" | "c2";
 
 export interface WargameSimState {
   active: boolean;
@@ -37,6 +37,7 @@ interface SituationState {
   selectedId: string | null;
   selectedCve: string | null;
   selectedActor: string | null;
+  selectedC2Id: string | null;
   actorFilter: string | null;
   hoveredId: string | null;
   window: TimeWindow;
@@ -46,7 +47,7 @@ interface SituationState {
   tab: RailTab;
   cinema: boolean;
   tacticalCrt: boolean;
-  layers: { incidents: boolean; countries: boolean; outages: boolean; arcs: boolean; cables: boolean; ballistics: boolean };
+  layers: { incidents: boolean; countries: boolean; outages: boolean; arcs: boolean; cables: boolean; ballistics: boolean; botnets: boolean };
   railOpen: boolean;
   wargameSim: WargameSimState | null;
   reconTarget: ReconTargetState | null;
@@ -54,9 +55,11 @@ interface SituationState {
   amIAffectedOpen: boolean;
   amIAffectedTarget: string | null;
   threatRadarOpen: boolean;
+  threatMatrixOpen: boolean;
   select: (id: string | null) => void;
   selectCve: (cve: string | null) => void;
   selectActor: (actor: string | null) => void;
+  selectC2: (id: string | null) => void;
   setActorFilter: (actor: string | null) => void;
   hover: (id: string | null) => void;
   setWindow: (window: TimeWindow) => void;
@@ -73,12 +76,14 @@ interface SituationState {
   setAmIAffectedOpen: (open: boolean) => void;
   setAmIAffectedTarget: (target: string | null) => void;
   setThreatRadarOpen: (open: boolean) => void;
+  setThreatMatrixOpen: (open: boolean) => void;
 }
 
 export const useSituation = create<SituationState>((set, get) => ({
   selectedId: null,
   selectedCve: null,
   selectedActor: null,
+  selectedC2Id: null,
   actorFilter: null,
   hoveredId: null,
   window: "7d",
@@ -89,7 +94,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   tab: "exploited",
   cinema: false,
   tacticalCrt: false,
-  layers: { incidents: true, countries: true, outages: true, arcs: true, cables: true, ballistics: true },
+  layers: { incidents: true, countries: true, outages: true, arcs: true, cables: true, ballistics: true, botnets: true },
   railOpen: true,
   wargameSim: null,
   reconTarget: null,
@@ -97,16 +102,18 @@ export const useSituation = create<SituationState>((set, get) => ({
   amIAffectedOpen: false,
   amIAffectedTarget: null,
   threatRadarOpen: false,
+  threatMatrixOpen: false,
   // Opening a dossier checks the free allowance: a few a day without an account, then Titan Cyber Command asks for a Valyu sign-in.
   select: (id) => {
     if (id && id !== get().selectedId && !useAccess.getState().allowOpen(`i:${id}`)) return;
-    set({ selectedId: id, selectedCve: null, selectedActor: null });
+    set({ selectedId: id, selectedCve: null, selectedActor: null, selectedC2Id: null });
   },
   selectCve: (cve) => {
     if (cve && cve !== get().selectedCve && !useAccess.getState().allowOpen(`cve:${cve}`)) return;
-    set({ selectedCve: cve, selectedId: null, selectedActor: null });
+    set({ selectedCve: cve, selectedId: null, selectedActor: null, selectedC2Id: null });
   },
   selectActor: (actor) => set({ selectedActor: actor }),
+  selectC2: (c2Id) => set({ selectedC2Id: c2Id, selectedId: null, selectedCve: null }),
   setActorFilter: (actor) => set({ actorFilter: actor }),
   hover: (id) => set({ hoveredId: id }),
   setWindow: (window) => set({ window }),
@@ -132,6 +139,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   setAmIAffectedOpen: (open) => set({ amIAffectedOpen: open }),
   setAmIAffectedTarget: (target) => set({ amIAffectedTarget: target }),
   setThreatRadarOpen: (open) => set({ threatRadarOpen: open }),
+  setThreatMatrixOpen: (open) => set({ threatMatrixOpen: open }),
 }));
 
 export const WINDOW_MS: Record<TimeWindow, number> = {

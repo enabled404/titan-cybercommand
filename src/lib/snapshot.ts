@@ -7,6 +7,7 @@ import { beforeDeadline } from "@/lib/fetched";
 import { reserveReviewedMembership, resolveReviewedAdvisories } from "@/lib/sources/advisories";
 import { buildIncidents } from "@/lib/pipeline";
 import { getLatestBrief, getOutages } from "@/lib/sources/context";
+import { getBotnetC2s } from "@/lib/sources/botnets";
 import {
   getCisaAdvisories,
   getDarkWebCartelStats,
@@ -27,7 +28,7 @@ import {
   getMalwarePackages,
   getRecentCriticalCves,
 } from "@/lib/sources/vulns";
-import type { CisaAdvisory, Incident, Snapshot, Vuln, WireBulletin } from "@/lib/types";
+import type { BotnetC2Node, CisaAdvisory, Incident, Snapshot, Vuln, WireBulletin } from "@/lib/types";
 
 const DAY = 86_400_000;
 
@@ -104,6 +105,7 @@ async function buildSnapshot(): Promise<Snapshot> {
     wireData,
     cartelStats,
     cisaData,
+    botnetC2s,
   ] = await Promise.all([
     settle(feeds, "CISA KEV", getKevCatalog, [] as Vuln[], len),
     settle(feeds, "NVD", () => getRecentCriticalCves(3), [] as Vuln[], len),
@@ -123,6 +125,7 @@ async function buildSnapshot(): Promise<Snapshot> {
     settle(feeds, "Threat wire", getWireData, { candidates: [] as Candidate[], bulletins: [] as WireBulletin[] }, (w) => w.candidates.length),
     settle(feeds, "Dark web radar", getDarkWebCartelStats, null, (s) => (s ? s.groupsOnline : 0)),
     settle(feeds, "CISA advisories", getCisaAdvisories, { advisories: [] as CisaAdvisory[], candidates: [] as Candidate[] }, (c) => c.advisories.length),
+    settle(feeds, "Botnet C2 beacons", getBotnetC2s, [] as BotnetC2Node[], len),
   ]);
 
   const live = await buildIncidents([...news, ...sweeps, ...sec, ...claims, ...wireData.candidates], { wikidataMs: WIKIDATA_MS });
@@ -210,6 +213,7 @@ async function buildSnapshot(): Promise<Snapshot> {
     darkWebStats: cartelStats ?? undefined,
     cisaAdvisories: cisaData.advisories,
     wireBulletins: wireData.bulletins,
+    botnetC2s,
     brief: brief ?? (seed.brief as unknown as Snapshot["brief"] | null) ?? undefined,
     stats: {
       incidents24h: incidents.filter((incident) => recent(incident.date, 1)).length,
@@ -225,6 +229,7 @@ async function buildSnapshot(): Promise<Snapshot> {
       activeTorLeakSites: cartelStats?.groupsOnline ?? 0,
       cisaAdvisoriesActive: cisaData.advisories.length,
       breakingWireCount: wireData.bulletins.length,
+      botnetC2Count: botnetC2s.length,
     },
     feeds,
   };
@@ -264,13 +269,14 @@ export type ClientSnapshot = Pick<
   | "darkWebStats"
   | "cisaAdvisories"
   | "wireBulletins"
+  | "botnetC2s"
   | "stats"
   | "feeds"
 >;
 
 export function toClientSnapshot(snapshot: Snapshot): ClientSnapshot {
-  const { generatedAt, incidents, kev, trending, fresh, malware, outages, darkWebStats, cisaAdvisories, wireBulletins, stats, feeds } = snapshot;
-  return { generatedAt, incidents, kev, trending, fresh, malware, outages, darkWebStats, cisaAdvisories, wireBulletins, stats, feeds };
+  const { generatedAt, incidents, kev, trending, fresh, malware, outages, darkWebStats, cisaAdvisories, wireBulletins, botnetC2s, stats, feeds } = snapshot;
+  return { generatedAt, incidents, kev, trending, fresh, malware, outages, darkWebStats, cisaAdvisories, wireBulletins, botnetC2s, stats, feeds };
 }
 
 /** Full KEV catalogue for lookups (CVE pages, stack checks). */

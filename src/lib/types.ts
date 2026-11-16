@@ -169,6 +169,24 @@ export interface WireBulletin {
   country?: string;
 }
 
+export interface BotnetC2Node {
+  id: string;
+  ip: string;
+  port: number;
+  framework: string;
+  beaconType?: string;
+  asn?: string;
+  country: string;
+  city?: string;
+  lat: number;
+  lon: number;
+  sleepTime?: number;
+  jitter?: number;
+  lastSeen: string;
+  status: "active" | "dormant";
+  uriPath?: string;
+}
+
 export interface SnapshotStats {
   incidents24h: number;
   incidents7d: number;
@@ -183,6 +201,7 @@ export interface SnapshotStats {
   activeTorLeakSites?: number;
   cisaAdvisoriesActive?: number;
   breakingWireCount?: number;
+  botnetC2Count?: number;
 }
 
 export interface Snapshot {
@@ -197,6 +216,7 @@ export interface Snapshot {
   darkWebStats?: DarkWebStats;
   cisaAdvisories?: CisaAdvisory[];
   wireBulletins?: WireBulletin[];
+  botnetC2s?: BotnetC2Node[];
   stats: SnapshotStats;
   brief?: DailyBrief;
   /** Which upstream feeds answered on this refresh. */
