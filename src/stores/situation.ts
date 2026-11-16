@@ -51,6 +51,7 @@ interface SituationState {
   reconTarget: ReconTargetState | null;
   replay: ReplayState;
   amIAffectedOpen: boolean;
+  amIAffectedTarget: string | null;
   select: (id: string | null) => void;
   selectCve: (cve: string | null) => void;
   selectActor: (actor: string | null) => void;
@@ -67,6 +68,7 @@ interface SituationState {
   setReconTarget: (target: ReconTargetState | null) => void;
   setReplay: (update: Partial<ReplayState> | null) => void;
   setAmIAffectedOpen: (open: boolean) => void;
+  setAmIAffectedTarget: (target: string | null) => void;
 }
 
 export const useSituation = create<SituationState>((set, get) => ({
@@ -88,6 +90,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   reconTarget: null,
   replay: { active: false, playing: false, progress: 0, speed: 1 },
   amIAffectedOpen: false,
+  amIAffectedTarget: null,
   // Opening a dossier checks the free allowance: a few a day without an account, then Titan Cyber Command asks for a Valyu sign-in.
   select: (id) => {
     if (id && id !== get().selectedId && !useAccess.getState().allowOpen(`i:${id}`)) return;
@@ -120,6 +123,7 @@ export const useSituation = create<SituationState>((set, get) => ({
       replay: update === null ? { active: false, playing: false, progress: 0, speed: 1 } : { ...state.replay, ...update },
     })),
   setAmIAffectedOpen: (open) => set({ amIAffectedOpen: open }),
+  setAmIAffectedTarget: (target) => set({ amIAffectedTarget: target }),
 }));
 
 export const WINDOW_MS: Record<TimeWindow, number> = {

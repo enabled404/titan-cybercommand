@@ -174,6 +174,22 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const setReplay = useSituation((s) => s.setReplay);
   const amIAffectedOpen = useSituation((s) => s.amIAffectedOpen);
   const setAmIAffectedOpen = useSituation((s) => s.setAmIAffectedOpen);
+  const [heroDomain, setHeroDomain] = useState("");
+  const [amIAffectedTarget, setAmIAffectedTarget] = useState<string | undefined>(undefined);
+  const heroInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleHeroSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = heroDomain.trim();
+    if (clean) {
+      soundEngine.playClick();
+      setAmIAffectedTarget(clean);
+      setAmIAffectedOpen(true);
+    } else {
+      setAmIAffectedTarget(undefined);
+      setAmIAffectedOpen(true);
+    }
+  };
 
   // WarGames autonomous cascade progression and automated countermeasure defense
   useEffect(() => {
@@ -242,15 +258,20 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
     if (!replay.active) return baseFiltered;
     const windowStart = now - 86_400_000;
     const simTime = now - (1 - Math.max(0, Math.min(1, replay.progress))) * 86_400_000;
-    const matches = baseFiltered.filter((inc) => {
+    const pool24h = baseFiltered.filter((inc) => {
       const t = Date.parse(inc.date);
-      return !isNaN(t) && t >= windowStart && t <= simTime;
+      return !isNaN(t) && t >= windowStart && t <= now;
     });
-    if (matches.length === 0 && baseFiltered.length > 0) {
-      const sliceCount = Math.max(1, Math.round(baseFiltered.length * replay.progress));
-      return baseFiltered.slice(0, sliceCount);
+
+    if (pool24h.length > 0) {
+      const landed = pool24h.filter((inc) => Date.parse(inc.date) <= simTime);
+      return landed.sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
     }
-    return matches;
+
+    // Fallback if no incidents fall strictly in 24h window: reveal chronologically
+    const chronological = [...baseFiltered].sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+    const sliceCount = Math.round(chronological.length * replay.progress);
+    return chronological.slice(0, sliceCount).reverse();
   }, [baseFiltered, replay.active, replay.progress, now]);
 
   const countryCounts = useMemo(() => {
@@ -340,7 +361,11 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         setWargamesOpen((prev) => !prev);
       } else if (event.key.toLowerCase() === "a") {
         event.preventDefault();
-        setAmIAffectedOpen(!amIAffectedOpen);
+        if (heroInputRef.current) {
+          heroInputRef.current.focus();
+        } else {
+          setAmIAffectedOpen(!amIAffectedOpen);
+        }
       } else if (event.key.toLowerCase() === "r") {
         event.preventDefault();
         setReconOpen((prev) => !prev);
@@ -507,7 +532,15 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
 
       <WargamesModal open={wargamesOpen} onClose={() => setWargamesOpen(false)} />
       <ReconScannerModal open={reconOpen} onClose={() => setReconOpen(false)} snapshot={snapshot} />
-      <AmIAffectedModal open={amIAffectedOpen} onClose={() => setAmIAffectedOpen(false)} snapshot={snapshot} />
+      <AmIAffectedModal
+        open={amIAffectedOpen}
+        onClose={() => {
+          setAmIAffectedOpen(false);
+          setAmIAffectedTarget(undefined);
+        }}
+        snapshot={snapshot}
+        initialDomain={amIAffectedTarget}
+      />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
       <ThreatActorModal actorName={selectedActor} open={Boolean(selectedActor)} onClose={() => selectActor(null)} snapshot={snapshot} />
@@ -515,23 +548,35 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       {!cinema && <CombatFeedDrawer incidents={filtered} shiftUp={patchDockOpen && patchDockFits} shiftLeft={panelOpen} />}
 
       {!cinema && !wargameSim?.active && (
-        <div className="pointer-events-auto fixed top-[66px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-cyan-500/30 bg-space/90 px-3.5 py-1 font-mono text-xs shadow-lg backdrop-blur-md transition-all hover:border-cyan-400 hover:bg-space">
-          <span className="relative flex size-2 items-center justify-center">
-            <span className="absolute inset-0 rounded-full bg-cyan-400/50 motion-safe:animate-ping" />
-            <span className="size-1.5 rounded-full bg-cyan-400" />
-          </span>
-          <span className="text-ink-3">AM I AFFECTED?</span>
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.playClick();
-              setAmIAffectedOpen(true);
-            }}
-            className="press flex items-center gap-1 font-bold text-cyan-400 hover:text-cyan-300 hover:underline"
-          >
-            <span>Scan domain posture</span>
-            <kbd className="rounded border border-white/20 bg-white/10 px-1 py-0.5 text-[10px] text-ink">A</kbd>
-          </button>
+        <div className="pointer-events-auto fixed top-[66px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-cyan-500/40 bg-space/95 p-1 font-mono shadow-2xl backdrop-blur-xl transition-all hover:border-cyan-400">
+          <div className="flex items-center gap-1.5 pl-3 pr-1">
+            <span className="relative flex size-2 items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-cyan-400/50 motion-safe:animate-ping" />
+              <span className="size-1.5 rounded-full bg-cyan-400" />
+            </span>
+            <span className="hidden text-[11px] font-bold uppercase tracking-wider text-cyan-400 sm:inline">
+              AM I AFFECTED?
+            </span>
+          </div>
+
+          <form onSubmit={handleHeroSubmit} className="flex items-center gap-1.5">
+            <input
+              ref={heroInputRef}
+              type="text"
+              value={heroDomain}
+              onChange={(e) => setHeroDomain(e.target.value)}
+              placeholder="Paste domain (e.g. apple.com)..."
+              className="w-44 sm:w-60 rounded-full border border-white/10 bg-black/60 px-3 py-1 text-xs text-ink placeholder:text-ink-4 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+            />
+            <button
+              type="submit"
+              className="press flex items-center gap-1 rounded-full bg-cyan-500 px-3 py-1 text-xs font-bold text-space shadow-md hover:bg-cyan-400"
+            >
+              <ShieldCheck size={13} weight="bold" />
+              <span>SCAN</span>
+              <kbd className="hidden sm:inline rounded bg-cyan-900/40 px-1 py-0.2 text-[9px] text-cyan-200">A</kbd>
+            </button>
+          </form>
         </div>
       )}
 

@@ -11,10 +11,12 @@ export function AmIAffectedModal({
   open,
   onClose,
   snapshot,
+  initialDomain,
 }: {
   open: boolean;
   onClose: () => void;
   snapshot: Snapshot;
+  initialDomain?: string;
 }) {
   const handleClose = () => {
     soundEngine.playClick();
@@ -48,7 +50,7 @@ export function AmIAffectedModal({
       </div>
 
       <div className="mt-4 max-h-[75vh] overflow-y-auto overscroll-contain pr-1 scrollbar-thin">
-        <AmIAffectedHero snapshot={snapshot} isModal onClose={handleClose} />
+        <AmIAffectedHero snapshot={snapshot} isModal onClose={handleClose} initialDomain={initialDomain} />
       </div>
     </TacticalDialog>
   );

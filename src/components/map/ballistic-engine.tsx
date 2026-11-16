@@ -528,10 +528,14 @@ export function BallisticEngine({
         // In replay mode, launch a synchronized attack trajectory to any newly unveiled victim
         if (replayRef.current?.active && incidents.length > lastReplayCountRef.current) {
           lastReplayCountRef.current = incidents.length;
-          const newest = incidents[incidents.length - 1];
+          // In newest-first filtered incidents list, the newly arrived attack is index 0
+          const newest = incidents[0] || incidents[incidents.length - 1];
           if (newest && attacksRef.current.length < 24) {
             spawnAttackForTarget(newest);
           }
+        } else if (replayRef.current?.active && incidents.length < lastReplayCountRef.current) {
+          // Seeking backward in scrubber resets threshold so playing forward launches attacks again
+          lastReplayCountRef.current = incidents.length;
         } else if (!replayRef.current?.active) {
           lastReplayCountRef.current = incidents.length;
         }
@@ -576,7 +580,10 @@ export function BallisticEngine({
         const p1 = atk.points[idx1];
         if (!p0 || !p1) continue;
 
-        const curLon = p0[0] + (p1[0] - p0[0]) * frac;
+        let lonDiff = p1[0] - p0[0];
+        if (lonDiff > 180) lonDiff -= 360;
+        if (lonDiff < -180) lonDiff += 360;
+        const curLon = ((p0[0] + lonDiff * frac + 540) % 360) - 180;
         const curLat = p0[1] + (p1[1] - p0[1]) * frac;
 
         const distFromCenter = angularDistance(center.lng, center.lat, curLon, curLat);
@@ -585,10 +592,15 @@ export function BallisticEngine({
         if (atk.points.length > 2) {
           ctx.beginPath();
           let started = false;
+          let prevLon: number | null = null;
           for (let i = 0; i < atk.points.length; i += 2) {
             const pt = atk.points[i];
             const d = angularDistance(center.lng, center.lat, pt[0], pt[1]);
-            if (d <= 88) {
+            // Break path if point is behind globe or crosses antimeridian wrap
+            const antimeridianBreak = prevLon !== null && Math.abs(pt[0] - prevLon) > 180;
+            prevLon = pt[0];
+
+            if (d <= 88 && !antimeridianBreak) {
               try {
                 const sp = map.project([pt[0], pt[1]]);
                 const ptProgress = i / (atk.points.length - 1);
@@ -610,8 +622,10 @@ export function BallisticEngine({
                   ctx.lineTo(arcX, arcY);
                 }
               } catch {
-                // Projection safety
+                started = false;
               }
+            } else {
+              started = false;
             }
           }
           if (started) {

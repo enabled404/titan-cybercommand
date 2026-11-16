@@ -68,6 +68,7 @@ export function correlateReconIntel(domain: string, snapshot: Snapshot): ReconCo
   const apex = deriveApexDomain(clean);
   const tokens = extractBrandTokens(clean);
 
+  const matchedCves = new Set<string>();
   const matchedIncidents: { title: string; status: string; date: string }[] = [];
   for (const inc of snapshot.incidents) {
     const incDomain = inc.domain?.trim().toLowerCase().replace(/^www\./, "") ?? "";
@@ -86,10 +87,12 @@ export function correlateReconIntel(domain: string, snapshot: Snapshot): ReconCo
 
     if (domainExact || victimMatch) {
       matchedIncidents.push({ title: inc.title, status: inc.status, date: inc.date });
+      for (const c of inc.cves ?? []) {
+        if (c) matchedCves.add(c.toUpperCase());
+      }
     }
   }
 
-  const matchedCves = new Set<string>();
   const allVulns = [...snapshot.kev, ...snapshot.trending, ...snapshot.fresh];
   for (const v of allVulns) {
     const vendor = v.vendor.trim().toLowerCase();
