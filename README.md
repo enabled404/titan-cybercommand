@@ -18,13 +18,13 @@
   </a>
 </p>
 
-**Global Kinetic Cyber Warfare & Real-Time Threat Intelligence Command Center**
+Titan Cyber Command is a live map of cyber warfare.
 
 [![Titan Cyber Command Live Demo](docs/demo.gif)](https://titan-cybercommand.vercel.app)
 
 🎥 **[Watch Master 1080p Briefing Video (MP4 with Synth Audio)](docs/demo.mp4)** | 🌐 **[VP9 WebM Master](docs/demo.webm)**
 
-Every cyber assault, ransomware breach, zero-day exploit, and network outage on Earth, tracked in real-time across an interactive 3D globe. Powered by true spherical Great-Circle geodesic trajectory mathematics, live streaming combat telemetry, procedural Web Audio synthesis, physical subsea fiber infrastructure, interactive disaster simulation, and non-invasive domain reconnaissance.
+Every breach, every threat actor, and every critical vulnerability, playing out on one globe in real time. Watch attacks arc across the planet, scan any domain to see what it is exposed to, and run a disaster simulation to see what breaks first. Threat intelligence that feels alive, not like a spreadsheet.
 
 ---
 
