@@ -82,15 +82,15 @@ export function DemoModal({ open, onClose }: Props) {
               onClick={() => soundEngine.playClick()}
               className="press flex min-h-8 items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 font-mono text-[11.5px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20"
             >
-              <DownloadSimple size={14} weight="bold" /> Download MP4 (4.1 MB)
+              <DownloadSimple size={14} weight="bold" /> Download MP4 (7.4 MB)
             </a>
             <a
               href="/docs/demo.gif"
               download="titan-cybercommand-preview.gif"
               onClick={() => soundEngine.playClick()}
-              className="press flex min-h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3.5 font-mono text-[11.5px] text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
+              className="press flex min-h-8 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 font-mono text-[11.5px] text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
             >
-              <DownloadSimple size={14} weight="bold" /> Animated GIF (9.4 MB)
+              <DownloadSimple size={14} weight="bold" /> Animated GIF (18.2 MB)
             </a>
             <a
               href="/docs/demo.webm"
@@ -98,7 +98,7 @@ export function DemoModal({ open, onClose }: Props) {
               onClick={() => soundEngine.playClick()}
               className="press flex min-h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3.5 font-mono text-[11.5px] text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
             >
-              <DownloadSimple size={14} weight="bold" /> WebM Master (7.8 MB)
+              <DownloadSimple size={14} weight="bold" /> WebM Master (15.2 MB)
             </a>
           </div>
         </div>
