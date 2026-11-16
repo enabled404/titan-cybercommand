@@ -12,6 +12,7 @@ interface Props {
 
 const SHORTCUTS = [
   { key: "A", desc: "Launch 'Am I Affected?' domain posture and CVE exposure scanner" },
+  { key: "B", desc: "Launch Live Threat Radar: Cartel Leaks & Breaking Wires" },
   { key: "W", desc: "Launch WarGames cascading disaster simulator" },
   { key: "R", desc: "Launch Target Recon passive OSINT scanner" },
   { key: "Y", desc: "Launch 24-hour time-travel attack replay" },

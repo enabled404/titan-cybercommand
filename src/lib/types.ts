@@ -135,6 +135,40 @@ export interface DailyBrief {
   sources: number;
 }
 
+export interface DarkWebStats {
+  groups: number;
+  groupsOnline: number;
+  posts24h: number;
+  postsMonth: number;
+  postsTotal: number;
+  marketsOnline: number;
+}
+
+export interface CisaAdvisory {
+  id: string;
+  title: string;
+  link: string;
+  published: string;
+  cves: string[];
+  category: "csa" | "alert" | "ics" | "directive";
+  summary: string;
+}
+
+export interface WireBulletin {
+  id: string;
+  title: string;
+  url: string;
+  publisher: string;
+  date: string;
+  summary: string;
+  victim?: string;
+  actor?: string;
+  type: IncidentType;
+  records?: number;
+  cves: string[];
+  country?: string;
+}
+
 export interface SnapshotStats {
   incidents24h: number;
   incidents7d: number;
@@ -145,6 +179,10 @@ export interface SnapshotStats {
   criticalCves72h: number;
   malware72h: number;
   outagesActive: number;
+  darkWebClaims24h?: number;
+  activeTorLeakSites?: number;
+  cisaAdvisoriesActive?: number;
+  breakingWireCount?: number;
 }
 
 export interface Snapshot {
@@ -156,6 +194,9 @@ export interface Snapshot {
   fresh: Vuln[];
   malware: MalwarePackage[];
   outages: Outage[];
+  darkWebStats?: DarkWebStats;
+  cisaAdvisories?: CisaAdvisory[];
+  wireBulletins?: WireBulletin[];
   stats: SnapshotStats;
   brief?: DailyBrief;
   /** Which upstream feeds answered on this refresh. */

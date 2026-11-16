@@ -47,6 +47,7 @@ const CvePanel = dynamic(() => import("@/components/hud/detail-panel").then((mod
 const ThreatActorModal = dynamic(() => import("@/components/hud/threat-actor-modal").then((mod) => mod.ThreatActorModal));
 const ReplayDock = dynamic(() => import("@/components/hud/replay-dock").then((mod) => mod.ReplayDock));
 const AmIAffectedModal = dynamic(() => import("@/components/hud/am-i-affected-modal").then((mod) => mod.AmIAffectedModal));
+const ThreatRadarModal = dynamic(() => import("@/components/hud/threat-radar-modal").then((mod) => mod.ThreatRadarModal));
 
 const PANEL = 460;
 /** Space the patch dock takes from the bottom edge on desktop. */
@@ -189,6 +190,8 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const setAmIAffectedOpen = useSituation((s) => s.setAmIAffectedOpen);
   const amIAffectedTarget = useSituation((s) => s.amIAffectedTarget);
   const setAmIAffectedTarget = useSituation((s) => s.setAmIAffectedTarget);
+  const threatRadarOpen = useSituation((s) => s.threatRadarOpen);
+  const setThreatRadarOpen = useSituation((s) => s.setThreatRadarOpen);
   const actorFilter = useSituation((s) => s.actorFilter);
   const setActorFilter = useSituation((s) => s.setActorFilter);
   const [heroDomain, setHeroDomain] = useState("");
@@ -355,6 +358,9 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       } else if (event.key.toLowerCase() === "t") {
         event.preventDefault();
         useCombatFeed.getState().toggleOpen();
+      } else if (event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        setThreatRadarOpen(!threatRadarOpen);
       } else if (event.key.toLowerCase() === "v") {
         event.preventDefault();
         setDemoOpen((prev) => !prev);
@@ -398,7 +404,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute, replay.active, setReplay, amIAffectedOpen, setAmIAffectedOpen]);
+  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute, replay.active, setReplay, amIAffectedOpen, setAmIAffectedOpen, threatRadarOpen, setThreatRadarOpen]);
 
   const onHover = useCallback((incident: Incident | null, point: { x: number; y: number } | null) => {
     setHovered(incident && point ? { incident, x: point.x, y: point.y } : null);
@@ -471,6 +477,8 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
             stats={snapshot.stats}
             onOpenAmIAffected={() => setAmIAffectedOpen(true)}
             isAmIAffectedActive={amIAffectedOpen}
+            onOpenThreatRadar={() => setThreatRadarOpen(true)}
+            isThreatRadarActive={threatRadarOpen}
             onOpenWargames={() => setWargamesOpen(true)}
             onOpenRecon={() => setReconOpen(true)}
             onOpenShortcuts={() => setShortcutsOpen(true)}
@@ -543,6 +551,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         snapshot={snapshot}
         initialDomain={amIAffectedTarget || undefined}
       />
+      <ThreatRadarModal open={threatRadarOpen} onClose={() => setThreatRadarOpen(false)} snapshot={snapshot} />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
       <ThreatActorModal actorName={selectedActor} open={Boolean(selectedActor)} onClose={() => selectActor(null)} snapshot={snapshot} />

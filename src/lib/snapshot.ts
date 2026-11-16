@@ -7,7 +7,16 @@ import { beforeDeadline } from "@/lib/fetched";
 import { reserveReviewedMembership, resolveReviewedAdvisories } from "@/lib/sources/advisories";
 import { buildIncidents } from "@/lib/pipeline";
 import { getLatestBrief, getOutages } from "@/lib/sources/context";
-import { getNewsIncidents, getRansomwareClaims, getSecDisclosures, getSweepIncidents, type Candidate } from "@/lib/sources/incidents";
+import {
+  getCisaAdvisories,
+  getDarkWebCartelStats,
+  getNewsIncidents,
+  getRansomwareClaims,
+  getSecDisclosures,
+  getSweepIncidents,
+  getWireData,
+  type Candidate,
+} from "@/lib/sources/incidents";
 import {
   getCriticalAdvisories,
   getCveNewsMentions,
@@ -18,7 +27,7 @@ import {
   getMalwarePackages,
   getRecentCriticalCves,
 } from "@/lib/sources/vulns";
-import type { Incident, Snapshot, Vuln } from "@/lib/types";
+import type { CisaAdvisory, Incident, Snapshot, Vuln, WireBulletin } from "@/lib/types";
 
 const DAY = 86_400_000;
 
@@ -78,7 +87,24 @@ async function buildSnapshot(): Promise<Snapshot> {
   const now = Date.now();
   const len = (value: unknown[]) => value.length;
 
-  const [kevAll, nvdCritical, cveListCritical, ghsaCritical, malware, claims, sec, news, sweeps, outages, brief, cveNews, reviewed] = await Promise.all([
+  const [
+    kevAll,
+    nvdCritical,
+    cveListCritical,
+    ghsaCritical,
+    malware,
+    claims,
+    sec,
+    news,
+    sweeps,
+    outages,
+    brief,
+    cveNews,
+    reviewed,
+    wireData,
+    cartelStats,
+    cisaData,
+  ] = await Promise.all([
     settle(feeds, "CISA KEV", getKevCatalog, [] as Vuln[], len),
     settle(feeds, "NVD", () => getRecentCriticalCves(3), [] as Vuln[], len),
     settle(feeds, "CVE list", getLatestCriticalCves, [] as Vuln[], len),
@@ -94,9 +120,12 @@ async function buildSnapshot(): Promise<Snapshot> {
     settle(feeds, "Daily brief", getLatestBrief, null, (b) => (b ? b.items.length : 0)),
     settle(feeds, "Valyu CVE news", getCveNewsMentions, {} as Record<string, number>, (m) => Object.keys(m).length),
     settle(feeds, "Reviewed advisories", () => resolveReviewedAdvisories(now, getCveRecord), [] as Vuln[], len),
+    settle(feeds, "Threat wire", getWireData, { candidates: [] as Candidate[], bulletins: [] as WireBulletin[] }, (w) => w.candidates.length),
+    settle(feeds, "Dark web radar", getDarkWebCartelStats, null, (s) => (s ? s.groupsOnline : 0)),
+    settle(feeds, "CISA advisories", getCisaAdvisories, { advisories: [] as CisaAdvisory[], candidates: [] as Candidate[] }, (c) => c.advisories.length),
   ]);
 
-  const live = await buildIncidents([...news, ...sweeps, ...sec, ...claims], { wikidataMs: WIKIDATA_MS });
+  const live = await buildIncidents([...news, ...sweeps, ...sec, ...claims, ...wireData.candidates], { wikidataMs: WIKIDATA_MS });
   const liveIds = new Set(live.map((incident) => incident.id));
   const seedIncidents = (seed.incidents as Incident[]).filter((incident) => !liveIds.has(incident.id) && now - Date.parse(incident.date) < 30 * DAY);
   const incidents = [...live, ...seedIncidents]
@@ -178,6 +207,9 @@ async function buildSnapshot(): Promise<Snapshot> {
     fresh,
     malware: malware.slice(0, 40),
     outages,
+    darkWebStats: cartelStats ?? undefined,
+    cisaAdvisories: cisaData.advisories,
+    wireBulletins: wireData.bulletins,
     brief: brief ?? (seed.brief as unknown as Snapshot["brief"] | null) ?? undefined,
     stats: {
       incidents24h: incidents.filter((incident) => recent(incident.date, 1)).length,
@@ -189,6 +221,10 @@ async function buildSnapshot(): Promise<Snapshot> {
       criticalCves72h: discovered.filter((vuln) => vuln.severity === "CRITICAL" && recent(vuln.published, 3) && !kevIds.has(vuln.cve)).length,
       malware72h: malware.filter((item) => recent(item.published, 3)).length,
       outagesActive: outages.filter((outage) => !outage.end).length,
+      darkWebClaims24h: cartelStats?.posts24h ?? 0,
+      activeTorLeakSites: cartelStats?.groupsOnline ?? 0,
+      cisaAdvisoriesActive: cisaData.advisories.length,
+      breakingWireCount: wireData.bulletins.length,
     },
     feeds,
   };
@@ -216,11 +252,25 @@ export async function getSnapshot(): Promise<Snapshot> {
  * new Snapshot fields stay on the server until a client component needs them. The daily brief (about
  * a tenth of the payload) has its own page.
  */
-export type ClientSnapshot = Pick<Snapshot, "generatedAt" | "incidents" | "kev" | "trending" | "fresh" | "malware" | "outages" | "stats" | "feeds">;
+export type ClientSnapshot = Pick<
+  Snapshot,
+  | "generatedAt"
+  | "incidents"
+  | "kev"
+  | "trending"
+  | "fresh"
+  | "malware"
+  | "outages"
+  | "darkWebStats"
+  | "cisaAdvisories"
+  | "wireBulletins"
+  | "stats"
+  | "feeds"
+>;
 
 export function toClientSnapshot(snapshot: Snapshot): ClientSnapshot {
-  const { generatedAt, incidents, kev, trending, fresh, malware, outages, stats, feeds } = snapshot;
-  return { generatedAt, incidents, kev, trending, fresh, malware, outages, stats, feeds };
+  const { generatedAt, incidents, kev, trending, fresh, malware, outages, darkWebStats, cisaAdvisories, wireBulletins, stats, feeds } = snapshot;
+  return { generatedAt, incidents, kev, trending, fresh, malware, outages, darkWebStats, cisaAdvisories, wireBulletins, stats, feeds };
 }
 
 /** Full KEV catalogue for lookups (CVE pages, stack checks). */
