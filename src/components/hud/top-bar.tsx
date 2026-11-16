@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
-import { ClockCounterClockwise, Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass, ShieldCheck } from "@phosphor-icons/react";
+import { Broadcast, ClockCounterClockwise, Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass, ShieldCheck } from "@phosphor-icons/react";
 
 import { AuthButton } from "@/components/auth/auth-button";
 import { AudioButton } from "@/components/hud/audio-button";
@@ -56,6 +56,8 @@ export function TopBar({
   stats,
   onOpenAmIAffected,
   isAmIAffectedActive,
+  onOpenThreatRadar,
+  isThreatRadarActive,
   onOpenWargames,
   onOpenRecon,
   onOpenShortcuts,
@@ -69,6 +71,8 @@ export function TopBar({
   stats?: PostureStats;
   onOpenAmIAffected?: () => void;
   isAmIAffectedActive?: boolean;
+  onOpenThreatRadar?: () => void;
+  isThreatRadarActive?: boolean;
   onOpenWargames?: () => void;
   onOpenRecon?: () => void;
   onOpenShortcuts?: () => void;
@@ -79,7 +83,9 @@ export function TopBar({
   isReplayActive?: boolean;
 }) {
   const [opsOpen, setOpsOpen] = useState(false);
-  const hasTacticalOps = Boolean(onOpenAmIAffected || onOpenRecon || onOpenWargames || onTogglePatrol || onOpenDemo || onToggleReplay);
+  const hasTacticalOps = Boolean(
+    onOpenAmIAffected || onOpenThreatRadar || onOpenRecon || onOpenWargames || onTogglePatrol || onOpenDemo || onToggleReplay,
+  );
 
   return (
     <header className="pointer-events-auto flex h-14 items-center justify-between gap-2 bg-space/90 px-3 backdrop-blur-md border-b border-white/[0.06] sm:gap-3 sm:px-4">
@@ -131,6 +137,30 @@ export function TopBar({
               >
                 <ShieldCheck size={12} weight="bold" />
                 <span>AM I AFFECTED?</span>
+              </button>
+            )}
+            {onOpenThreatRadar && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  onOpenThreatRadar();
+                }}
+                className={cn(
+                  "press flex h-7 items-center gap-1.5 rounded-full px-2.5 font-mono text-[11px] font-bold transition-colors",
+                  isThreatRadarActive
+                    ? "bg-cyan-500/25 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.4)]"
+                    : "text-cyan-300 hover:bg-cyan-500/15 hover:text-cyan-200",
+                )}
+                title="Launch Live Threat Radar: Cartel Leaks & Breaking Wires (B)"
+                aria-label="Live Threat Radar"
+              >
+                <span className="relative flex size-1.5 items-center justify-center">
+                  <span className="absolute inset-0 rounded-full bg-cyan-400/60 motion-safe:animate-ping" />
+                  <span className="size-1.5 rounded-full bg-cyan-400" />
+                </span>
+                <Broadcast size={12} weight="bold" />
+                <span>THREAT RADAR</span>
               </button>
             )}
             {onOpenRecon && (
@@ -255,6 +285,20 @@ export function TopBar({
                     >
                       <ShieldCheck size={14} weight="bold" />
                       <span>Am I Affected? (A)</span>
+                    </button>
+                  )}
+                  {onOpenThreatRadar && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playClick();
+                        setOpsOpen(false);
+                        onOpenThreatRadar();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 font-bold text-cyan-300 transition-colors hover:bg-cyan-500/15"
+                    >
+                      <Broadcast size={14} weight="bold" />
+                      <span>Threat Radar (B)</span>
                     </button>
                   )}
                   {onOpenRecon && (

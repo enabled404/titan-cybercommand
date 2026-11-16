@@ -55,6 +55,7 @@ function getCityIndex(): Map<string, CityRow[]> {
 
 const COUNTRY_ALIASES: Record<string, string> = {
   usa: "US",
+  "united states": "US",
   "united states of america": "US",
   us: "US",
   america: "US",
@@ -151,16 +152,56 @@ export function nearestCity(lat: number, lon: number, country?: string, maxKm = 
   return { lat: best[4], lon: best[5], city: best[0], country: best[2] };
 }
 
-/** Parse "Secaucus, NJ" style SEC business locations. */
+let stateGeoMap: Map<string, GeoPoint> | null = null;
+let stateNameToCodeMap: Map<string, string> | null = null;
+
+function getStateGeo(stateCode: string): GeoPoint | undefined {
+  if (!stateGeoMap) {
+    stateGeoMap = new Map();
+    for (const row of cities) {
+      if (row[2] !== "US" || !row[3]) continue;
+      const prev = stateGeoMap.get(row[3]);
+      const prevPop = (prev as (GeoPoint & { pop?: number }) | undefined)?.pop ?? 0;
+      if (!prev || row[6] > prevPop) {
+        stateGeoMap.set(row[3], { lat: row[4], lon: row[5], city: row[0], country: "US", pop: row[6] } as GeoPoint & { pop?: number });
+      }
+    }
+  }
+  return stateGeoMap.get(stateCode.toUpperCase());
+}
+
+function stateCodeFromName(name: string): string | undefined {
+  if (!stateNameToCodeMap) {
+    stateNameToCodeMap = new Map();
+    for (const [code, stateName] of Object.entries(usStates)) {
+      stateNameToCodeMap.set(stateName.toLowerCase(), code);
+    }
+  }
+  return stateNameToCodeMap.get(name.trim().toLowerCase());
+}
+
+/** Parse "Secaucus, NJ" style SEC business locations or US state indicators. */
 export function resolveUsLocation(location: string): GeoPoint | undefined {
-  const [cityPart, statePart] = location.split(",").map((part) => part.trim());
-  if (!cityPart) return undefined;
-  const state = statePart?.toUpperCase();
-  if (state && !usStates[state]) {
+  const parts = location.split(",").map((part) => part.trim());
+  const cityPart = parts[0] || "";
+  const statePart = parts[1];
+  if (!cityPart && !statePart) return undefined;
+
+  if (statePart) {
+    const state = statePart.toUpperCase();
+    if (usStates[state]) {
+      return (cityPart ? resolveCity(cityPart, "US", state) : undefined) ?? getStateGeo(state) ?? countryPoint("US");
+    }
     const iso = countryCode(statePart);
     return iso ? (resolveCity(cityPart, iso) ?? countryPoint(iso)) : undefined;
   }
-  return resolveCity(cityPart, "US", state) ?? countryPoint("US");
+
+  const directCode = usStates[cityPart.toUpperCase()] ? cityPart.toUpperCase() : stateCodeFromName(cityPart);
+  if (directCode) {
+    return getStateGeo(directCode) ?? countryPoint("US");
+  }
+
+  return resolveCity(cityPart, "US") ?? countryPoint("US");
 }
 
 export function countryPoint(iso: string): GeoPoint | undefined {

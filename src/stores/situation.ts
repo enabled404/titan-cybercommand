@@ -7,7 +7,7 @@ import { useAccess } from "@/stores/access";
 import { INCIDENT_STATUSES } from "@/lib/incident-view";
 
 export type TimeWindow = "24h" | "7d" | "30d";
-export type RailTab = "incidents" | "exploited" | "malware" | "outages";
+export type RailTab = "incidents" | "exploited" | "malware" | "outages" | "wire";
 
 export interface WargameSimState {
   active: boolean;
@@ -53,6 +53,7 @@ interface SituationState {
   replay: ReplayState;
   amIAffectedOpen: boolean;
   amIAffectedTarget: string | null;
+  threatRadarOpen: boolean;
   select: (id: string | null) => void;
   selectCve: (cve: string | null) => void;
   selectActor: (actor: string | null) => void;
@@ -71,6 +72,7 @@ interface SituationState {
   setReplay: (update: Partial<ReplayState> | null) => void;
   setAmIAffectedOpen: (open: boolean) => void;
   setAmIAffectedTarget: (target: string | null) => void;
+  setThreatRadarOpen: (open: boolean) => void;
 }
 
 export const useSituation = create<SituationState>((set, get) => ({
@@ -94,6 +96,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   replay: { active: false, playing: false, progress: 0, speed: 1 },
   amIAffectedOpen: false,
   amIAffectedTarget: null,
+  threatRadarOpen: false,
   // Opening a dossier checks the free allowance: a few a day without an account, then Titan Cyber Command asks for a Valyu sign-in.
   select: (id) => {
     if (id && id !== get().selectedId && !useAccess.getState().allowOpen(`i:${id}`)) return;
@@ -128,6 +131,7 @@ export const useSituation = create<SituationState>((set, get) => ({
     })),
   setAmIAffectedOpen: (open) => set({ amIAffectedOpen: open }),
   setAmIAffectedTarget: (target) => set({ amIAffectedTarget: target }),
+  setThreatRadarOpen: (open) => set({ threatRadarOpen: open }),
 }));
 
 export const WINDOW_MS: Record<TimeWindow, number> = {

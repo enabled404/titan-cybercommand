@@ -7,7 +7,15 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: vi.fn() }));
 vi.mock("@/lib/pipeline", () => ({ buildIncidents: async () => [] }));
 vi.mock("@/lib/sources/context", () => ({ getLatestBrief: async () => null, getOutages: async () => [] }));
-vi.mock("@/lib/sources/incidents", () => ({ getNewsIncidents: async () => [], getRansomwareClaims: async () => [], getSecDisclosures: async () => [], getSweepIncidents: async () => [] }));
+vi.mock("@/lib/sources/incidents", () => ({
+  getNewsIncidents: async () => [],
+  getRansomwareClaims: async () => [],
+  getSecDisclosures: async () => [],
+  getSweepIncidents: async () => [],
+  getWireData: async () => ({ candidates: [], bulletins: [] }),
+  getDarkWebCartelStats: async () => null,
+  getCisaAdvisories: async () => ({ advisories: [], candidates: [] }),
+}));
 vi.mock("@/lib/sources/vulns", () => ({
   getKevCatalog: async () => [], getRecentCriticalCves: async () => [], getCriticalAdvisories: async () => [],
   getLatestCriticalCves: async () => Array.from({ length: 80 }, (_, i) => ({ ...record, cve: `CVE-2026-${10000 + i}`, severity: "CRITICAL", cvss: 9.8 })),

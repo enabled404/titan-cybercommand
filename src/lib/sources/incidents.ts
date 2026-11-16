@@ -6,7 +6,8 @@ import { type Fetched, beforeDeadline, settle, unwrap } from "@/lib/fetched";
 import { cacheLife } from "next/cache";
 
 import { withLastGood } from "@/lib/sources/last-good";
-import type { IncidentStatus, IncidentType, Incident, SourceRef } from "@/lib/types";
+import type { CisaAdvisory, DarkWebStats, IncidentStatus, IncidentType, Incident, SourceRef, WireBulletin } from "@/lib/types";
+import { countryCode } from "@/lib/geo";
 import { ARTICLE_SCHEMA, SWEEP_MARKER, SWEEP_SCHEMA, sweepQuery, valyuServer } from "@/lib/valyu/server";
 
 const UA = "TitanCyberCommand/1.0 (+https://github.com/enabled404/titan-cybercommand)";
@@ -97,8 +98,52 @@ interface RansomLookPost {
   group_name: string;
 }
 
+interface RansomLookStats {
+  groups: number;
+  groups_online: number;
+  posts_total: number;
+  posts_24h: number;
+  posts_month: number;
+  markets_online: number;
+}
+
 function titleCaseGroup(group: string): string {
   return group.replace(/(^|[\s_-])(\w)/g, (_, sep: string, ch: string) => `${sep === "_" ? " " : sep}${ch.toUpperCase()}`);
+}
+
+function flagToIso(text: string): string | undefined {
+  const chars = [...text];
+  for (let i = 0; i < chars.length - 1; i++) {
+    const cp1 = chars[i].codePointAt(0) ?? 0;
+    const cp2 = chars[i + 1].codePointAt(0) ?? 0;
+    if (cp1 >= 0x1f1e6 && cp1 <= 0x1f1ff && cp2 >= 0x1f1e6 && cp2 <= 0x1f1ff) {
+      return String.fromCharCode(cp1 - 0x1f1e6 + 65, cp2 - 0x1f1e6 + 65);
+    }
+  }
+  return undefined;
+}
+
+const US_STATES_MAP: Record<string, string> = {
+  ALABAMA: "AL", ALASKA: "AK", ARIZONA: "AZ", ARKANSAS: "AR", CALIFORNIA: "CA",
+  COLORADO: "CO", CONNECTICUT: "CT", DELAWARE: "DE", FLORIDA: "FL", GEORGIA: "GA",
+  HAWAII: "HI", IDAHO: "ID", ILLINOIS: "IL", INDIANA: "IN", IOWA: "IA",
+  KANSAS: "KS", KENTUCKY: "KY", LOUISIANA: "LA", MAINE: "ME", MARYLAND: "MD",
+  MASSACHUSETTS: "MA", MICHIGAN: "MI", MINNESOTA: "MN", MISSISSIPPI: "MS", MISSOURI: "MO",
+  MONTANA: "MT", NEBRASKA: "NE", NEVADA: "NV", "NEW HAMPSHIRE": "NH", "NEW JERSEY": "NJ",
+  "NEW MEXICO": "NM", "NEW YORK": "NY", "NORTH CAROLINA": "NC", "NORTH DAKOTA": "ND",
+  OHIO: "OH", OKLAHOMA: "OK", OREGON: "OR", PENNSYLVANIA: "PA", "RHODE ISLAND": "RI",
+  "SOUTH CAROLINA": "SC", "SOUTH DAKOTA": "SD", "TENNESSEE": "TN", TEXAS: "TX",
+  UTAH: "UT", VERMONT: "VT", VIRGINIA: "VA", WASHINGTON: "WA", "WEST VIRGINIA": "WV",
+  WISCONSIN: "WI", WYOMING: "WY",
+};
+
+function matchUsState(name: string): { state: string; code: string } | null {
+  const upper = name.toUpperCase();
+  for (const [state, code] of Object.entries(US_STATES_MAP)) {
+    const re = new RegExp(`\\b${state}\\b`, "i");
+    if (re.test(upper)) return { state, code };
+  }
+  return null;
 }
 
 export async function getRansomwareClaims(): Promise<Candidate[]> {
@@ -108,42 +153,384 @@ export async function getRansomwareClaims(): Promise<Candidate[]> {
 async function getRansomwareClaimsFetched(): Promise<Fetched<Candidate[]>> {
   "use cache: remote";
   const result = await settle(async () => {
-    const res = await fetch("https://www.ransomlook.io/api/recent", {
-      headers: { "User-Agent": UA },
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!res.ok) throw new Error(`RansomLook ${res.status}`);
-    const posts = (await res.json()) as RansomLookPost[];
-    return posts
-      .filter((post) => post.post_title && post.post_title.length > 2)
-      .map((post) => {
-        const title = post.post_title.trim();
-        const isDomain = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(title);
-        const group = titleCaseGroup(post.group_name);
-        const date = new Date(`${post.discovered.replace(" ", "T").slice(0, 19)}Z`).toISOString();
-        const victim = isDomain ? title.toLowerCase() : title;
-        return {
-          victim,
-          domain: isDomain ? title.toLowerCase() : undefined,
-          type: "ransomware",
-          status: "claimed",
-          actor: group,
-          cves: [],
-          headline: `${group} claims ${victim}`,
-          summary: `The ${group} group listed ${victim} on its leak site. The organisation has not confirmed an attack, so treat this as a claim.`,
-          date,
-          sources: [
-            {
-              title: `${group} leak-site post (via RansomLook)`,
-              url: `https://www.ransomlook.io/group/${encodeURIComponent(post.group_name)}`,
-              publisher: "ransomlook.io",
-              date,
-              kind: "leaksite",
-            },
-          ],
-          origin: "claims",
-        } satisfies Candidate;
+    return withLastGood("ransomlook-claims", async () => {
+      const res = await fetch("https://www.ransomlook.io/api/recent", {
+        headers: { "User-Agent": UA },
+        signal: AbortSignal.timeout(15_000),
       });
+      if (!res.ok) throw new Error(`RansomLook ${res.status}`);
+      const posts = (await res.json()) as RansomLookPost[];
+      return posts
+        .filter((post) => post.post_title && post.post_title.length > 2)
+        .map((post) => {
+          const rawTitle = post.post_title.trim();
+          const flagCountry = flagToIso(rawTitle);
+          // Strip country flag emoji characters from victim display name
+          const title = rawTitle.replace(/[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]/g, "").trim();
+          const isDomain = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(title);
+          const group = titleCaseGroup(post.group_name);
+          const date = new Date(`${post.discovered.replace(" ", "T").slice(0, 19)}Z`).toISOString();
+          const victim = isDomain ? title.toLowerCase() : title;
+
+          let country: string | undefined = flagCountry;
+          let sector: string | undefined = undefined;
+          let usLocation: string | undefined = undefined;
+
+          if (post.description) {
+            const parts = post.description.split(/[·•|,]/).map((s) => s.trim());
+            for (const part of parts) {
+              const iso = countryCode(part);
+              if (iso) country = country || iso;
+            }
+            if (parts[0] && parts[0].length > 2 && !countryCode(parts[0])) {
+              sector = parts[0].slice(0, 60);
+            }
+          }
+
+          const stateHit = matchUsState(title) || (post.description ? matchUsState(post.description) : null);
+          if (stateHit) {
+            country = country || "US";
+            usLocation = stateHit.state;
+          }
+
+          return {
+            victim,
+            domain: isDomain ? title.toLowerCase() : undefined,
+            sector,
+            country,
+            usLocation,
+            type: "ransomware",
+            status: "claimed",
+            actor: group,
+            cves: [],
+            headline: `${group} claims ${victim}`,
+            summary: post.description
+              ? `${post.description}. The ${group} group listed ${victim} on its leak site. The organisation has not confirmed an attack, so treat this as a claim.`
+              : `The ${group} group listed ${victim} on its leak site. The organisation has not confirmed an attack, so treat this as a claim.`,
+            date,
+            sources: [
+              {
+                title: `${group} leak-site post (via RansomLook)`,
+                url: `https://www.ransomlook.io/group/${encodeURIComponent(post.group_name)}`,
+                publisher: "ransomlook.io",
+                date,
+                kind: "leaksite",
+              },
+            ],
+            origin: "claims",
+          } satisfies Candidate;
+        });
+    });
+  });
+  if (result.ok) cacheLife("feed");
+  else cacheLife("minutes");
+  return result;
+}
+
+/** Global dark web extortion telemetry: active cartels, online Tor leak sites, and victim velocity. */
+export async function getDarkWebCartelStats(): Promise<DarkWebStats | null> {
+  return unwrap(await getDarkWebCartelStatsFetched());
+}
+
+async function getDarkWebCartelStatsFetched(): Promise<Fetched<DarkWebStats | null>> {
+  "use cache: remote";
+  const result = await settle(async () => {
+    return withLastGood("ransomlook-stats", async () => {
+      const res = await fetch("https://www.ransomlook.io/api/stats", {
+        headers: { "User-Agent": UA },
+        signal: AbortSignal.timeout(12_000),
+      });
+      if (!res.ok) throw new Error(`RansomLook stats ${res.status}`);
+      const data = (await res.json()) as RansomLookStats;
+      return {
+        groups: data.groups ?? 0,
+        groupsOnline: data.groups_online ?? 0,
+        posts24h: data.posts_24h ?? 0,
+        postsMonth: data.posts_month ?? 0,
+        postsTotal: data.posts_total ?? 0,
+        marketsOnline: data.markets_online ?? 0,
+      } satisfies DarkWebStats;
+    });
+  });
+  if (result.ok) cacheLife("feed");
+  else cacheLife("minutes");
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Breaking Threat Wire (The Record, The Hacker News, Dark Reading, CyberScoop)
+// ---------------------------------------------------------------------------
+
+function cleanXmlText(s?: string): string {
+  if (!s) return "";
+  return s
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseRssDate(raw?: string): string {
+  if (!raw) return new Date().toISOString();
+  try {
+    const fixed = raw.replace(/(\b\d{1,2}\s+[A-Za-z]{3}\s+)(\d{2})(\s+)/, "$120$2$3");
+    const d = new Date(fixed);
+    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  } catch {
+    return new Date().toISOString();
+  }
+}
+
+const NON_VICTIM_REPORTERS = /^(?:FBI|CISA|NSA|Europol|Interpol|GCHQ|NCSC|DOJ|FTC|SEC|CERT|Google|Microsoft|Mandiant|CrowdStrike|Kaspersky|Sophos|Palo Alto Networks|SentinelOne|Check Point|Fortinet|Cisco|Recorded Future|ESET|Symantec|Trend Micro|Citizen Lab|Qualys|Rapid7|Zscaler|Darktrace)\b/i;
+const ADVISORY_FLAW_PREDICATE = /\b(?:flaw|flaws|vulnerability|vulnerabilities|bug|bugs|zero-day|0-day|bypass|sandbox escape|patch|patches|exploit|exploits|warning|risk|threat|tool|campaign|scam|botnet|deepfake)\b/i;
+
+function extractWireVictim(title: string): string | null {
+  const clean = cleanXmlText(title);
+  if (/^FBI flash alert\b/i.test(clean)) return null;
+  const m1 = clean.match(/^([A-Z][A-Za-z0-9\s&.-]{2,40}?)\s+(?:warns(?:\s+of)?|discloses|hit by|targeted (?:by|in)|confirms|investigating|suffers|reports|says|reveals|faces|reels(?:\s+following)?)\b/i);
+  if (m1) {
+    const candidate = m1[1].trim();
+    if (/\b(?:warns|says|reports|alerts)\b/i.test(candidate)) return null;
+    if (NON_VICTIM_REPORTERS.test(candidate)) {
+      if (!/confirms?\s+(?:breach|compromise|hack|cyberattack|intrusion)|hit by|suffers/i.test(clean)) {
+        return null;
+      }
+    }
+    const remainder = clean.slice(m1[0].length);
+    if (/^(?:warns|reports|says|reveals)\b/i.test(clean.slice(candidate.length).trim())) {
+      if (ADVISORY_FLAW_PREDICATE.test(remainder) && !/\b(?:data breach|ransomware|stolen data|personal information|records|network breach)\b/i.test(remainder)) {
+        return null;
+      }
+    }
+    return candidate.replace(/\s+(?:employee|customer|patient|staff|user|network|system)s?$/i, "");
+  }
+  const m2 = clean.match(/^([A-Z][A-Za-z0-9\s&.-]{2,40}?)\s+(?:Data Breach|Cyberattack|Ransomware Attack|Security Incident)\b/i);
+  if (m2) return m2[1].trim().replace(/\s+(?:employee|customer|patient|staff|user|network|system)s?$/i, "");
+  const m3 = clean.match(/(?:Attackers in|Attack on|Hackers breach|Breach at|Hackers target)\s+([A-Z][A-Za-z0-9\s&.-]{2,40}?)\s+(?:Breach|Incident|Attack|Network|Systems)/i);
+  if (m3) return m3[1].trim().replace(/\s+(?:employee|customer|patient|staff|user|network|system)s?$/i, "");
+  const m4 = clean.match(/(?:fines|penalizes|penalised)\s+([A-Z][A-Za-z0-9\s&.-]{2,30}?)\s+(?:over|for|€|\$)/i);
+  if (m4) return m4[1].trim();
+  const m5 = clean.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Hospital|Health|Medical Center|Clinic|School District|University|College|County|Police|Airways?|Airlines?|Bank))\b/);
+  if (m5) return m5[1].trim();
+  return null;
+}
+
+const WIRE_INCIDENT_SIG = /data\s*breach|ransomware|cyberattack|hacked|stolen\s*(?:data|keys?|credentials|information)|leak|unauthorized\s*access|compromis|zero-day|cve-\d{4}|malware|trojan|backdoor|ddos|extortion|threat\s*actor|espionage/i;
+
+function classifyWire(title: string, desc = ""): { type: IncidentType; cves: string[]; records?: number; actor?: string } {
+  const text = `${title} ${desc}`.toLowerCase();
+  let type: IncidentType = "cyberattack";
+  if (/ransomware|lockbit|qilin|play\b|black\s*basta|encrypt(or|ion)/i.test(text)) type = "ransomware";
+  else if (/data\s*breach|leak|stolen\s*data|exposed\s*records|personal\s*information/i.test(text)) type = "data_breach";
+  else if (/supply\s*chain|trojanized|backdoor(ed)?\s*package|malicious\s*npm/i.test(text)) type = "supply_chain";
+  else if (/espionage|nation-state|apt\d+|salt\s*typhoon|volt\s*typhoon/i.test(text)) type = "espionage";
+  else if (/ddos|denial\s*of\s*service/i.test(text)) type = "ddos";
+
+  const cves = [...new Set(text.toUpperCase().match(/CVE-\d{4}-\d{4,7}/g) ?? [])];
+
+  let records: number | undefined = undefined;
+  const recMatch = text.match(/impacting\s*([0-9,]+(?:\.[0-9]+)?)\s*(million|k|thousand)?/i) || text.match(/([0-9,]+(?:\.[0-9]+)?)\s*(million|k|thousand)?\s*(records|users|accounts|people|victims)/i);
+  if (recMatch) {
+    let num = parseFloat(recMatch[1].replace(/,/g, ""));
+    const unit = recMatch[2]?.toLowerCase();
+    if (unit === "million") num *= 1_000_000;
+    else if (unit === "k" || unit === "thousand") num *= 1_000;
+    records = Math.round(num);
+  }
+
+  let actor: string | undefined = undefined;
+  const actorMatch = text.match(/(volt\s*typhoon|salt\s*typhoon|scattered\s*spider|lazarus|apt\d+|lockbit|blackcat|alphv|qilin|play\s*ransomware|cl0p|darkside|rhysida|akira|fancy\s*bear|cozy\s*bear)/i);
+  if (actorMatch) {
+    actor = actorMatch[1].replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  return { type, cves, records, actor };
+}
+
+export interface WireData {
+  candidates: Candidate[];
+  bulletins: WireBulletin[];
+}
+
+export async function getWireData(): Promise<WireData> {
+  return unwrap(await getWireDataFetched());
+}
+
+async function getWireDataFetched(): Promise<Fetched<WireData>> {
+  "use cache: remote";
+  const result = await settle(async () => {
+    return withLastGood("breaking-wire-data", async () => {
+      const wireSources = [
+        { name: "BleepingComputer", url: "https://www.bleepingcomputer.com/feed/", publisher: "bleepingcomputer.com" },
+        { name: "The Record", url: "https://therecord.media/feed", publisher: "therecord.media" },
+        { name: "The Hacker News", url: "https://feeds.feedburner.com/TheHackersNews", publisher: "thehackernews.com" },
+        { name: "Dark Reading", url: "https://darkreading.com/rss.xml", publisher: "darkreading.com" },
+        { name: "SecurityWeek", url: "https://www.securityweek.com/feed/", publisher: "securityweek.com" },
+        { name: "Krebs on Security", url: "https://krebsonsecurity.com/feed/", publisher: "krebsonsecurity.com" },
+        { name: "CyberScoop", url: "https://cyberscoop.com/feed/", publisher: "cyberscoop.com" },
+      ];
+
+      const settled = await Promise.allSettled(
+        wireSources.map(async (src) => {
+          const res = await fetch(src.url, {
+            headers: { "User-Agent": UA },
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!res.ok) throw new Error(`${src.name} ${res.status}`);
+          const xml = await res.text();
+          return { src, xml };
+        }),
+      );
+
+      const candidates: Candidate[] = [];
+      const bulletins: WireBulletin[] = [];
+      const seenUrls = new Set<string>();
+
+      for (const item of settled) {
+        if (item.status !== "fulfilled") continue;
+        const { src, xml } = item.value;
+        const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+
+        for (const m of items) {
+          const raw = m[1];
+          const title = cleanXmlText(raw.match(/<title>([\s\S]*?)<\/title>/)?.[1]);
+          const link = cleanXmlText(raw.match(/<link>([\s\S]*?)<\/link>/)?.[1]);
+          const pubDate = cleanXmlText(raw.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]);
+          const desc = cleanXmlText(raw.match(/<description>([\s\S]*?)<\/description>/)?.[1]);
+
+          if (!title || !link || seenUrls.has(link)) continue;
+          seenUrls.add(link);
+
+          const isSecurityNews = WIRE_INCIDENT_SIG.test(`${title} ${desc}`);
+          if (!isSecurityNews) continue;
+
+          const date = parseRssDate(pubDate);
+          const classified = classifyWire(title, desc);
+          const victim = extractWireVictim(title);
+
+          let country: string | undefined = undefined;
+          const countryHints = ["Japan", "Italy", "Germany", "France", "United Kingdom", "Australia", "Canada", "United States"];
+          for (const ch of countryHints) {
+            if (new RegExp(`\\b${ch}\\b`, "i").test(`${title} ${desc}`)) {
+              country = countryCode(ch);
+              break;
+            }
+          }
+
+          const bulletin: WireBulletin = {
+            id: `wb-${Date.parse(date)}-${Math.abs(link.split("").reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0))}`,
+            title,
+            url: link,
+            publisher: src.publisher,
+            date,
+            summary: desc.slice(0, 320),
+            victim: victim ?? undefined,
+            actor: classified.actor,
+            type: classified.type,
+            records: classified.records,
+            cves: classified.cves,
+            country,
+          };
+          bulletins.push(bulletin);
+
+          if (victim && victim.length > 2 && victim.length < 50) {
+            const isConfirmed = /warns(?:\s+of)?|confirms|discloses|fined|fines|reveals/i.test(title);
+            candidates.push({
+              victim,
+              type: classified.type,
+              status: isConfirmed ? "confirmed" : "reported",
+              actor: classified.actor,
+              records: classified.records,
+              cves: classified.cves,
+              country,
+              headline: title,
+              summary: desc ? desc.slice(0, 400) : `${victim} affected by ${classified.type.replace("_", " ")} as reported by ${src.publisher}.`,
+              date,
+              sources: [
+                {
+                  title: `${title} (${src.publisher})`,
+                  url: link,
+                  publisher: src.publisher,
+                  date,
+                  kind: "news",
+                },
+              ],
+              origin: "news",
+            });
+          }
+        }
+      }
+
+      return { candidates, bulletins: bulletins.slice(0, 40) };
+    });
+  });
+  if (result.ok) cacheLife("feed");
+  else cacheLife("minutes");
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// CISA Emergency Cybersecurity Advisories (CISA CSA, Alerts & Directives)
+// ---------------------------------------------------------------------------
+
+export interface CisaData {
+  advisories: CisaAdvisory[];
+  candidates: Candidate[];
+}
+
+export async function getCisaAdvisories(): Promise<CisaData> {
+  return unwrap(await getCisaAdvisoriesFetched());
+}
+
+async function getCisaAdvisoriesFetched(): Promise<Fetched<CisaData>> {
+  "use cache: remote";
+  const result = await settle(async () => {
+    return withLastGood("cisa-advisories-rss", async () => {
+      const res = await fetch("https://www.cisa.gov/cybersecurity-advisories/all.xml", {
+        headers: { "User-Agent": UA },
+        signal: AbortSignal.timeout(12_000),
+      });
+      if (!res.ok) throw new Error(`CISA XML ${res.status}`);
+      const xml = await res.text();
+      const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+
+      const advisories: CisaAdvisory[] = [];
+
+      for (const m of items) {
+        const raw = m[1];
+        const title = cleanXmlText(raw.match(/<title>([\s\S]*?)<\/title>/)?.[1]);
+        const link = cleanXmlText(raw.match(/<link>([\s\S]*?)<\/link>/)?.[1]);
+        const pubDate = cleanXmlText(raw.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]);
+        const desc = cleanXmlText(raw.match(/<description>([\s\S]*?)<\/description>/)?.[1]?.slice(0, 1500));
+
+        if (!title || !link) continue;
+        const date = parseRssDate(pubDate);
+        const cves = [...new Set(`${title} ${desc}`.toUpperCase().match(/CVE-\d{4}-\d{4,7}/g) ?? [])];
+
+        let category: CisaAdvisory["category"] = "alert";
+        if (link.includes("/ics-advisories/")) category = "ics";
+        else if (link.includes("/cybersecurity-advisories/")) category = "csa";
+        else if (link.includes("/directives/")) category = "directive";
+
+        const advisory: CisaAdvisory = {
+          id: `cisa-${Date.parse(date)}-${Math.abs(link.split("").reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0))}`,
+          title,
+          link,
+          published: date,
+          cves,
+          category,
+          summary: desc.slice(0, 360),
+        };
+        advisories.push(advisory);
+      }
+
+      return { advisories: advisories.slice(0, 35), candidates: [] };
+    });
   });
   if (result.ok) cacheLife("feed");
   else cacheLife("minutes");

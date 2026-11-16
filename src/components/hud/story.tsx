@@ -132,6 +132,11 @@ const StoryPanel = forwardRef<OmniboxHandle, StoryProps>(function Story(props, r
           options={[
             { value: "exploited", label: "CVEs", count: cveCount },
             { value: "incidents", label: "Breaches", count: incidents.length },
+            {
+              value: "wire",
+              label: "Wire",
+              count: (snapshot?.stats?.breakingWireCount ?? 0) + (snapshot?.stats?.cisaAdvisoriesActive ?? 0),
+            },
             { value: "malware", label: "Malware", count: malware.length },
             { value: "outages", label: "Outages", count: outages.length },
           ]}
@@ -141,6 +146,7 @@ const StoryPanel = forwardRef<OmniboxHandle, StoryProps>(function Story(props, r
       <div className="relative px-1.5 pb-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:scrollbar-thin" role="tabpanel">
         {tab === "incidents" ? <IncidentFeed incidents={incidents} now={now} /> : null}
         {tab === "exploited" ? <VulnRows fresh={newCritical} trending={exploited} kev={kev} now={now} /> : null}
+        {tab === "wire" ? <WireRows snapshot={snapshot} now={now} /> : null}
         {tab === "malware" ? <MalwareRows malware={malware} now={now} /> : null}
         {tab === "outages" ? <OutageRows outages={outages} now={now} /> : null}
       </div>
@@ -575,6 +581,136 @@ function OutageRows({ outages, now }: { outages: Outage[]; now: number }) {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function WireRows({ snapshot, now }: { snapshot?: Snapshot; now: number }) {
+  const bulletins = snapshot?.wireBulletins ?? [];
+  const cisa = snapshot?.cisaAdvisories ?? [];
+  const darkWeb = snapshot?.darkWebStats;
+  const selectCve = useSituation((s) => s.selectCve);
+
+  return (
+    <div>
+      <ListNote>
+        Live dispatches from primary threat intelligence wires and federal emergency cyber directives: The Record, The Hacker News, Dark Reading, CyberScoop, and CISA.
+      </ListNote>
+
+      {/* Dark Web Radar Quick Banner */}
+      <div className="mx-1.5 mb-2 rounded-[14px] border border-cyan-500/20 bg-surface-2/80 p-3">
+        <div className="flex items-center justify-between font-mono text-[10.5px]">
+          <span className="flex items-center gap-1.5 font-bold text-cyan-300">
+            <span className="size-1.5 rounded-full bg-cyan-400 motion-safe:animate-ping" />
+            DARK WEB CARTEL RADAR
+          </span>
+          <span className="text-confirmed font-bold">
+            {darkWeb?.groupsOnline ?? snapshot?.stats?.activeTorLeakSites ?? 0} ONION SITES ONLINE
+          </span>
+        </div>
+        <div className="mt-1.5 flex items-center justify-between font-mono text-[10.5px] text-ink-4">
+          <span>{darkWeb?.posts24h ?? snapshot?.stats?.darkWebClaims24h ?? 0} victims claimed / 24h</span>
+          <span>{darkWeb?.marketsOnline ? `${darkWeb.marketsOnline} dark markets monitored` : "Tor markets monitored"}</span>
+        </div>
+      </div>
+
+      {bulletins.length === 0 && cisa.length === 0 ? (
+        <EmptyNote>Connecting to breaking threat wire feeds...</EmptyNote>
+      ) : null}
+
+      {/* Breaking Wire Bulletins */}
+      {bulletins.length > 0 && (
+        <section aria-label="Breaking wire bulletins">
+          <h3 className="sticky top-0 z-[1] flex items-baseline justify-between bg-surface px-3 pb-1.5 pt-2">
+            <Eyebrow className="text-cyan-300">Breaking Wire Bulletins</Eyebrow>
+            <Eyebrow>{bulletins.length}</Eyebrow>
+          </h3>
+          <ul className="space-y-1">
+            {bulletins.map((item) => (
+              <li key={item.id}>
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group flex flex-col gap-1 rounded-[14px] px-3 py-2 transition-colors duration-150 hover:bg-white/[0.04]"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="shrink-0 rounded bg-cyan-500/15 px-1.5 py-0.2 font-mono text-[9.5px] font-bold uppercase text-cyan-300">
+                        {item.publisher.replace(".com", "").replace(".media", "")}
+                      </span>
+                      {item.records && (
+                        <span className="shrink-0 rounded bg-confirmed/15 px-1.5 py-0.2 font-mono text-[9.5px] font-bold text-confirmed">
+                          {item.records.toLocaleString()} records
+                        </span>
+                      )}
+                    </div>
+                    <span suppressHydrationWarning className="shrink-0 font-mono text-[10px] text-ink-4">
+                      {relativeTime(item.date, now).replace(" ago", "")}
+                    </span>
+                  </div>
+                  <span className="text-[13px] font-medium leading-snug text-ink group-hover:text-cyan-200">
+                    {item.title}
+                  </span>
+                  {item.summary && (
+                    <span className="line-clamp-2 text-[11.5px] text-ink-3">
+                      {item.summary}
+                    </span>
+                  )}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* CISA Advisories */}
+      {cisa.length > 0 && (
+        <section aria-label="CISA emergency alerts" className="mt-4">
+          <h3 className="sticky top-0 z-[1] flex items-baseline justify-between bg-surface px-3 pb-1.5 pt-2">
+            <Eyebrow className="text-emerald-400">CISA Directives & Advisories</Eyebrow>
+            <Eyebrow>{cisa.length}</Eyebrow>
+          </h3>
+          <ul className="space-y-1">
+            {cisa.map((item) => (
+              <li key={item.id}>
+                <div className="group flex flex-col gap-1 rounded-[14px] px-3 py-2 transition-colors duration-150 hover:bg-white/[0.04]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.2 font-mono text-[9.5px] font-bold uppercase text-emerald-300">
+                      {item.category.toUpperCase()}
+                    </span>
+                    <span suppressHydrationWarning className="shrink-0 font-mono text-[10px] text-ink-4">
+                      {relativeTime(item.published, now).replace(" ago", "")}
+                    </span>
+                  </div>
+                  <a
+                    href={item.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[13px] font-medium leading-snug text-ink hover:text-emerald-300"
+                  >
+                    {item.title}
+                  </a>
+                  {item.cves.length > 0 && (
+                    <div className="mt-0.5 flex flex-wrap gap-1">
+                      {item.cves.map((cve) => (
+                        <button
+                          key={cve}
+                          type="button"
+                          onClick={() => selectCve(cve)}
+                          className="press rounded bg-white/[0.06] px-1.5 py-0.2 font-mono text-[10px] text-cyan-300 hover:bg-white/10"
+                        >
+                          {cve}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
