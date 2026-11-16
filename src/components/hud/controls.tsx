@@ -7,6 +7,7 @@ import { StatusMark } from "@/components/kit/status-mark";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { STATUS_LABEL, relativeTime } from "@/lib/format";
 import { useNow } from "@/lib/perf/use-now";
+import { TIP_JAR_URL } from "@/lib/site";
 import type { Snapshot } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useSituation } from "@/stores/situation";
@@ -83,6 +84,7 @@ export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt
           <div className="flex items-center justify-between border-t border-white/[0.06] px-2.5 py-1.5 text-[11px] text-ink-4">
             <Link href="/terms" className="transition-colors hover:text-ink">Terms & Safe Harbor</Link>
             <Link href="/privacy" className="transition-colors hover:text-ink">Privacy</Link>
+            <a href={TIP_JAR_URL} target="_blank" rel="noreferrer" className="text-amber-400 font-medium transition-colors hover:text-amber-300">Tip Jar</a>
           </div>
         </PopoverContent>
       </Popover>

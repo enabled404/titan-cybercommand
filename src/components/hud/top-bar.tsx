@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
-import { Broadcast, ClockCounterClockwise, Compass, Crosshair, FilmSlate, Lightning, MagnifyingGlass, Radioactive, ShieldCheck } from "@phosphor-icons/react";
+import { Broadcast, ClockCounterClockwise, Compass, Crosshair, FilmSlate, Heart, Lightning, MagnifyingGlass, Radioactive, ShieldCheck } from "@phosphor-icons/react";
 
 import { AuthButton } from "@/components/auth/auth-button";
 import { AudioButton } from "@/components/hud/audio-button";
@@ -12,7 +12,7 @@ import { RecordDemoButton } from "@/components/hud/record-demo";
 import { BrandMark, GithubIcon } from "@/components/icons/agents";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ACCOUNTS } from "@/lib/mode";
-import { REPO_URL } from "@/lib/site";
+import { REPO_URL, TIP_JAR_URL } from "@/lib/site";
 import { soundEngine } from "@/lib/audio/sound-engine";
 import { cn } from "@/lib/utils";
 
@@ -416,6 +416,19 @@ export function TopBar({
                       <span>Master Demo (V)</span>
                     </button>
                   )}
+                  <a
+                    href={TIP_JAR_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => {
+                      soundEngine.playClick();
+                      setOpsOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-amber-400 transition-colors hover:bg-amber-400/10"
+                  >
+                    <Heart size={14} weight="fill" />
+                    <span>Tip Jar (Support)</span>
+                  </a>
                 </div>
               </PopoverContent>
             </Popover>
@@ -445,6 +458,17 @@ export function TopBar({
           <Suspense fallback={<NavLinks pathname={null} />}>
             <ActiveNavLinks />
           </Suspense>
+          <a
+            href={TIP_JAR_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="hidden h-7 items-center gap-1 rounded-full px-2 font-mono text-[11px] font-bold text-amber-400 transition-colors hover:bg-amber-400/10 hover:text-amber-300 sm:flex"
+            title="Support development via Tip Jar"
+            aria-label="Tip Jar"
+          >
+            <Heart size={12} weight="fill" className="text-amber-400" />
+            <span className="hidden md:inline">TIP JAR</span>
+          </a>
           <a
             href={REPO_URL}
             target="_blank"
