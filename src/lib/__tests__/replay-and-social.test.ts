@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { useSituation } from "@/stores/situation";
 import { scoreReconPosture } from "@/lib/recon";
+import {
+  buildReplayDataset,
+  calculateIncidentTickPosition,
+  filterReplayIncidents,
+  getSimulatedTime,
+} from "@/lib/replay";
+import type { Incident } from "@/lib/types";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -88,24 +95,75 @@ describe("Time-Travel Replay State and Posture Intelligence", () => {
   it("filters incidents chronologically during time-travel replay progression", () => {
     const baseTime = 1700000000000;
     const testIncidents = [
-      { id: "inc-1", date: new Date(baseTime - 80_000_000).toISOString() }, // ~22h ago
-      { id: "inc-2", date: new Date(baseTime - 40_000_000).toISOString() }, // ~11h ago
-      { id: "inc-3", date: new Date(baseTime - 5_000_000).toISOString() },  // ~1.4h ago
+      { id: "inc-1", date: new Date(baseTime - 80_000_000).toISOString(), victim: "A", country: "US" } as Incident, // ~22h ago
+      { id: "inc-2", date: new Date(baseTime - 40_000_000).toISOString(), victim: "B", country: "GB" } as Incident, // ~11h ago
+      { id: "inc-3", date: new Date(baseTime - 5_000_000).toISOString(), victim: "C", country: "DE" } as Incident,  // ~1.4h ago
+      { id: "inc-4", date: new Date(baseTime - 2_000_000).toISOString(), victim: "D", country: "JP" } as Incident,  // ~0.5h ago
     ];
 
+    const dataset = buildReplayDataset(testIncidents, baseTime);
+    expect(dataset.isStrict24h).toBe(true);
+    expect(dataset.incidents.length).toBe(4);
+    expect(getSimulatedTime(dataset, 0)).toBe(baseTime - 86_400_000);
+    expect(getSimulatedTime(dataset, 1)).toBe(baseTime);
+
     // At progress 0 (24h ago): 0 attacks passed
-    const simTime0 = baseTime - 86_400_000;
-    const filter0 = testIncidents.filter((i) => Date.parse(i.date) <= simTime0);
+    const filter0 = filterReplayIncidents(dataset, 0);
     expect(filter0.length).toBe(0);
 
     // At progress 0.5 (12h ago): only inc-1 passed
-    const simTime50 = baseTime - 0.5 * 86_400_000;
-    const filter50 = testIncidents.filter((i) => Date.parse(i.date) <= simTime50);
+    const filter50 = filterReplayIncidents(dataset, 0.5);
     expect(filter50.map((i) => i.id)).toEqual(["inc-1"]);
 
     // At progress 1.0 (now): all passed
-    const simTime100 = baseTime;
-    const filter100 = testIncidents.filter((i) => Date.parse(i.date) <= simTime100);
+    const filter100 = filterReplayIncidents(dataset, 1.0);
+    expect(filter100.length).toBe(4);
+
+    // Tick positions must be positive percentages
+    for (const inc of testIncidents) {
+      const pos = calculateIncidentTickPosition(inc.date, dataset);
+      expect(pos).toBeGreaterThanOrEqual(0);
+      expect(pos).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it("gracefully distributes ticks when incidents fall back to older sparse records", () => {
+    const baseTime = 1700000000000;
+    // Incidents older than 24h
+    const testIncidents = [
+      { id: "old-1", date: new Date(baseTime - 5 * 86_400_000).toISOString(), victim: "Old1", country: "US" } as Incident,
+      { id: "old-2", date: new Date(baseTime - 3 * 86_400_000).toISOString(), victim: "Old2", country: "FR" } as Incident,
+      { id: "old-3", date: new Date(baseTime - 86_400_000).toISOString(), victim: "Old3", country: "CA" } as Incident,
+    ];
+
+    const dataset = buildReplayDataset(testIncidents, baseTime);
+    expect(dataset.isStrict24h).toBe(false);
+    expect(dataset.incidents.length).toBe(3);
+
+    // Oldest incident should be at 0%
+    const posOldest = calculateIncidentTickPosition(testIncidents[0].date, dataset);
+    expect(posOldest).toBe(0);
+
+    // Intermediate incident should be cleanly between 0% and 100%, NOT clamped to 0%
+    const posMid = calculateIncidentTickPosition(testIncidents[1].date, dataset);
+    expect(posMid).toBeGreaterThan(0);
+    expect(posMid).toBeLessThan(100);
+
+    // Scrubber filtering progresses sequentially
+    const filter0 = filterReplayIncidents(dataset, 0);
+    expect(filter0.length).toBe(1); // oldest landed at 0%
+    const filter100 = filterReplayIncidents(dataset, 1);
     expect(filter100.length).toBe(3);
+  });
+
+  it("manages actorFilter in situation store for focused ballistic trajectories", () => {
+    useSituation.getState().setActorFilter(null);
+    expect(useSituation.getState().actorFilter).toBe(null);
+
+    useSituation.getState().setActorFilter("Volt Typhoon");
+    expect(useSituation.getState().actorFilter).toBe("Volt Typhoon");
+
+    useSituation.getState().setActorFilter(null);
+    expect(useSituation.getState().actorFilter).toBe(null);
   });
 });

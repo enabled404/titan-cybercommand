@@ -4,38 +4,25 @@ import { useEffect, useMemo, useRef } from "react";
 import { ArrowClockwise, ClockCounterClockwise, Pause, Play, X } from "@phosphor-icons/react";
 
 import { soundEngine } from "@/lib/audio/sound-engine";
+import {
+  buildReplayDataset,
+  calculateIncidentTickPosition,
+  getSimulatedTime,
+} from "@/lib/replay";
 import type { Incident } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useSituation } from "@/stores/situation";
 
-const REPLAY_DURATION_MS = 30_000; // 30 seconds for 24 hours of attacks
+const REPLAY_DURATION_MS = 30_000; // 30 seconds for full attack replay timelapse
 
 export function ReplayDock({ incidents, now }: { incidents: Incident[]; now: number }) {
   const replay = useSituation((s) => s.replay);
   const setReplay = useSituation((s) => s.setReplay);
   const animRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
-  const lastIncidentIndexRef = useRef<number>(-1);
 
-  // Incidents in the last 24 hours sorted chronologically (oldest to newest)
-  const window24hIncidents = useMemo(() => {
-    const cutoff = now - 86_400_000;
-    const direct24h = incidents
-      .filter((inc) => {
-        const t = Date.parse(inc.date);
-        return !isNaN(t) && t >= cutoff && t <= now;
-      })
-      .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
-
-    if (direct24h.length >= 4) return direct24h;
-
-    // Gracefully include recent incidents if strict 24h count is sparse
-    const recent = incidents
-      .filter((inc) => !isNaN(Date.parse(inc.date)))
-      .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
-      .slice(0, 16);
-    return recent.sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
-  }, [incidents, now]);
+  // Chronologically ordered dataset shared with globe filters
+  const dataset = useMemo(() => buildReplayDataset(incidents, now), [incidents, now]);
 
   // Animation playback loop
   useEffect(() => {
@@ -50,19 +37,9 @@ export function ReplayDock({ incidents, now }: { incidents: Incident[]; now: num
       const delta = currentTime - lastTimeRef.current;
       lastTimeRef.current = currentTime;
 
-      const increment = (delta / (REPLAY_DURATION_MS / replay.speed));
+      const increment = delta / (REPLAY_DURATION_MS / replay.speed);
       const curProgress = useSituation.getState().replay.progress;
       const nextProgress = Math.min(1, curProgress + increment);
-
-      // Check if we passed any incidents and play audio / trigger
-      const currentSimTime = now - (1 - nextProgress) * 86_400_000;
-      const newIndex = window24hIncidents.findIndex((inc) => Date.parse(inc.date) > currentSimTime);
-      const effectiveIndex = newIndex === -1 ? window24hIncidents.length : newIndex;
-
-      if (effectiveIndex > lastIncidentIndexRef.current && effectiveIndex > 0) {
-        lastIncidentIndexRef.current = effectiveIndex;
-        soundEngine.playAttackLaunch(0);
-      }
 
       if (nextProgress >= 1) {
         setReplay({ progress: 1, playing: false });
@@ -77,21 +54,25 @@ export function ReplayDock({ incidents, now }: { incidents: Incident[]; now: num
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [replay.active, replay.playing, replay.speed, now, window24hIncidents, setReplay]);
+  }, [replay.active, replay.playing, replay.speed, setReplay]);
 
   if (!replay.active) return null;
 
-  const currentSimTime = now - (1 - replay.progress) * 86_400_000;
+  const currentSimTime = getSimulatedTime(dataset, replay.progress);
   const simDate = new Date(currentSimTime);
   const timeLabel = simDate.toISOString().replace("T", " ").slice(0, 16) + " UTC";
   const hoursAgo = ((now - currentSimTime) / 3600_000).toFixed(1);
 
-  const attacksPassedCount = window24hIncidents.filter((i) => Date.parse(i.date) <= currentSimTime).length;
+  const startLabel = dataset.isStrict24h
+    ? "-24h ago"
+    : `-${Math.max(1, Math.round((now - dataset.startTime) / 86_400_000))}d ago`;
+  const badgeLabel = dataset.isStrict24h ? "30 SEC TIMELAPSE" : "ATTACK TIMELAPSE";
+
+  const attacksPassedCount = dataset.incidents.filter((i) => Date.parse(i.date) <= currentSimTime).length;
 
   const togglePlay = () => {
     soundEngine.playClick();
     if (replay.progress >= 1) {
-      lastIncidentIndexRef.current = -1;
       setReplay({ progress: 0, playing: true });
     } else {
       setReplay({ playing: !replay.playing });
@@ -104,13 +85,11 @@ export function ReplayDock({ incidents, now }: { incidents: Incident[]; now: num
   };
 
   const handleSeek = (val: number) => {
-    lastIncidentIndexRef.current = -1;
     setReplay({ progress: val });
   };
 
   const handleRestart = () => {
     soundEngine.playClick();
-    lastIncidentIndexRef.current = -1;
     setReplay({ progress: 0, playing: true });
   };
 
@@ -126,10 +105,10 @@ export function ReplayDock({ incidents, now }: { incidents: Incident[]; now: num
         <div className="flex items-center gap-2">
           <ClockCounterClockwise size={16} className="text-cyan-400" />
           <span className="font-mono text-xs font-bold uppercase tracking-wider text-ink">
-            TIME-TRAVEL REPLAY // 24H ATTACK RECONSTRUCTION
+            TIME-TRAVEL REPLAY // ATTACK RECONSTRUCTION
           </span>
           <span className="rounded bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300">
-            30 SEC TIMELAPSE
+            {badgeLabel}
           </span>
         </div>
 
@@ -146,7 +125,7 @@ export function ReplayDock({ incidents, now }: { incidents: Incident[]; now: num
       {/* Main Scrubber Control */}
       <div className="mt-3.5 space-y-2">
         <div className="flex items-center justify-between font-mono text-[11px]">
-          <span className="text-ink-4">-24h ago</span>
+          <span className="text-ink-4">{startLabel}</span>
           <div className="flex items-center gap-2">
             <span className="font-bold text-cyan-400">{timeLabel}</span>
             <span className="text-ink-3">({hoursAgo}h ago)</span>
@@ -166,9 +145,9 @@ export function ReplayDock({ incidents, now }: { incidents: Incident[]; now: num
 
           {/* Incident tick dots along track */}
           <div className="absolute inset-x-0 pointer-events-none h-2">
-            {window24hIncidents.map((inc) => {
+            {dataset.incidents.map((inc) => {
               const incTime = Date.parse(inc.date);
-              const pct = Math.max(0, Math.min(100, ((incTime - (now - 86_400_000)) / 86_400_000) * 100));
+              const pct = calculateIncidentTickPosition(inc.date, dataset);
               const passed = incTime <= currentSimTime;
               return (
                 <div
@@ -214,7 +193,7 @@ export function ReplayDock({ incidents, now }: { incidents: Incident[]; now: num
             type="button"
             onClick={handleRestart}
             className="press flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5 font-mono text-xs text-ink-3 hover:text-ink"
-            title="Restart replay from -24h"
+            title="Restart replay"
           >
             <ArrowClockwise size={13} />
             <span>RESET</span>
@@ -240,7 +219,7 @@ export function ReplayDock({ incidents, now }: { incidents: Incident[]; now: num
 
         <div className="flex items-center gap-3 font-mono text-xs">
           <span className="text-ink-3">
-            Attacks Landed: <strong className="text-cyan-400">{attacksPassedCount}</strong> / {window24hIncidents.length}
+            Attacks Landed: <strong className="text-cyan-400">{attacksPassedCount}</strong> / {dataset.incidents.length}
           </span>
         </div>
       </div>
