@@ -184,6 +184,29 @@ function botnetFeatures(nodes: BotnetC2Node[]): FeatureCollection<Point> {
   };
 }
 
+function graticuleFeatures(): FeatureCollection<LineString> {
+  const features: Feature<LineString>[] = [];
+  for (let lat = -75; lat <= 75; lat += 15) {
+    const coords: [number, number][] = [];
+    for (let lon = -180; lon <= 180; lon += 5) coords.push([lon, lat]);
+    features.push({
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: coords },
+      properties: { type: "parallel", lat },
+    });
+  }
+  for (let lon = -180; lon < 180; lon += 15) {
+    const coords: [number, number][] = [];
+    for (let lat = -80; lat <= 80; lat += 5) coords.push([lon, lat]);
+    features.push({
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: coords },
+      properties: { type: "meridian", lon },
+    });
+  }
+  return { type: "FeatureCollection", features };
+}
+
 let blackMarbleRegistered = false;
 
 /**
@@ -561,6 +584,35 @@ function addLayers(map: MapLibre) {
         "line-width": 1.2,
         "line-dasharray": [2, 2],
         "line-opacity": 0.8,
+      },
+    },
+    beforeBorders,
+  );
+
+  // Tactical cyber graticule (lat/lon coordinate grid)
+  map.addSource("graticule", { type: "geojson", data: graticuleFeatures() });
+  map.addLayer(
+    {
+      id: "graticule-lines",
+      type: "line",
+      source: "graticule",
+      paint: {
+        "line-color": "rgba(6, 182, 212, 0.12)",
+        "line-width": 0.65,
+        "line-dasharray": [2, 4],
+      },
+    },
+    beforeBorders,
+  );
+  map.addLayer(
+    {
+      id: "graticule-equator",
+      type: "line",
+      source: "graticule",
+      filter: ["==", ["get", "lat"], 0],
+      paint: {
+        "line-color": "rgba(6, 182, 212, 0.28)",
+        "line-width": 1.0,
       },
     },
     beforeBorders,
@@ -1134,6 +1186,7 @@ export function Globe({ incidents, outages, botnetC2s = [], countryCounts, paddi
       set(["arcs"], layers.arcs);
       set(["submarine-cables-glow", "submarine-cables-line"], layers.cables);
       set(["botnet-c2-halo", "botnet-c2-pulse", "botnet-c2-core", "botnet-c2-labels"], layers.botnets);
+      set(["graticule-lines", "graticule-equator"], layers.grid);
     });
   }, [layers, ready]);
 

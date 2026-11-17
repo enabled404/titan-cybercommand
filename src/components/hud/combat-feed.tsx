@@ -1,12 +1,15 @@
 "use client";
 
-import { CaretDown, CaretUp, Terminal } from "@phosphor-icons/react";
+import { CaretDown, CaretUp, Funnel, Terminal } from "@phosphor-icons/react";
+import { useMemo, useState } from "react";
 import { soundEngine } from "@/lib/audio/sound-engine";
 import { useCombatFeed } from "@/stores/combat-feed";
 import { useMapInstance } from "@/components/map/map-instance";
 import { useSituation } from "@/stores/situation";
 import type { Incident } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+type FeedFilter = "all" | "critical" | "exploits" | "c2";
 
 export function CombatFeedDrawer({
   incidents = [],
@@ -21,6 +24,14 @@ export function CombatFeedDrawer({
   const map = useMapInstance((s) => s.map);
   const select = useSituation((s) => s.select);
   const totalMonitored = totalIntercepted > 0 ? totalIntercepted : incidents.length;
+  const [filter, setFilter] = useState<FeedFilter>("all");
+
+  const displayedIntercepts = useMemo(() => {
+    if (filter === "critical") return intercepts.filter((i) => i.severity >= 4);
+    if (filter === "exploits") return intercepts.filter((i) => i.vector.toLowerCase().includes("exploit") || i.vector.toLowerCase().includes("cve"));
+    if (filter === "c2") return intercepts.filter((i) => i.vector.toLowerCase().includes("c2"));
+    return intercepts;
+  }, [intercepts, filter]);
 
   return (
     <div
@@ -89,15 +100,36 @@ export function CombatFeedDrawer({
             </div>
           </div>
 
+          {/* Tactical Filter Segment */}
+          <div className="flex items-center gap-1 border-b border-white/[0.06] bg-surface/80 px-2 py-1 font-mono text-[9.5px]">
+            <Funnel size={10} className="text-ink-4 mr-0.5" />
+            {(["all", "critical", "exploits", "c2"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  setFilter(mode);
+                }}
+                className={cn(
+                  "rounded px-1.5 py-0.5 font-bold uppercase tracking-wider transition-colors",
+                  filter === mode ? "bg-cyan-500/20 text-cyan-300" : "text-ink-4 hover:text-ink-2",
+                )}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+
           {/* Intercepts List */}
           <div className="h-44 overflow-y-auto overscroll-contain p-1.5 font-mono text-[10.5px] leading-tight scrollbar-thin">
-            {intercepts.length === 0 ? (
+            {displayedIntercepts.length === 0 ? (
               <div className="flex h-full items-center justify-center text-ink-4">
-                Initializing satellite packet sniffer...
+                No telemetry matching current filter
               </div>
             ) : (
               <div className="space-y-1">
-                {intercepts.slice(0, 15).map((item) => (
+                {displayedIntercepts.slice(0, 15).map((item) => (
                   <button
                     type="button"
                     key={item.id}
@@ -151,7 +183,7 @@ export function CombatFeedDrawer({
                             "rounded px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wider",
                             item.verificationStatus === "confirmed" && "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
                             item.verificationStatus === "reported" && "bg-amber-500/15 text-amber-400 border border-amber-500/30",
-                            item.verificationStatus === "claimed" && "bg-rose-500/15 text-rose-400 border border-rose-500/30",
+                            item.verificationStatus === "claimed" && "bg-white/[0.08] text-slate-300 border border-white/20",
                           )}
                         >
                           {item.verificationStatus}

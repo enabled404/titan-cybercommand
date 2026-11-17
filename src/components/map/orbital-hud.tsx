@@ -22,7 +22,6 @@ export function OrbitalHud() {
     let animId = 0;
     let scanAngle = 0;
     let running = true;
-    let wasBlank = false;
 
     const renderFrame = (scheduleNext: boolean) => {
       if (!running) return;
@@ -47,23 +46,77 @@ export function OrbitalHud() {
         canvas.height = h * dpr;
         canvas.style.width = `${w}px`;
         canvas.style.height = `${h}px`;
-        wasBlank = false;
       }
 
       const zoom = map.getZoom();
-      if (zoom >= 5) {
-        if (!wasBlank) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          wasBlank = true;
-        }
-        if (scheduleNext) animId = requestAnimationFrame(() => renderFrame(true));
-        return;
-      }
-      wasBlank = false;
+      const pitch = map.getPitch();
+      const bearing = map.getBearing();
 
       ctx.save();
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, w, h);
+
+      // Four Tactical Viewport Corner Brackets (Aerospace / Situation Room HUD)
+      const bracketMargin = 16;
+      const bracketLen = 14;
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.22)";
+      ctx.lineWidth = 1;
+
+      // Top-Left
+      ctx.beginPath();
+      ctx.moveTo(bracketMargin, bracketMargin + bracketLen);
+      ctx.lineTo(bracketMargin, bracketMargin);
+      ctx.lineTo(bracketMargin + bracketLen, bracketMargin);
+      ctx.stroke();
+
+      // Top-Right
+      ctx.beginPath();
+      ctx.moveTo(w - bracketMargin - bracketLen, bracketMargin);
+      ctx.lineTo(w - bracketMargin, bracketMargin);
+      ctx.lineTo(w - bracketMargin, bracketMargin + bracketLen);
+      ctx.stroke();
+
+      // Bottom-Left
+      ctx.beginPath();
+      ctx.moveTo(bracketMargin, h - bracketMargin - bracketLen);
+      ctx.lineTo(bracketMargin, h - bracketMargin);
+      ctx.lineTo(bracketMargin + bracketLen, h - bracketMargin);
+      ctx.stroke();
+
+      // Bottom-Right
+      ctx.beginPath();
+      ctx.moveTo(w - bracketMargin - bracketLen, h - bracketMargin);
+      ctx.lineTo(w - bracketMargin, h - bracketMargin);
+      ctx.lineTo(w - bracketMargin, h - bracketMargin - bracketLen);
+      ctx.stroke();
+
+      if (zoom >= 5) {
+        // High-Zoom Tactical Grid Viewport
+        const cx = w / 2;
+        const cy = h / 2;
+        const ch = 12;
+
+        ctx.strokeStyle = "rgba(6, 182, 212, 0.35)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx - ch, cy);
+        ctx.lineTo(cx + ch, cy);
+        ctx.moveTo(cx, cy - ch);
+        ctx.lineTo(cx, cy + ch);
+        ctx.stroke();
+
+        const mapCenter = map.getCenter();
+        const latStr = `${Math.abs(mapCenter.lat).toFixed(2)}°${mapCenter.lat >= 0 ? "N" : "S"}`;
+        const lngStr = `${Math.abs(mapCenter.lng).toFixed(2)}°${mapCenter.lng >= 0 ? "E" : "W"}`;
+        ctx.font = "8.5px 'Martian Mono', monospace";
+        ctx.fillStyle = "rgba(6, 182, 212, 0.65)";
+        ctx.textAlign = "center";
+        ctx.fillText(`LOCAL RECON TARGET // ${latStr} ${lngStr} // Z${zoom.toFixed(1)} // HDG ${Math.round(bearing)}°`, cx, cy + 20);
+
+        ctx.restore();
+        if (scheduleNext) animId = requestAnimationFrame(() => renderFrame(true));
+        return;
+      }
 
       const { x, y, r } = globeCircle(map);
 
@@ -162,11 +215,13 @@ export function OrbitalHud() {
         const latStr = `${Math.abs(mapCenter.lat).toFixed(1)}°${mapCenter.lat >= 0 ? "N" : "S"}`;
         const lngStr = `${Math.abs(mapCenter.lng).toFixed(1)}°${mapCenter.lng >= 0 ? "E" : "W"}`;
         const zoomStr = `Z${map.getZoom().toFixed(1)}`;
+        const pitchStr = pitch > 2 ? ` // PITCH ${Math.round(pitch)}°` : "";
+        const bearingStr = Math.abs(bearing) > 2 ? ` // HDG ${Math.round((bearing + 360) % 360)}°` : "";
         ctx.font = "8.5px 'Martian Mono', monospace";
         ctx.fillStyle = "rgba(6, 182, 212, 0.65)";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillText(`GEO ${latStr} ${lngStr} // ${zoomStr}`, x, y + orbitR + 10);
+        ctx.fillText(`GEO ${latStr} ${lngStr} // ${zoomStr}${pitchStr}${bearingStr}`, x, y + orbitR + 10);
       }
 
       ctx.restore();

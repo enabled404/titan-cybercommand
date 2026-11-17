@@ -19,6 +19,7 @@ import { AsciiAtlas } from "@/components/map/ascii-atlas";
 import { DataTags } from "@/components/map/data-tags";
 import { BallisticEngine } from "@/components/map/ballistic-engine";
 import { OrbitalHud } from "@/components/map/orbital-hud";
+import { useMapInstance } from "@/components/map/map-instance";
 import { CombatFeedDrawer } from "@/components/hud/combat-feed";
 import { GlobeErrorBoundary } from "@/components/map/globe-error-boundary";
 import { useCombatFeed } from "@/stores/combat-feed";
@@ -170,6 +171,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
   const toggleMute = useAudioStore((s) => s.toggleMute);
+  const map = useMapInstance((s) => s.map);
 
   const window_ = useSituation((s) => s.window);
   const statuses = useSituation((s) => s.statuses);
@@ -393,6 +395,22 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       } else if (event.key === "?" || (event.shiftKey && event.key === "/")) {
         event.preventDefault();
         setShortcutsOpen((prev) => !prev);
+      } else if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        soundEngine.playClick();
+        if (map) map.zoomIn({ duration: 250 });
+      } else if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        soundEngine.playClick();
+        if (map) map.zoomOut({ duration: 250 });
+      } else if (event.key === "0") {
+        event.preventDefault();
+        soundEngine.playClick();
+        if (map) map.easeTo({ bearing: 0, pitch: 0, duration: 600, essential: true });
+      } else if (event.key === "3") {
+        event.preventDefault();
+        soundEngine.playClick();
+        if (map) map.easeTo({ pitch: map.getPitch() > 15 ? 0 : 45, duration: 600, essential: true });
       } else if (event.key.toLowerCase() === "j") {
         step(1);
       } else if (event.key === " ") {
@@ -411,7 +429,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute, replay.active, setReplay, amIAffectedOpen, setAmIAffectedOpen, threatRadarOpen, setThreatRadarOpen, threatMatrixOpen, setThreatMatrixOpen]);
+  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute, replay.active, setReplay, amIAffectedOpen, setAmIAffectedOpen, threatRadarOpen, setThreatRadarOpen, threatMatrixOpen, setThreatMatrixOpen, map]);
 
   const onHover = useCallback((incident: Incident | null, point: { x: number; y: number } | null) => {
     setHovered(incident && point ? { incident, x: point.x, y: point.y } : null);
@@ -578,7 +596,19 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       {!cinema && <CombatFeedDrawer incidents={filtered} shiftUp={patchDockOpen && patchDockFits} shiftLeft={panelOpen} />}
 
       {!cinema && !wargameSim?.active && (
-        <div className="pointer-events-auto fixed top-[66px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-cyan-500/40 bg-space/95 p-1 font-mono shadow-2xl backdrop-blur-xl transition-all hover:border-cyan-400">
+        <div
+          style={
+            mobile
+              ? undefined
+              : {
+                  left: `${patchInsetLeft + patchAvailableWidth / 2}px`,
+                }
+          }
+          className={cn(
+            "pointer-events-auto fixed top-[66px] z-20 flex items-center gap-1.5 rounded-full border border-cyan-500/40 bg-space/95 p-1 font-mono shadow-2xl backdrop-blur-xl transition-[left,border-color] duration-300 hover:border-cyan-400",
+            mobile ? "left-1/2 -translate-x-1/2" : "-translate-x-1/2",
+          )}
+        >
           <div className="flex items-center gap-1.5 pl-3 pr-1">
             <span className="relative flex size-2 items-center justify-center">
               <span className="absolute inset-0 rounded-full bg-cyan-400/50 motion-safe:animate-ping" />

@@ -290,6 +290,11 @@ export function BallisticEngine({
   const replay = useSituation((s) => s.replay);
   const selectedIncident = incidents.find((i) => i.id === selectedId);
 
+  const selectedIncidentRef = useRef(selectedIncident);
+  useEffect(() => {
+    selectedIncidentRef.current = selectedIncident;
+  }, [selectedIncident]);
+
   const botnetC2sRef = useRef(botnetC2s);
   useEffect(() => {
     botnetC2sRef.current = botnetC2s;
@@ -760,16 +765,26 @@ export function BallisticEngine({
             atk.trail.push({ x: screenX, y: screenY, time: now });
             atk.trail = atk.trail.filter((t) => now - t.time < 550);
 
-            // Spawn drifting ember spark particles
-            if (Math.random() < 0.65) {
+            // Spawn directional hyper-velocity exhaust embers
+            let thrustVx = 0;
+            let thrustVy = 0;
+            if (atk.trail.length >= 2) {
+              const prev = atk.trail[atk.trail.length - 2];
+              const tdx = screenX - prev.x;
+              const tdy = screenY - prev.y;
+              const tlen = Math.hypot(tdx, tdy) || 1;
+              thrustVx = -(tdx / tlen) * (1.2 + Math.random() * 1.5);
+              thrustVy = -(tdy / tlen) * (1.2 + Math.random() * 1.5);
+            }
+            if (Math.random() < 0.7) {
               atk.embers.push({
-                x: screenX + (Math.random() - 0.5) * 4,
-                y: screenY + (Math.random() - 0.5) * 4,
-                vx: (Math.random() - 0.5) * 1.2,
-                vy: (Math.random() - 0.5) * 1.2,
+                x: screenX + (Math.random() - 0.5) * 3,
+                y: screenY + (Math.random() - 0.5) * 3,
+                vx: thrustVx + (Math.random() - 0.5) * 0.8,
+                vy: thrustVy + (Math.random() - 0.5) * 0.8,
                 alpha: 1,
                 color: atk.color,
-                size: 1 + Math.random() * 1.5,
+                size: 1 + Math.random() * 1.6,
               });
             }
 
@@ -1059,6 +1074,116 @@ export function BallisticEngine({
             ctx.font = "8px 'Martian Mono', monospace";
             ctx.fillStyle = "#a5f3fc";
             ctx.fillText(`POSTURE: ${curRecon.grade} (${curRecon.score}/100)`, p.x, p.y + radius + 14);
+          } catch {
+            // Projection safety
+          }
+        }
+      }
+
+      // 5. Render Selected Incident Tactical Lock & Reticle
+      const curSelected = selectedIncidentRef.current;
+      if (curSelected && !curWargame?.active) {
+        const dist = angularDistance(center.lng, center.lat, curSelected.lon, curSelected.lat);
+        if (dist <= 88) {
+          try {
+            const p = map.project([curSelected.lon, curSelected.lat]);
+            ctx.save();
+            ctx.globalCompositeOperation = "lighter";
+
+            const pulse = (Math.sin(now * 0.005) + 1) * 0.5;
+            const r = 24 + pulse * 6;
+            const bracketSize = 8;
+            const lockColor = "#06b6d4";
+
+            // Dual Corner Brackets [ ]
+            ctx.strokeStyle = lockColor;
+            ctx.lineWidth = 1.8;
+
+            // Top-left bracket
+            ctx.beginPath();
+            ctx.moveTo(p.x - r, p.y - r + bracketSize);
+            ctx.lineTo(p.x - r, p.y - r);
+            ctx.lineTo(p.x - r + bracketSize, p.y - r);
+            ctx.stroke();
+
+            // Top-right bracket
+            ctx.beginPath();
+            ctx.moveTo(p.x + r - bracketSize, p.y - r);
+            ctx.lineTo(p.x + r, p.y - r);
+            ctx.lineTo(p.x + r, p.y - r + bracketSize);
+            ctx.stroke();
+
+            // Bottom-right bracket
+            ctx.beginPath();
+            ctx.moveTo(p.x + r, p.y + r - bracketSize);
+            ctx.lineTo(p.x + r, p.y + r);
+            ctx.lineTo(p.x + r - bracketSize, p.y + r);
+            ctx.stroke();
+
+            // Bottom-left bracket
+            ctx.beginPath();
+            ctx.moveTo(p.x - r + bracketSize, p.y + r);
+            ctx.lineTo(p.x - r, p.y + r);
+            ctx.lineTo(p.x - r, p.y + r - bracketSize);
+            ctx.stroke();
+
+            // Rotating Azimuth Compass Tick Ring
+            const spinAngle = now * 0.0012;
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(spinAngle);
+            ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 5]);
+            ctx.beginPath();
+            ctx.arc(0, 0, r + 7, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+
+            // Focal Crosshairs
+            ctx.strokeStyle = "rgba(6, 182, 212, 0.65)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(p.x - r - 8, p.y);
+            ctx.lineTo(p.x - r + 3, p.y);
+            ctx.moveTo(p.x + r - 3, p.y);
+            ctx.lineTo(p.x + r + 8, p.y);
+            ctx.moveTo(p.x, p.y - r - 8);
+            ctx.lineTo(p.x, p.y - r + 3);
+            ctx.moveTo(p.x, p.y + r - 3);
+            ctx.lineTo(p.x, p.y + r + 8);
+            ctx.stroke();
+
+            // Tactical Data Callout Tag
+            ctx.font = "bold 9px 'Martian Mono', monospace";
+            ctx.fillStyle = lockColor;
+            ctx.textAlign = "left";
+            const tagX = p.x + r + 12;
+            const tagY = p.y - 12;
+
+            // Callout connecting angled bracket line
+            ctx.strokeStyle = "rgba(6, 182, 212, 0.5)";
+            ctx.beginPath();
+            ctx.moveTo(p.x + r, p.y);
+            ctx.lineTo(tagX - 4, tagY + 4);
+            ctx.lineTo(tagX + 80, tagY + 4);
+            ctx.stroke();
+
+            // Text readouts
+            ctx.fillText(`TARGET: ${curSelected.victim.toUpperCase()}`, tagX, tagY);
+            ctx.font = "8px 'Martian Mono', monospace";
+            ctx.fillStyle = "#a5f3fc";
+            const coordsStr = `${Math.abs(curSelected.lat).toFixed(1)}°${curSelected.lat >= 0 ? "N" : "S"} ${Math.abs(curSelected.lon).toFixed(1)}°${curSelected.lon >= 0 ? "E" : "W"}`;
+            const statusStr = `${curSelected.status.toUpperCase()} // SEV-${curSelected.severity || 3}`;
+            ctx.fillText(`${coordsStr} // ${statusStr}`, tagX, tagY + 13);
+
+            if (curSelected.actor) {
+              ctx.fillStyle = "#fdba74";
+              ctx.fillText(`ACTOR: ${curSelected.actor.toUpperCase()}`, tagX, tagY + 23);
+            }
+
+            ctx.restore();
           } catch {
             // Projection safety
           }
