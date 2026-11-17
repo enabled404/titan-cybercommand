@@ -47,7 +47,7 @@ interface SituationState {
   tab: RailTab;
   cinema: boolean;
   tacticalCrt: boolean;
-  layers: { incidents: boolean; countries: boolean; outages: boolean; arcs: boolean; cables: boolean; ballistics: boolean; botnets: boolean };
+  layers: { incidents: boolean; countries: boolean; outages: boolean; arcs: boolean; cables: boolean; ballistics: boolean; botnets: boolean; grid: boolean };
   railOpen: boolean;
   wargameSim: WargameSimState | null;
   reconTarget: ReconTargetState | null;
@@ -94,7 +94,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   tab: "exploited",
   cinema: false,
   tacticalCrt: false,
-  layers: { incidents: true, countries: true, outages: true, arcs: true, cables: true, ballistics: true, botnets: true },
+  layers: { incidents: true, countries: true, outages: true, arcs: true, cables: true, ballistics: true, botnets: true, grid: true },
   railOpen: true,
   wargameSim: null,
   reconTarget: null,

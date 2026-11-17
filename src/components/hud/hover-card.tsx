@@ -27,7 +27,7 @@ export function HoverCard({ incident, x, y }: { incident: Incident; x: number; y
       {/* Threat Intel Provenance Chips */}
       <div className="mt-2.5 flex flex-wrap items-center gap-1 font-mono text-[9.5px]">
         {incident.actor && (
-          <span className="rounded bg-rose-500/15 px-1.5 py-0.5 font-bold text-rose-400 border border-rose-500/30">
+          <span className="rounded bg-amber-500/15 px-1.5 py-0.5 font-bold text-amber-300 border border-amber-500/30">
             {incident.actor.toUpperCase()}
           </span>
         )}

@@ -1,10 +1,21 @@
 "use client";
 
-import { StackSimple } from "@phosphor-icons/react";
+import {
+  ArrowsIn,
+  ArrowsOut,
+  Cube,
+  Minus,
+  NavigationArrow,
+  Plus,
+  StackSimple,
+} from "@phosphor-icons/react";
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 
 import { StatusMark } from "@/components/kit/status-mark";
+import { useMapInstance } from "@/components/map/map-instance";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { soundEngine } from "@/lib/audio/sound-engine";
 import { STATUS_LABEL, relativeTime } from "@/lib/format";
 import { useNow } from "@/lib/perf/use-now";
 import { TIP_JAR_URL } from "@/lib/site";
@@ -20,10 +31,12 @@ const LAYERS = [
   { id: "cables", label: "Subsea fiber optic cables" },
   { id: "ballistics", label: "Kinetic ballistic laser tracers" },
   { id: "botnets", label: "Botnet C2 command servers" },
+  { id: "grid", label: "Tactical cyber graticule" },
 ] as const;
 
-/** Map layers and the key to the map's marks. The status split itself lives in the left panel. */
+/** Map layers and tactical camera navigation controls. */
 export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt: string; feeds: Snapshot["feeds"]; shiftForPanel: boolean }) {
+  const map = useMapInstance((s) => s.map);
   const layers = useSituation((s) => s.layers);
   const toggleLayer = useSituation((s) => s.toggleLayer);
   const tacticalCrt = useSituation((s) => s.tacticalCrt);
@@ -32,16 +45,135 @@ export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt
   // The popover is prerendered with the page, so its "updated" time uses the server-safe clock.
   const now = useNow(Date.parse(generatedAt));
 
+  const [bearing, setBearing] = useState(0);
+  const [pitch, setPitch] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!map) return;
+    const updateAngles = () => {
+      setBearing(map.getBearing());
+      setPitch(map.getPitch());
+    };
+    updateAngles();
+    map.on("rotate", updateAngles);
+    map.on("pitch", updateAngles);
+    return () => {
+      map.off("rotate", updateAngles);
+      map.off("pitch", updateAngles);
+    };
+  }, [map]);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  const handleZoomIn = useCallback(() => {
+    soundEngine.playClick();
+    if (map) map.zoomIn({ duration: 250 });
+  }, [map]);
+
+  const handleZoomOut = useCallback(() => {
+    soundEngine.playClick();
+    if (map) map.zoomOut({ duration: 250 });
+  }, [map]);
+
+  const handleResetNorth = useCallback(() => {
+    soundEngine.playClick();
+    if (map) {
+      map.easeTo({ bearing: 0, pitch: 0, duration: 600, essential: true });
+    }
+  }, [map]);
+
+  const handleToggle3D = useCallback(() => {
+    soundEngine.playClick();
+    if (!map) return;
+    const targetPitch = pitch > 15 ? 0 : 45;
+    map.easeTo({ pitch: targetPitch, duration: 600, essential: true });
+  }, [map, pitch]);
+
+  const handleToggleFullscreen = useCallback(() => {
+    soundEngine.playClick();
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
   return (
     <div
       className={cn(
-        "pointer-events-auto absolute top-[76px] z-20 hidden transition-[right] duration-300 ease-out-expo md:block",
+        "pointer-events-auto absolute top-[76px] z-20 hidden items-center gap-1.5 transition-[right] duration-300 ease-out-expo md:flex",
         shiftForPanel ? "right-[480px]" : "right-4",
       )}
     >
+      {/* Tactical Camera Controls Group */}
+      <div className="glass-pill flex items-center divide-x divide-white/[0.08] rounded-full p-0.5 shadow-xl">
+        <button
+          type="button"
+          onClick={handleZoomIn}
+          className="press flex size-7 items-center justify-center rounded-l-full text-ink-2 hover:bg-white/10 hover:text-ink transition-colors"
+          title="Zoom in (+)"
+          aria-label="Zoom in"
+        >
+          <Plus className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          className="press flex size-7 items-center justify-center text-ink-2 hover:bg-white/10 hover:text-ink transition-colors"
+          title="Zoom out (-)"
+          aria-label="Zoom out"
+        >
+          <Minus className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={handleResetNorth}
+          className="press flex size-7 items-center justify-center text-ink-2 hover:bg-white/10 hover:text-ink transition-colors"
+          title={`Reset North (${Math.round(bearing)}°) (0)`}
+          aria-label="Reset North alignment"
+        >
+          <NavigationArrow
+            className="size-3.5 text-cyan-400 transition-transform duration-200"
+            style={{ transform: `rotate(${-bearing}deg)` }}
+            weight="fill"
+          />
+        </button>
+        <button
+          type="button"
+          onClick={handleToggle3D}
+          className={cn(
+            "press flex size-7 items-center justify-center rounded-r-full transition-colors",
+            pitch > 15 ? "bg-cyan-500/25 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.4)]" : "text-ink-2 hover:bg-white/10 hover:text-ink",
+          )}
+          title={pitch > 15 ? "Switch to 2D Nadir View (3)" : "Switch to 3D Tactical Pitch (3)"}
+          aria-label="Toggle 3D View"
+        >
+          <Cube className="size-3.5" weight={pitch > 15 ? "fill" : "regular"} />
+        </button>
+      </div>
+
+      {/* Fullscreen Toggle */}
+      <button
+        type="button"
+        onClick={handleToggleFullscreen}
+        className="press glass-pill flex size-8 items-center justify-center rounded-full text-ink-2 hover:bg-white/10 hover:text-ink transition-colors shadow-xl"
+        title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+        aria-label="Toggle Fullscreen Mode"
+      >
+        {isFullscreen ? <ArrowsIn className="size-3.5" /> : <ArrowsOut className="size-3.5" />}
+      </button>
+
+      {/* Layers & Key Popover */}
       <Popover>
         <PopoverTrigger
-          className="glass-pill press flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] text-ink-2 transition-colors hover:text-ink"
+          className="glass-pill press flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium text-ink-2 transition-colors hover:text-ink shadow-xl"
           aria-label="Map layers and key"
         >
           <StackSimple className="size-3.5" /> Layers

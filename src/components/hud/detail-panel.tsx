@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, FileCode, FileText, LinkSimple, ShareNetwork, ShieldCheck, Target, X } from "@phosphor-icons/react";
+import { ArrowUpRight, Crosshair, FileCode, FileText, LinkSimple, ShareNetwork, ShieldCheck, Target, X } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -15,6 +15,8 @@ import { OrgLogo } from "@/components/kit/org-logo";
 import { Segmented } from "@/components/kit/segmented";
 import { useExplainer } from "@/hooks/use-patch";
 import { StatusMark } from "@/components/kit/status-mark";
+import { flyToIncident, useMapInstance } from "@/components/map/map-instance";
+import { soundEngine } from "@/lib/audio/sound-engine";
 import { countryName } from "@/lib/countries";
 import { incidentPrompt } from "@/lib/deeplinks";
 import { STATUS_LABEL, TYPE_LABEL, epssPercent, placeLabel, recordsLabel, shortDate } from "@/lib/format";
@@ -175,6 +177,7 @@ function Checklist({ items }: { items: string[] }) {
 }
 
 export function IncidentPanel({ incident, related }: { incident: Incident; related: Incident[] }) {
+  const map = useMapInstance((s) => s.map);
   const select = useSituation((s) => s.select);
   const selectCve = useSituation((s) => s.selectCve);
   const selectActor = useSituation((s) => s.selectActor);
@@ -183,6 +186,14 @@ export function IncidentPanel({ incident, related }: { incident: Incident; relat
   const guidance = guidanceFor(incident);
   const url = `${SITE_URL}/incident/${incident.id}`;
   const primary = incident.sources[0]?.url ?? url;
+
+  const handleLocate = () => {
+    soundEngine.playClick();
+    if (map) {
+      flyToIncident(map, incident.lon, incident.lat, { zoom: 5.2, pitch: 42 });
+    }
+  };
+
   const facts = [
     recordsLabel(incident),
     TYPE_LABEL[incident.type],
@@ -203,15 +214,26 @@ export function IncidentPanel({ incident, related }: { incident: Incident; relat
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
           <StatusChip status={incident.status} />
-          <button
-            type="button"
-            onClick={() => setShareCardOpen(true)}
-            className="press flex h-7 items-center gap-1.5 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-3 font-mono text-[11px] font-bold text-cyan-200 shadow-sm transition-colors hover:bg-cyan-500/25"
-            title="Export 1-click formatted social media incident card"
-          >
-            <ShareNetwork className="size-3.5 text-cyan-400" />
-            <span>EXPORT SOCIAL CARD</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleLocate}
+              className="press flex h-7 items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 font-mono text-[11px] font-bold text-ink-2 shadow-sm transition-colors hover:bg-white/10 hover:text-ink"
+              title="Focus and pitch camera onto incident location on globe"
+            >
+              <Crosshair className="size-3.5 text-cyan-400" />
+              <span>LOCATE</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShareCardOpen(true)}
+              className="press flex h-7 items-center gap-1.5 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-3 font-mono text-[11px] font-bold text-cyan-200 shadow-sm transition-colors hover:bg-cyan-500/25"
+              title="Export 1-click formatted social media incident card"
+            >
+              <ShareNetwork className="size-3.5 text-cyan-400" />
+              <span>EXPORT SOCIAL CARD</span>
+            </button>
+          </div>
         </div>
         <p className="mt-2 text-[13px] leading-snug text-ink-3">{statusSentence(incident)}</p>
 

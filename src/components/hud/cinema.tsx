@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CaretLeft, CaretRight, Pause, Play } from "@phosphor-icons/react";
 
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BrandMark } from "@/components/icons/agents";
 import { DecryptText } from "@/components/kit/decrypt-text";
 import { StatusMark } from "@/components/kit/status-mark";
 import { useMapInstance } from "@/components/map/map-instance";
+import { soundEngine } from "@/lib/audio/sound-engine";
 import { countryName } from "@/lib/countries";
 import { STATUS_COLOR, STATUS_LABEL, TYPE_LABEL, placeLabel, recordsLabel, relativeTime } from "@/lib/format";
 import type { Incident } from "@/lib/types";
@@ -76,18 +78,21 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
   const [current, setCurrent] = useState<Incident | null>(null);
   const [phase, setPhase] = useState<"flying" | "dwell">("flying");
   const [index, setIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const tour = useMemo(() => tourOrder(incidents), [incidents]);
-  const runRef = useRef(0);
+  const timerRef = useRef<number | null>(null);
+  const visitRef = useRef<(i: number) => void>(() => {});
 
-  useEffect(() => {
-    if (!cinema || !map || !tour.length) return;
-    const run = ++runRef.current;
-    select(null);
-    let timer = 0;
-    const visit = (i: number) => {
-      if (runRef.current !== run) return;
-      const incident = tour[i % tour.length];
-      setIndex(i % tour.length);
+  const visit = useCallback(
+    (i: number) => {
+      if (!map || !tour.length) return;
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      const curIndex = (i + tour.length) % tour.length;
+      const incident = tour[curIndex];
+      setIndex(curIndex);
       setCurrent(incident);
       setPhase("flying");
       const precise = incident.geoBasis === "stated" || incident.geoBasis === "hq";
@@ -101,21 +106,73 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
         curve: 1.4,
         essential: true,
       });
-      timer = window.setTimeout(() => {
-        if (runRef.current !== run) return;
+      timerRef.current = window.setTimeout(() => {
         setPhase("dwell");
         map.easeTo({ bearing: map.getBearing() + 10, duration: DWELL_MS, easing: (t) => t });
-        timer = window.setTimeout(() => visit(i + 1), DWELL_MS);
+        timerRef.current = window.setTimeout(() => {
+          visitRef.current(curIndex + 1);
+        }, DWELL_MS);
       }, FLIGHT_MS);
-    };
-    visit(0);
+    },
+    [map, tour],
+  );
+
+  useEffect(() => {
+    visitRef.current = visit;
+  }, [visit]);
+
+  useEffect(() => {
+    if (!cinema || !map || !tour.length) return;
+    select(null);
+    if (!isPaused) {
+      timerRef.current = window.setTimeout(() => visit(index), 0);
+    } else {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
     return () => {
-      runRef.current += 1;
-      window.clearTimeout(timer);
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
       map.stop();
-      setCurrent(null);
     };
-  }, [cinema, map, tour, select]);
+  }, [cinema, isPaused, map, tour, select, visit, index]);
+
+  const handleTogglePause = useCallback(() => {
+    soundEngine.playClick();
+    setIsPaused((p) => !p);
+  }, []);
+
+  const handleNext = useCallback(() => {
+    soundEngine.playClick();
+    visit(index + 1);
+  }, [visit, index]);
+
+  const handlePrev = useCallback(() => {
+    soundEngine.playClick();
+    visit(index - 1);
+  }, [visit, index]);
+
+  useEffect(() => {
+    if (!cinema) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        handleTogglePause();
+      } else if (e.key === "ArrowRight" || e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        handleNext();
+      } else if (e.key === "ArrowLeft" || e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        handlePrev();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [cinema, handleTogglePause, handleNext, handlePrev]);
 
   if (!cinema) return null;
 
@@ -161,26 +218,58 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
           </div>
           <div className="mt-6 h-[2px] w-full overflow-hidden rounded-full bg-white/10">
             <div
-              key={`${current.id}-${phase}`}
+              key={`${current.id}-${phase}-${isPaused}`}
               className="h-full bg-ink motion-reduce:hidden"
               style={{
                 width: "100%",
                 transformOrigin: "left",
-                animation: `cinema-progress ${phase === "flying" ? FLIGHT_MS : DWELL_MS}ms linear forwards`,
+                animation: isPaused ? "none" : `cinema-progress ${phase === "flying" ? FLIGHT_MS : DWELL_MS}ms linear forwards`,
               }}
             />
           </div>
         </div>
       ) : null}
 
-      <div className="absolute bottom-5 right-6 flex items-center gap-4 text-[12.5px] text-ink-4 sm:right-10">
-        <span>Every cyber incident on Earth, live</span>
+      <div className="pointer-events-auto absolute bottom-5 right-6 flex items-center gap-3 text-[12.5px] text-ink-4 sm:right-10">
+        <div className="glass-pill flex items-center divide-x divide-white/[0.08] rounded-full p-0.5 shadow-xl">
+          <button
+            type="button"
+            onClick={handlePrev}
+            className="press flex size-7 items-center justify-center rounded-l-full text-ink-2 hover:bg-white/10 hover:text-ink transition-colors"
+            title="Previous incident (Left arrow / K)"
+            aria-label="Previous incident"
+          >
+            <CaretLeft className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleTogglePause}
+            className="press flex size-7 items-center justify-center text-ink-2 hover:bg-white/10 hover:text-ink transition-colors"
+            title={isPaused ? "Resume Patrol (Space)" : "Pause Patrol (Space)"}
+            aria-label={isPaused ? "Resume Patrol" : "Pause Patrol"}
+          >
+            {isPaused ? <Play className="size-3.5 text-cyan-400" weight="fill" /> : <Pause className="size-3.5" />}
+          </button>
+          <button
+            type="button"
+            onClick={handleNext}
+            className="press flex size-7 items-center justify-center rounded-r-full text-ink-2 hover:bg-white/10 hover:text-ink transition-colors"
+            title="Next incident (Right arrow / J)"
+            aria-label="Next incident"
+          >
+            <CaretRight className="size-3.5" />
+          </button>
+        </div>
+
         <button
           type="button"
-          onClick={() => setCinema(false)}
-          className="pointer-events-auto rounded-full px-3 py-1.5 text-ink-2 ring-1 ring-white/15 hover:text-ink"
+          onClick={() => {
+            soundEngine.playClick();
+            setCinema(false);
+          }}
+          className="press glass-pill rounded-full px-3 py-1.5 font-mono text-[11px] text-ink-2 hover:text-ink shadow-xl"
         >
-          Esc to exit
+          ESC TO EXIT
         </button>
       </div>
       <style>{`@keyframes cinema-progress { from { transform: scaleX(0) } to { transform: scaleX(1) } }`}</style>
