@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCircle, Copy, Crosshair, MagnifyingGlass, ShieldCheck, ShieldWarning, WarningCircle, X } from "@phosphor-icons/react";
+import { ArrowUpRight, Check, CheckCircle, Copy, Crosshair, MagnifyingGlass, ShieldCheck, ShieldWarning, WarningCircle, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { useMapInstance } from "@/components/map/map-instance";
@@ -527,6 +527,32 @@ export function ReconScannerModal({ open, onClose, snapshot }: { open: boolean; 
                       : `IPv4: ${result.ipAddresses.join(", ") || "No A record returned"}`}
                   </span>
                 </div>
+                {!result.nxdomain && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <a
+                      href={`https://www.virustotal.com/gui/domain/${encodeURIComponent(result.domain)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="press inline-flex items-center gap-1 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/20 transition-colors"
+                      title="Inspect domain security and malware detections on VirusTotal"
+                    >
+                      <span>VIRUSTOTAL INTEL</span>
+                      <ArrowUpRight size={10} />
+                    </a>
+                    {result.ipAddresses[0] && (
+                      <a
+                        href={`https://www.virustotal.com/gui/ip-address/${encodeURIComponent(result.ipAddresses[0])}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="press inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-ink-3 hover:bg-white/10 hover:text-ink transition-colors"
+                        title="Inspect IPv4 address telemetry on VirusTotal"
+                      >
+                        <span>VT IP ({result.ipAddresses[0]})</span>
+                        <ArrowUpRight size={10} />
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">

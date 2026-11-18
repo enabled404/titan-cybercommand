@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ArrowRight, Crosshair, FileCode, FileText, X } from "@phosphor-icons/react";
+import { ArrowRight, ArrowUpRight, Crosshair, FileCode, FileText, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { TacticalDialog } from "@/components/ui/tactical-dialog";
@@ -298,6 +298,17 @@ export function ThreatActorModal({
             <FileText size={14} className="text-cyan-400" />
             <span>Dossier (.md)</span>
           </button>
+
+          <a
+            href={`https://www.virustotal.com/gui/search/${encodeURIComponent(profile.name)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="press flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 font-mono text-xs text-ink-3 hover:text-ink transition-colors"
+            title="Inspect threat actor malware IOCs and telemetry on VirusTotal"
+          >
+            <ArrowUpRight size={14} className="text-cyan-400" />
+            <span>VirusTotal IOCs</span>
+          </a>
         </div>
 
         <button

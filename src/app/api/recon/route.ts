@@ -109,6 +109,43 @@ export async function GET(request: Request) {
       }
     }
 
+    let vtStats: { malicious: number; suspicious: number; harmless: number; undetected: number; reportUrl: string } | null = null;
+    const vtKey = process.env.VIRUSTOTAL_API_KEY;
+    if (vtKey && !nxdomain) {
+      try {
+        const vtRes = await fetch(`https://www.virustotal.com/api/v3/domains/${encodeURIComponent(domain)}`, {
+          headers: { "x-apikey": vtKey, Accept: "application/json" },
+          signal: AbortSignal.timeout(3000),
+        });
+        if (vtRes.ok) {
+          const vtData = (await vtRes.json()) as {
+            data?: {
+              attributes?: {
+                last_analysis_stats?: {
+                  malicious?: number;
+                  suspicious?: number;
+                  harmless?: number;
+                  undetected?: number;
+                };
+              };
+            };
+          };
+          const s = vtData.data?.attributes?.last_analysis_stats;
+          if (s) {
+            vtStats = {
+              malicious: s.malicious ?? 0,
+              suspicious: s.suspicious ?? 0,
+              harmless: s.harmless ?? 0,
+              undetected: s.undetected ?? 0,
+              reportUrl: `https://www.virustotal.com/gui/domain/${encodeURIComponent(domain)}`,
+            };
+          }
+        }
+      } catch {
+        // Fall back to passive report URL
+      }
+    }
+
     return NextResponse.json(
       {
         domain,
@@ -119,6 +156,9 @@ export async function GET(request: Request) {
         txt: txtStrings,
         dmarc: dmarcStrings,
         partial: !aRes || !txtRes || !dmarcRes || !mxRes,
+        virustotal: vtStats ?? {
+          reportUrl: `https://www.virustotal.com/gui/domain/${encodeURIComponent(domain)}`,
+        },
       },
       {
         headers: {
