@@ -81,7 +81,13 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
   const [isPaused, setIsPaused] = useState(false);
   const tour = useMemo(() => tourOrder(incidents), [incidents]);
   const timerRef = useRef<number | null>(null);
+  const indexRef = useRef(0);
+  const isPausedRef = useRef(false);
   const visitRef = useRef<(i: number) => void>(() => {});
+
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
 
   const visit = useCallback(
     (i: number) => {
@@ -90,7 +96,8 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      const curIndex = (i + tour.length) % tour.length;
+      const curIndex = ((i % tour.length) + tour.length) % tour.length;
+      indexRef.current = curIndex;
       const incident = tour[curIndex];
       setIndex(curIndex);
       setCurrent(incident);
@@ -110,7 +117,9 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
         setPhase("dwell");
         map.easeTo({ bearing: map.getBearing() + 10, duration: DWELL_MS, easing: (t) => t });
         timerRef.current = window.setTimeout(() => {
-          visitRef.current(curIndex + 1);
+          if (!isPausedRef.current) {
+            visitRef.current(curIndex + 1);
+          }
         }, DWELL_MS);
       }, FLIGHT_MS);
     },
@@ -124,37 +133,44 @@ export function CinemaMode({ incidents }: { incidents: Incident[] }) {
   useEffect(() => {
     if (!cinema || !map || !tour.length) return;
     select(null);
-    if (!isPaused) {
-      timerRef.current = window.setTimeout(() => visit(index), 0);
-    } else {
-      if (timerRef.current !== null) {
-        window.clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    }
+    indexRef.current = 0;
+    timerRef.current = window.setTimeout(() => visit(0), 0);
     return () => {
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;
       }
       map.stop();
+      setCurrent(null);
     };
-  }, [cinema, isPaused, map, tour, select, visit, index]);
+  }, [cinema, map, tour, select, visit]);
 
   const handleTogglePause = useCallback(() => {
     soundEngine.playClick();
-    setIsPaused((p) => !p);
-  }, []);
+    setIsPaused((prev) => {
+      const next = !prev;
+      if (next) {
+        if (timerRef.current !== null) {
+          window.clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+        if (map) map.stop();
+      } else {
+        visit(indexRef.current);
+      }
+      return next;
+    });
+  }, [map, visit]);
 
   const handleNext = useCallback(() => {
     soundEngine.playClick();
-    visit(index + 1);
-  }, [visit, index]);
+    visit(indexRef.current + 1);
+  }, [visit]);
 
   const handlePrev = useCallback(() => {
     soundEngine.playClick();
-    visit(index - 1);
-  }, [visit, index]);
+    visit(indexRef.current - 1);
+  }, [visit]);
 
   useEffect(() => {
     if (!cinema) return;

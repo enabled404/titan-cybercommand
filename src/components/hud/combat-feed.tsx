@@ -156,6 +156,14 @@ export function CombatFeedDrawer({
                             essential: true,
                           });
                         }
+                      } else if (item.targetCoords && map) {
+                        map.flyTo({
+                          center: item.targetCoords,
+                          zoom: 4.8,
+                          pitch: 45,
+                          duration: 2200,
+                          essential: true,
+                        });
                       }
                     }}
                     title="Click to track verified incident on globe"

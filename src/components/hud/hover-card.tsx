@@ -8,10 +8,11 @@ import type { Incident } from "@/lib/types";
 
 export function HoverCard({ incident, x, y }: { incident: Incident; x: number; y: number }) {
   const flip = typeof window !== "undefined" && x > window.innerWidth - 340;
+  const flipY = typeof window !== "undefined" && y > window.innerHeight - 220;
   return (
     <div
       className="pointer-events-none absolute z-40 w-[300px] rounded-[16px] bg-surface p-3.5 ring-1 ring-hairline-2 shadow-2xl backdrop-blur motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-150"
-      style={{ left: flip ? x - 316 : x + 18, top: Math.max(72, y - 28) }}
+      style={{ left: flip ? x - 316 : x + 18, top: flipY ? Math.max(72, y - 190) : Math.max(72, y - 28) }}
     >
       <div className="flex items-center gap-2.5">
         <OrgLogo name={incident.victim} domain={incident.domain} size={32} className="rounded-[9px]" />

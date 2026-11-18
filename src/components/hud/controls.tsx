@@ -48,6 +48,14 @@ export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt
   const [bearing, setBearing] = useState(0);
   const [pitch, setPitch] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     if (!map) return;
@@ -108,8 +116,9 @@ export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt
   return (
     <div
       className={cn(
-        "pointer-events-auto absolute top-[76px] z-20 hidden items-center gap-1.5 transition-[right] duration-300 ease-out-expo md:flex",
-        shiftForPanel ? "right-[480px]" : "right-4",
+        "pointer-events-auto z-20 flex items-center gap-1.5 transition-all duration-300 ease-out-expo",
+        "fixed bottom-4 right-3 md:absolute md:bottom-auto md:top-[76px]",
+        shiftForPanel ? "md:right-[480px]" : "md:right-4",
       )}
     >
       {/* Tactical Camera Controls Group */}
@@ -159,11 +168,11 @@ export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt
         </button>
       </div>
 
-      {/* Fullscreen Toggle */}
+      {/* Fullscreen Toggle (Hidden on touch mobile where browser handles viewport) */}
       <button
         type="button"
         onClick={handleToggleFullscreen}
-        className="press glass-pill flex size-8 items-center justify-center rounded-full text-ink-2 hover:bg-white/10 hover:text-ink transition-colors shadow-xl"
+        className="press glass-pill hidden sm:flex size-8 items-center justify-center rounded-full text-ink-2 hover:bg-white/10 hover:text-ink transition-colors shadow-xl"
         title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
         aria-label="Toggle Fullscreen Mode"
       >
@@ -176,9 +185,14 @@ export function MapControls({ generatedAt, feeds, shiftForPanel }: { generatedAt
           className="glass-pill press flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium text-ink-2 transition-colors hover:text-ink shadow-xl"
           aria-label="Map layers and key"
         >
-          <StackSimple className="size-3.5" /> Layers
+          <StackSimple className="size-3.5" /> <span className="hidden xs:inline">Layers</span>
         </PopoverTrigger>
-        <PopoverContent side="bottom" align="end" className="w-72 rounded-[16px] border-0 bg-surface p-1.5 ring-1 ring-hairline-2 shadow-xl">
+        <PopoverContent
+          side={isMobile ? "top" : "bottom"}
+          align="end"
+          sideOffset={8}
+          className="w-72 max-h-[min(500px,80vh)] overflow-y-auto rounded-[16px] border-0 bg-surface p-1.5 ring-1 ring-hairline-2 shadow-xl"
+        >
           <p className="px-2.5 pb-1 pt-2 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-4">Layers</p>
           {LAYERS.map((layer) => (
             <label

@@ -152,32 +152,39 @@ export function OrbitalHud() {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // 3. Degree Ticks (every 30 deg)
+        // 3. Dynamic Rotating Compass Degree Ticks (synchronized with camera bearing)
         for (let deg = 0; deg < 360; deg += 30) {
-          const rad = (deg * Math.PI) / 180;
+          const rad = ((deg - bearing) * Math.PI) / 180;
           const cos = Math.cos(rad);
           const sin = Math.sin(rad);
 
-          const p1x = x + cos * (orbitR - 4);
-          const p1y = y + sin * (orbitR - 4);
-          const p2x = x + cos * (orbitR + 4);
-          const p2y = y + sin * (orbitR + 4);
+          const isNorth = deg === 270;
+          const isCardinal = deg % 90 === 0;
 
-          ctx.strokeStyle = deg % 90 === 0 ? "rgba(6, 182, 212, 0.45)" : "rgba(255, 255, 255, 0.15)";
-          ctx.lineWidth = deg % 90 === 0 ? 1.5 : 0.8;
+          const p1x = x + cos * (orbitR - (isNorth ? 6 : 4));
+          const p1y = y + sin * (orbitR - (isNorth ? 6 : 4));
+          const p2x = x + cos * (orbitR + (isNorth ? 6 : 4));
+          const p2y = y + sin * (orbitR + (isNorth ? 6 : 4));
+
+          ctx.strokeStyle = isNorth
+            ? "#06b6d4"
+            : isCardinal
+              ? "rgba(6, 182, 212, 0.55)"
+              : "rgba(255, 255, 255, 0.15)";
+          ctx.lineWidth = isNorth ? 2 : isCardinal ? 1.4 : 0.8;
           ctx.beginPath();
           ctx.moveTo(p1x, p1y);
           ctx.lineTo(p2x, p2y);
           ctx.stroke();
 
           // Cardinal marks (N, E, S, W)
-          if (deg % 90 === 0) {
+          if (isCardinal) {
             const label = deg === 270 ? "N" : deg === 0 ? "E" : deg === 90 ? "S" : "W";
-            ctx.font = "8.5px 'Martian Mono', monospace";
-            ctx.fillStyle = "rgba(6, 182, 212, 0.7)";
+            ctx.font = isNorth ? "bold 9.5px 'Martian Mono', monospace" : "8.5px 'Martian Mono', monospace";
+            ctx.fillStyle = isNorth ? "#22d3ee" : "rgba(6, 182, 212, 0.7)";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(label, x + cos * (orbitR + 14), y + sin * (orbitR + 14));
+            ctx.fillText(label, x + cos * (orbitR + 15), y + sin * (orbitR + 15));
           }
         }
 
