@@ -29,11 +29,17 @@ export async function GET(request: Request) {
       },
     });
   }
+  const rawType = res.headers.get("content-type") ?? "image/png";
+  const contentType = /^image\/(png|x-icon|vnd\.microsoft\.icon|jpeg|webp|gif|svg\+xml)$/i.test(rawType)
+    ? rawType
+    : "image/png";
   const body = await res.arrayBuffer();
   return new NextResponse(body, {
     headers: {
-      "Content-Type": res.headers.get("content-type") ?? "image/png",
+      "Content-Type": contentType,
       "Cache-Control": "public, max-age=604800, s-maxage=2592000, immutable",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'",
     },
   });
 }
