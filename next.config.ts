@@ -69,6 +69,7 @@ const nextConfig: NextConfig = {
     },
   },
   experimental: {
+    agentUpgrade: "security",
     // One build worker: collecting page data and prerendering share a single in-process snapshot and
     // explainer cache, instead of each worker rebuilding the pipeline and bursting Valyu's rate limits.
     cpus: 1,
