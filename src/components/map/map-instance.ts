@@ -18,12 +18,18 @@ export const useMapInstance = create<MapInstanceState>((set) => ({
   setReady: (ready) => set({ ready }),
 }));
 
-export function flyToIncident(map: MapLibreMap, lon: number, lat: number, opts: { zoom?: number; pitch?: number; duration?: number } = {}): void {
+export function flyToIncident(
+  map: MapLibreMap,
+  lon: number,
+  lat: number,
+  opts: { zoom?: number; pitch?: number; duration?: number; padding?: { left: number; right: number; top: number; bottom: number } } = {},
+): void {
   map.flyTo({
     center: [lon, lat],
     zoom: opts.zoom ?? Math.max(map.getZoom(), 4.2),
     pitch: opts.pitch ?? 35,
     bearing: map.getBearing(),
+    padding: opts.padding ?? map.getPadding(),
     duration: opts.duration ?? 2600,
     curve: 1.5,
     essential: true,

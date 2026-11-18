@@ -30,7 +30,7 @@ interface BallisticAttack {
   duration: number; // ms
   arcHeight: number; // px peak
   points: [number, number][]; // Pre-calculated Great Circle geodesic points
-  trail: { x: number; y: number; time: number }[];
+  trail: { x: number; y: number; lon: number; lat: number; altOffset: number; time: number }[];
   embers: EmberParticle[];
 }
 
@@ -374,6 +374,7 @@ export function BallisticEngine({
         verificationStatus: target.status,
         sourceName: target.sources?.[0]?.publisher || target.origin.toUpperCase(),
         cve: target.cves?.[0],
+        targetCoords: [target.lon, target.lat],
       });
 
       const attack: BallisticAttack = {
@@ -489,6 +490,7 @@ export function BallisticEngine({
           verificationStatus: target.status,
           sourceName: target.sources?.[0]?.publisher || target.origin.toUpperCase(),
           cve: target.cves?.[0],
+          targetCoords: [target.lon, target.lat],
         });
 
         attacksRef.current.push({
@@ -524,6 +526,7 @@ export function BallisticEngine({
             severity: 4,
             color: "#ff2233",
             status: "ENGAGED",
+            targetCoords: [curWargame.coords[0], curWargame.coords[1]],
           });
 
           attacksRef.current.push({
@@ -595,6 +598,7 @@ export function BallisticEngine({
               color: "#d946ef",
               status: "ENGAGED",
               sourceName: c2.framework,
+              targetCoords: [hub.lon, hub.lat],
             });
 
             attacksRef.current.push({
@@ -761,15 +765,40 @@ export function BallisticEngine({
             const screenX = p.x + (dirX / dirLen) * altOffset;
             const screenY = p.y + (dirY / dirLen) * altOffset;
 
-            // Append trail point
-            atk.trail.push({ x: screenX, y: screenY, time: now });
+            // Append trail point with full geographic and altitude coordinates
+            atk.trail.push({ x: screenX, y: screenY, lon: curLon, lat: curLat, altOffset, time: now });
             atk.trail = atk.trail.filter((t) => now - t.time < 550);
+
+            // Dynamically project trail points with current camera frame
+            const screenTrail: { x: number; y: number }[] = [];
+            for (const t of atk.trail) {
+              const td = angularDistance(center.lng, center.lat, t.lon, t.lat);
+              if (td <= 88) {
+                try {
+                  const tp = map.project([t.lon, t.lat]);
+                  const trdx = tp.x - centerProj.x;
+                  const trdy = tp.y - centerProj.y;
+                  const trdist = Math.hypot(trdx, trdy);
+                  const tnormX = trdist > 0.5 ? trdx / trdist : 0;
+                  const tnormY = trdist > 0.5 ? trdy / trdist : -1;
+                  const tdirX = tnormX * globeBlend;
+                  const tdirY = tnormY * globeBlend - (1 - globeBlend);
+                  const tdirLen = Math.hypot(tdirX, tdirY) || 1;
+                  screenTrail.push({
+                    x: tp.x + (tdirX / tdirLen) * t.altOffset,
+                    y: tp.y + (tdirY / tdirLen) * t.altOffset,
+                  });
+                } catch {
+                  screenTrail.push({ x: t.x, y: t.y });
+                }
+              }
+            }
 
             // Spawn directional hyper-velocity exhaust embers
             let thrustVx = 0;
             let thrustVy = 0;
-            if (atk.trail.length >= 2) {
-              const prev = atk.trail[atk.trail.length - 2];
+            if (screenTrail.length >= 2) {
+              const prev = screenTrail[screenTrail.length - 2];
               const tdx = screenX - prev.x;
               const tdy = screenY - prev.y;
               const tlen = Math.hypot(tdx, tdy) || 1;
@@ -789,7 +818,7 @@ export function BallisticEngine({
             }
 
             // Draw glowing luminous laser trail (triple-pass laser bloom with additive photon glow)
-            if (atk.trail.length > 1) {
+            if (screenTrail.length > 1) {
               ctx.lineCap = "round";
               ctx.lineJoin = "round";
               ctx.globalCompositeOperation = "lighter";
@@ -799,9 +828,9 @@ export function BallisticEngine({
               ctx.strokeStyle = atk.color;
               ctx.globalAlpha = 0.35;
               ctx.beginPath();
-              ctx.moveTo(atk.trail[0].x, atk.trail[0].y);
-              for (let i = 1; i < atk.trail.length; i++) {
-                ctx.lineTo(atk.trail[i].x, atk.trail[i].y);
+              ctx.moveTo(screenTrail[0].x, screenTrail[0].y);
+              for (let i = 1; i < screenTrail.length; i++) {
+                ctx.lineTo(screenTrail[i].x, screenTrail[i].y);
               }
               ctx.stroke();
 
@@ -810,9 +839,9 @@ export function BallisticEngine({
               ctx.strokeStyle = atk.color;
               ctx.globalAlpha = 0.88;
               ctx.beginPath();
-              ctx.moveTo(atk.trail[0].x, atk.trail[0].y);
-              for (let i = 1; i < atk.trail.length; i++) {
-                ctx.lineTo(atk.trail[i].x, atk.trail[i].y);
+              ctx.moveTo(screenTrail[0].x, screenTrail[0].y);
+              for (let i = 1; i < screenTrail.length; i++) {
+                ctx.lineTo(screenTrail[i].x, screenTrail[i].y);
               }
               ctx.stroke();
 
@@ -821,9 +850,9 @@ export function BallisticEngine({
               ctx.strokeStyle = "#ffffff";
               ctx.globalAlpha = 0.95;
               ctx.beginPath();
-              ctx.moveTo(atk.trail[0].x, atk.trail[0].y);
-              for (let i = 1; i < atk.trail.length; i++) {
-                ctx.lineTo(atk.trail[i].x, atk.trail[i].y);
+              ctx.moveTo(screenTrail[0].x, screenTrail[0].y);
+              for (let i = 1; i < screenTrail.length; i++) {
+                ctx.lineTo(screenTrail[i].x, screenTrail[i].y);
               }
               ctx.stroke();
 
@@ -1093,7 +1122,12 @@ export function BallisticEngine({
             const pulse = (Math.sin(now * 0.005) + 1) * 0.5;
             const r = 24 + pulse * 6;
             const bracketSize = 8;
-            const lockColor = "#06b6d4";
+            const lockColor =
+              curSelected.status === "confirmed"
+                ? "#ef4444"
+                : curSelected.status === "reported"
+                  ? "#f59e0b"
+                  : "#38bdf8";
 
             // Dual Corner Brackets [ ]
             ctx.strokeStyle = lockColor;
@@ -1132,7 +1166,8 @@ export function BallisticEngine({
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(spinAngle);
-            ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
+            ctx.strokeStyle = lockColor;
+            ctx.globalAlpha = 0.4;
             ctx.lineWidth = 1;
             ctx.setLineDash([3, 5]);
             ctx.beginPath();
@@ -1142,7 +1177,8 @@ export function BallisticEngine({
             ctx.restore();
 
             // Focal Crosshairs
-            ctx.strokeStyle = "rgba(6, 182, 212, 0.65)";
+            ctx.strokeStyle = lockColor;
+            ctx.globalAlpha = 0.65;
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(p.x - r - 8, p.y);
@@ -1157,30 +1193,50 @@ export function BallisticEngine({
 
             // Tactical Data Callout Tag
             ctx.font = "bold 9px 'Martian Mono', monospace";
-            ctx.fillStyle = lockColor;
-            ctx.textAlign = "left";
-            const tagX = p.x + r + 12;
-            const tagY = p.y - 12;
+            const victimClean = curSelected.victim.length > 28 ? `${curSelected.victim.slice(0, 26).toUpperCase()}..` : curSelected.victim.toUpperCase();
+            const targetText = `TARGET: ${victimClean}`;
+            const coordsStr = `${Math.abs(curSelected.lat).toFixed(1)}°${curSelected.lat >= 0 ? "N" : "S"} ${Math.abs(curSelected.lon).toFixed(1)}°${curSelected.lon >= 0 ? "E" : "W"}`;
+            const statusStr = `${curSelected.status.toUpperCase()} // SEV-${curSelected.severity || 3}`;
+            const actorStr = curSelected.actor ? `ACTOR: ${curSelected.actor.toUpperCase()}` : "";
+
+            const textW = Math.max(
+              90,
+              ctx.measureText(targetText).width,
+              ctx.measureText(`${coordsStr} // ${statusStr}`).width,
+              actorStr ? ctx.measureText(actorStr).width : 0,
+            );
+
+            const flipLeft = p.x > width - textW - 40;
+            const tagX = flipLeft ? p.x - r - 14 : p.x + r + 14;
+            const tagY = Math.max(30, Math.min(height - 40, p.y - 12));
 
             // Callout connecting angled bracket line
-            ctx.strokeStyle = "rgba(6, 182, 212, 0.5)";
+            ctx.strokeStyle = lockColor;
+            ctx.globalAlpha = 0.55;
             ctx.beginPath();
-            ctx.moveTo(p.x + r, p.y);
-            ctx.lineTo(tagX - 4, tagY + 4);
-            ctx.lineTo(tagX + 80, tagY + 4);
+            if (flipLeft) {
+              ctx.moveTo(p.x - r, p.y);
+              ctx.lineTo(tagX + 4, tagY + 4);
+              ctx.lineTo(tagX - textW, tagY + 4);
+            } else {
+              ctx.moveTo(p.x + r, p.y);
+              ctx.lineTo(tagX - 4, tagY + 4);
+              ctx.lineTo(tagX + textW, tagY + 4);
+            }
             ctx.stroke();
 
             // Text readouts
-            ctx.fillText(`TARGET: ${curSelected.victim.toUpperCase()}`, tagX, tagY);
+            ctx.globalAlpha = 1;
+            ctx.textAlign = flipLeft ? "right" : "left";
+            ctx.fillStyle = lockColor;
+            ctx.fillText(targetText, tagX, tagY);
             ctx.font = "8px 'Martian Mono', monospace";
             ctx.fillStyle = "#a5f3fc";
-            const coordsStr = `${Math.abs(curSelected.lat).toFixed(1)}°${curSelected.lat >= 0 ? "N" : "S"} ${Math.abs(curSelected.lon).toFixed(1)}°${curSelected.lon >= 0 ? "E" : "W"}`;
-            const statusStr = `${curSelected.status.toUpperCase()} // SEV-${curSelected.severity || 3}`;
             ctx.fillText(`${coordsStr} // ${statusStr}`, tagX, tagY + 13);
 
-            if (curSelected.actor) {
+            if (actorStr) {
               ctx.fillStyle = "#fdba74";
-              ctx.fillText(`ACTOR: ${curSelected.actor.toUpperCase()}`, tagX, tagY + 23);
+              ctx.fillText(actorStr, tagX, tagY + 23);
             }
 
             ctx.restore();

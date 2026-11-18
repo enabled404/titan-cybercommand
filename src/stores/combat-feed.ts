@@ -17,6 +17,7 @@ export interface CombatIntercept {
   verificationStatus?: "confirmed" | "reported" | "claimed" | "precautionary" | "disputed";
   sourceName?: string;
   cve?: string;
+  targetCoords?: [number, number];
 }
 
 interface CombatFeedState {

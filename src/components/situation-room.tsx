@@ -395,25 +395,25 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       } else if (event.key === "?" || (event.shiftKey && event.key === "/")) {
         event.preventDefault();
         setShortcutsOpen((prev) => !prev);
-      } else if (event.key === "+" || event.key === "=") {
+      } else if (!cinema && (event.key === "+" || event.key === "=")) {
         event.preventDefault();
         soundEngine.playClick();
         if (map) map.zoomIn({ duration: 250 });
-      } else if (event.key === "-" || event.key === "_") {
+      } else if (!cinema && (event.key === "-" || event.key === "_")) {
         event.preventDefault();
         soundEngine.playClick();
         if (map) map.zoomOut({ duration: 250 });
-      } else if (event.key === "0") {
+      } else if (!cinema && event.key === "0") {
         event.preventDefault();
         soundEngine.playClick();
         if (map) map.easeTo({ bearing: 0, pitch: 0, duration: 600, essential: true });
-      } else if (event.key === "3") {
+      } else if (!cinema && event.key === "3") {
         event.preventDefault();
         soundEngine.playClick();
         if (map) map.easeTo({ pitch: map.getPitch() > 15 ? 0 : 45, duration: 600, essential: true });
-      } else if (event.key.toLowerCase() === "j") {
+      } else if (!cinema && event.key.toLowerCase() === "j") {
         step(1);
-      } else if (event.key === " ") {
+      } else if (!cinema && event.key === " ") {
         if (
           target?.closest(
             "button, a[href], select, summary, input, textarea, [role='button'], [role='switch'], [role='checkbox'], [role='radio'], [role='menuitem'], [role='option'], [role='tab'], [role='slider'], [role='combobox'], [contenteditable='true']",
@@ -423,7 +423,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
         }
         event.preventDefault();
         step(1);
-      } else if (event.key.toLowerCase() === "k") {
+      } else if (!cinema && event.key.toLowerCase() === "k") {
         step(-1);
       }
     };
