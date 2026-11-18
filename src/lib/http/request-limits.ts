@@ -23,6 +23,9 @@ export function requestLimits(path: string, method: string, ip: string): Limit[]
   } else if (path === "/api/check") {
     add("check-burst", 10);
     add("check-hour", 60, HOUR);
+  } else if (path === "/api/recon") {
+    add("recon-burst", 20);
+    add("recon-hour", 120, HOUR);
   } else if (path === "/api/mcp") {
     add("mcp-burst", 30);
     add("mcp-hour", 300, HOUR);
