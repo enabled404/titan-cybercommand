@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, CheckCircle, Copy, ShieldCheck, ShieldWarning, Sparkle, WarningCircle, X } from "@phosphor-icons/react";
+import { ArrowRight, ArrowUpRight, CheckCircle, Copy, ShieldCheck, ShieldWarning, Sparkle, WarningCircle, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { soundEngine } from "@/lib/audio/sound-engine";
@@ -546,7 +546,7 @@ export function AmIAffectedHero({
 
           {/* Action buttons footer */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 onClick={copyExecutiveSummary}
@@ -563,6 +563,16 @@ export function AmIAffectedHero({
                 <Sparkle size={12} />
                 <span>TRACK IN STACK</span>
               </button>
+              <a
+                href={`https://www.virustotal.com/gui/domain/${encodeURIComponent(report.domain)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="press flex items-center gap-1 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 font-mono text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/20 transition-colors"
+                title="Inspect domain security and malware detections on VirusTotal"
+              >
+                <span>VIRUSTOTAL</span>
+                <ArrowUpRight size={11} />
+              </a>
             </div>
             <button
               type="button"
