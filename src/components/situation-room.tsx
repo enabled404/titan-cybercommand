@@ -19,6 +19,8 @@ import { AsciiAtlas } from "@/components/map/ascii-atlas";
 import { DataTags } from "@/components/map/data-tags";
 import { BallisticEngine } from "@/components/map/ballistic-engine";
 import { OrbitalHud } from "@/components/map/orbital-hud";
+import { OrbitalSurveillance } from "@/components/map/orbital-surveillance";
+import { SubseaCablesPulse } from "@/components/map/subsea-cables-pulse";
 import { useMapInstance } from "@/components/map/map-instance";
 import { CombatFeedDrawer } from "@/components/hud/combat-feed";
 import { GlobeErrorBoundary } from "@/components/map/globe-error-boundary";
@@ -199,6 +201,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
   const setThreatMatrixOpen = useSituation((s) => s.setThreatMatrixOpen);
   const actorFilter = useSituation((s) => s.actorFilter);
   const setActorFilter = useSituation((s) => s.setActorFilter);
+  const toggleLayer = useSituation((s) => s.toggleLayer);
   const [heroDomain, setHeroDomain] = useState("");
   const heroInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -388,6 +391,14 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
       } else if (event.key.toLowerCase() === "m") {
         event.preventDefault();
         toggleMute();
+      } else if (event.key.toLowerCase() === "o") {
+        event.preventDefault();
+        soundEngine.playClick();
+        toggleLayer("satellites");
+      } else if (event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        soundEngine.playClick();
+        toggleLayer("cables");
       } else if (event.key.toLowerCase() === "x" || event.key.toLowerCase() === "g") {
         event.preventDefault();
         soundEngine.playClick();
@@ -429,7 +440,7 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute, replay.active, setReplay, amIAffectedOpen, setAmIAffectedOpen, threatRadarOpen, setThreatRadarOpen, threatMatrixOpen, setThreatMatrixOpen, map]);
+  }, [cinema, setCinema, select, selectCve, step, shortcutsOpen, demoOpen, wargamesOpen, reconOpen, toggleMute, toggleLayer, replay.active, setReplay, amIAffectedOpen, setAmIAffectedOpen, threatRadarOpen, setThreatRadarOpen, threatMatrixOpen, setThreatMatrixOpen, map]);
 
   const onHover = useCallback((incident: Incident | null, point: { x: number; y: number } | null) => {
     setHovered(incident && point ? { incident, x: point.x, y: point.y } : null);
@@ -486,7 +497,14 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
             onHover={onHover}
             onCluster={onCluster}
           />
+          <SubseaCablesPulse />
           <OrbitalHud />
+          <OrbitalSurveillance
+            incidents={filtered}
+            hudLeft={patchInsetLeft}
+            hudBottom={patchDockOpen && patchDockFits ? 236 : patchDockFits ? 56 : 16}
+            showHud={!mobile && !cinema && patchAvailableWidth >= 880}
+          />
           <BallisticEngine
             incidents={filtered}
             botnetC2s={snapshot.botnetC2s ?? []}

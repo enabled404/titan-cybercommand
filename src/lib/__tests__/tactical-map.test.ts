@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { useCombatFeed } from "@/stores/combat-feed";
 import { angularDistance } from "@/components/map/map-instance";
+import {
+  SATELLITE_CONSTELLATION,
+  calculateSatellitePosition,
+} from "@/components/map/orbital-surveillance";
+import { soundEngine } from "@/lib/audio/sound-engine";
+import { useSituation } from "@/stores/situation";
 
 describe("Tactical Map & Combat Telemetry", () => {
   it("records combat intercepts with target coordinates and status provenance", () => {
@@ -43,5 +49,59 @@ describe("Tactical Map & Combat Telemetry", () => {
     // Same point is 0 degrees
     const d0 = angularDistance(-77.0369, 38.9072, -77.0369, 38.9072);
     expect(Math.round(d0)).toBe(0);
+  });
+
+  it("calculates orbital positions and velocities across satellite constellations", () => {
+    expect(SATELLITE_CONSTELLATION.length).toBeGreaterThanOrEqual(10);
+
+    for (const sat of SATELLITE_CONSTELLATION) {
+      expect(sat.noradId).toBeGreaterThan(0);
+      expect(sat.altitudeKm).toBeGreaterThan(100);
+      expect(sat.inclinationDeg).toBeGreaterThanOrEqual(0);
+      expect(sat.inclinationDeg).toBeLessThanOrEqual(180);
+
+      // Check ground track at t = 0
+      const pos0 = calculateSatellitePosition(sat, 0);
+      expect(pos0.lat).toBeGreaterThanOrEqual(-90);
+      expect(pos0.lat).toBeLessThanOrEqual(90);
+      expect(pos0.lon).toBeGreaterThanOrEqual(-180);
+      expect(pos0.lon).toBeLessThanOrEqual(180);
+
+      // Check Keplerian orbital velocity physics
+      if (sat.type === "LEO") {
+        expect(pos0.velocityKms).toBeGreaterThan(7.0);
+        expect(pos0.velocityKms).toBeLessThan(8.0);
+      } else if (sat.type === "GEO") {
+        expect(pos0.velocityKms).toBeGreaterThan(3.0);
+        expect(pos0.velocityKms).toBeLessThan(3.2);
+      }
+
+      // Check position advancement at t = 1800 seconds (30 minutes)
+      const posFuture = calculateSatellitePosition(sat, 1800);
+      expect(posFuture.lat).toBeGreaterThanOrEqual(-90);
+      expect(posFuture.lat).toBeLessThanOrEqual(90);
+      expect(posFuture.lon).toBeGreaterThanOrEqual(-180);
+      expect(posFuture.lon).toBeLessThanOrEqual(180);
+    }
+  });
+
+  it("handles tactical procedural audio calls safely", () => {
+    soundEngine.setMuted(true);
+    expect(soundEngine.getMuted()).toBe(true);
+
+    // None of these should throw even without browser AudioContext gesture
+    expect(() => soundEngine.playOrbitalScan()).not.toThrow();
+    expect(() => soundEngine.playInterception()).not.toThrow();
+    expect(() => soundEngine.playSubseaPacketPulse()).not.toThrow();
+    expect(() => soundEngine.playThreatDetection()).not.toThrow();
+    expect(() => soundEngine.playKineticDetonation(4)).not.toThrow();
+  });
+
+  it("toggles the orbital satellite layer in situation store", () => {
+    const initial = useSituation.getState().layers.satellites;
+    useSituation.getState().toggleLayer("satellites");
+    expect(useSituation.getState().layers.satellites).toBe(!initial);
+    useSituation.getState().toggleLayer("satellites");
+    expect(useSituation.getState().layers.satellites).toBe(initial);
   });
 });

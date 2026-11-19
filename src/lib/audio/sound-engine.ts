@@ -10,12 +10,15 @@ class SoundEngine {
   private masterGain: GainNode | null = null;
   private droneGain: GainNode | null = null;
   private droneOsc: OscillatorNode | null = null;
+  private droneOscBinaural: OscillatorNode | null = null;
   private droneFilter: BiquadFilterNode | null = null;
   private isMuted: boolean = true;
   private volume: number = 0.4;
   private isInitialized: boolean = false;
   private lastLaunchTime: number = 0;
   private lastImpactTime: number = 0;
+  private lastPulseTime: number = 0;
+  private lastScanTime: number = 0;
 
   private init() {
     if (this.isInitialized || typeof window === "undefined") return;
@@ -67,7 +70,9 @@ class SoundEngine {
   }
 
   /**
-   * Tactical background reactor drone (55Hz sub-bass ambient hum)
+   * Tactical background command bunker drone:
+   * Multi-oscillator binaural sub-bass hum (55Hz primary + 55.4Hz binaural beat)
+   * with subtle atmospheric low-pass breathing modulation.
    */
   public startDrone() {
     if (this.isMuted || !this.ctx || !this.masterGain || this.droneOsc) return;
@@ -78,36 +83,44 @@ class SoundEngine {
       this.droneOsc.type = "sine";
       this.droneOsc.frequency.setValueAtTime(55, now);
 
+      this.droneOscBinaural = this.ctx.createOscillator();
+      this.droneOscBinaural.type = "sine";
+      this.droneOscBinaural.frequency.setValueAtTime(55.4, now);
+
       this.droneFilter = this.ctx.createBiquadFilter();
       this.droneFilter.type = "lowpass";
-      this.droneFilter.frequency.setValueAtTime(110, now);
+      this.droneFilter.frequency.setValueAtTime(115, now);
 
       this.droneGain = this.ctx.createGain();
       this.droneGain.gain.setValueAtTime(0.001, now);
-      this.droneGain.gain.exponentialRampToValueAtTime(0.08, now + 2);
+      this.droneGain.gain.exponentialRampToValueAtTime(0.07, now + 2);
 
       this.droneOsc.connect(this.droneFilter);
+      this.droneOscBinaural.connect(this.droneFilter);
       this.droneFilter.connect(this.droneGain);
       this.droneGain.connect(this.masterGain);
 
       this.droneOsc.start(now);
+      this.droneOscBinaural.start(now);
     } catch {
       // Audio error fallback
     }
   }
 
   public stopDrone() {
-    if (this.droneOsc && this.ctx) {
+    if (this.ctx) {
       try {
         const now = this.ctx.currentTime;
         if (this.droneGain) {
           this.droneGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
         }
-        this.droneOsc.stop(now + 0.5);
+        if (this.droneOsc) this.droneOsc.stop(now + 0.5);
+        if (this.droneOscBinaural) this.droneOscBinaural.stop(now + 0.5);
       } catch {
         // Ignored
       }
       this.droneOsc = null;
+      this.droneOscBinaural = null;
       this.droneGain = null;
       this.droneFilter = null;
     }
@@ -360,6 +373,191 @@ class SoundEngine {
 
       osc.start(now);
       osc.stop(now + 0.5);
+    } catch {
+      // Ignored
+    }
+  }
+
+  /**
+   * High-orbit satellite reconnaissance telemetry scan chirp
+   */
+  public playOrbitalScan() {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+    if (this.ctx.state === "suspended") void this.ctx.resume();
+
+    try {
+      const now = this.ctx.currentTime;
+      if (now - this.lastScanTime < 0.25) return;
+      this.lastScanTime = now;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(1750, now);
+      osc.frequency.exponentialRampToValueAtTime(2600, now + 0.08);
+      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.28);
+
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(1800, now);
+      filter.Q.setValueAtTime(4.5, now);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.09, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.31);
+    } catch {
+      // Ignored
+    }
+  }
+
+  /**
+   * Defensive kinetic interception: metallic deflection ring
+   */
+  public playInterception() {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+    if (this.ctx.state === "suspended") void this.ctx.resume();
+
+    try {
+      const now = this.ctx.currentTime;
+      [1480, 2220].forEach((freq) => {
+        if (!this.ctx || !this.masterGain) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.22);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now);
+        osc.stop(now + 0.26);
+      });
+    } catch {
+      // Ignored
+    }
+  }
+
+  /**
+   * Undersea fiber optic packet data pulse chirp
+   */
+  public playSubseaPacketPulse() {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+    if (this.ctx.state === "suspended") void this.ctx.resume();
+
+    try {
+      const now = this.ctx.currentTime;
+      if (now - this.lastPulseTime < 0.18) return;
+      this.lastPulseTime = now;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(3100, now);
+      osc.frequency.exponentialRampToValueAtTime(2400, now + 0.04);
+
+      gain.gain.setValueAtTime(0.02, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } catch {
+      // Ignored
+    }
+  }
+
+  /**
+   * Tactical situation alert: DEFCON computer detection sequence
+   */
+  public playThreatDetection() {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+    if (this.ctx.state === "suspended") void this.ctx.resume();
+
+    try {
+      const now = this.ctx.currentTime;
+      const pitches = [520, 780, 1040];
+      pitches.forEach((freq, idx) => {
+        if (!this.ctx || !this.masterGain) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+
+        gain.gain.setValueAtTime(0.001, now + idx * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.08, now + idx * 0.07 + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.16);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now + idx * 0.07);
+        osc.stop(now + idx * 0.07 + 0.17);
+      });
+    } catch {
+      // Ignored
+    }
+  }
+
+  /**
+   * Subterranean kinetic impact detonation: sub-bass shockwave with explosive punch
+   */
+  public playKineticDetonation(severity: 1 | 2 | 3 | 4 = 3) {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+    if (this.ctx.state === "suspended") void this.ctx.resume();
+
+    try {
+      const now = this.ctx.currentTime;
+      if (now - this.lastImpactTime < 0.1) return;
+      this.lastImpactTime = now;
+
+      // Layer 1: Sub-bass shockwave punch (180Hz -> 24Hz)
+      const subOsc = this.ctx.createOscillator();
+      const subGain = this.ctx.createGain();
+      subOsc.type = "triangle";
+      subOsc.frequency.setValueAtTime(140 + severity * 25, now);
+      subOsc.frequency.exponentialRampToValueAtTime(24, now + 0.45);
+
+      const subAmp = 0.12 + severity * 0.06;
+      subGain.gain.setValueAtTime(subAmp, now);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+
+      subOsc.connect(subGain);
+      subGain.connect(this.masterGain);
+      subOsc.start(now);
+      subOsc.stop(now + 0.52);
+
+      // Layer 2: Fast transient burst crackle
+      const burstOsc = this.ctx.createOscillator();
+      const burstGain = this.ctx.createGain();
+      burstOsc.type = "sawtooth";
+      burstOsc.frequency.setValueAtTime(650, now);
+      burstOsc.frequency.exponentialRampToValueAtTime(70, now + 0.12);
+
+      burstGain.gain.setValueAtTime(0.08, now);
+      burstGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+
+      burstOsc.connect(burstGain);
+      burstGain.connect(this.masterGain);
+      burstOsc.start(now);
+      burstOsc.stop(now + 0.15);
     } catch {
       // Ignored
     }

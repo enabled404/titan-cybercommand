@@ -47,7 +47,8 @@ interface SituationState {
   tab: RailTab;
   cinema: boolean;
   tacticalCrt: boolean;
-  layers: { incidents: boolean; countries: boolean; outages: boolean; arcs: boolean; cables: boolean; ballistics: boolean; botnets: boolean; grid: boolean };
+  layers: { incidents: boolean; countries: boolean; outages: boolean; arcs: boolean; cables: boolean; ballistics: boolean; botnets: boolean; grid: boolean; satellites: boolean };
+  selectedSatellite: string | null;
   railOpen: boolean;
   wargameSim: WargameSimState | null;
   reconTarget: ReconTargetState | null;
@@ -77,6 +78,7 @@ interface SituationState {
   setAmIAffectedTarget: (target: string | null) => void;
   setThreatRadarOpen: (open: boolean) => void;
   setThreatMatrixOpen: (open: boolean) => void;
+  selectSatellite: (name: string | null) => void;
 }
 
 export const useSituation = create<SituationState>((set, get) => ({
@@ -84,6 +86,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   selectedCve: null,
   selectedActor: null,
   selectedC2Id: null,
+  selectedSatellite: null,
   actorFilter: null,
   hoveredId: null,
   window: "7d",
@@ -94,7 +97,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   tab: "exploited",
   cinema: false,
   tacticalCrt: false,
-  layers: { incidents: true, countries: true, outages: true, arcs: true, cables: true, ballistics: true, botnets: true, grid: true },
+  layers: { incidents: true, countries: true, outages: true, arcs: true, cables: true, ballistics: true, botnets: true, grid: true, satellites: true },
   railOpen: true,
   wargameSim: null,
   reconTarget: null,
@@ -140,6 +143,7 @@ export const useSituation = create<SituationState>((set, get) => ({
   setAmIAffectedTarget: (target) => set({ amIAffectedTarget: target }),
   setThreatRadarOpen: (open) => set({ threatRadarOpen: open }),
   setThreatMatrixOpen: (open) => set({ threatMatrixOpen: open }),
+  selectSatellite: (satellite) => set({ selectedSatellite: satellite }),
 }));
 
 export const WINDOW_MS: Record<TimeWindow, number> = {

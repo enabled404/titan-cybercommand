@@ -43,6 +43,7 @@ interface ImpactShockwave {
   label: string;
   startTime: number;
   duration: number; // ms
+  ejecta: { x: number; y: number; vx: number; vy: number; alpha: number; color: string; size: number }[];
 }
 
 // Global Tier-1 internet backbone routing exchanges & transit nodes
@@ -917,6 +918,23 @@ export function BallisticEngine({
                 : "INTERCEPTED";
           useCombatFeed.getState().updateStatus(atk.combatId, resolvedStatus);
 
+          // Generate radial spark ejecta particles
+          const ejectaCount = 12 + atk.severity * 3;
+          const ejecta: { x: number; y: number; vx: number; vy: number; alpha: number; color: string; size: number }[] = [];
+          for (let i = 0; i < ejectaCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = 1.2 + Math.random() * (1.8 + atk.severity * 0.8);
+            ejecta.push({
+              x: 0,
+              y: 0,
+              vx: Math.cos(angle) * spd,
+              vy: Math.sin(angle) * spd,
+              alpha: 1,
+              color: Math.random() > 0.4 ? "#ffffff" : atk.color,
+              size: 1.0 + Math.random() * 1.6,
+            });
+          }
+
           shockwavesRef.current.push({
             id: `shk-${now}-${Math.random()}`,
             lon: atk.target.lon,
@@ -925,9 +943,19 @@ export function BallisticEngine({
             severity: atk.severity,
             label: atk.target.label,
             startTime: now,
-            duration: 1400,
+            duration: 1800,
+            ejecta,
           });
-          soundEngine.playImpact(atk.severity);
+
+          if (atk.severity >= 3) {
+            soundEngine.playKineticDetonation(atk.severity);
+          } else {
+            soundEngine.playImpact(atk.severity);
+          }
+
+          if (resolvedStatus === "INTERCEPTED") {
+            soundEngine.playInterception();
+          }
         } else {
           activeAttacks.push(atk);
         }
@@ -935,7 +963,7 @@ export function BallisticEngine({
 
       attacksRef.current = activeAttacks;
 
-      // 2. Render impact shockwaves and ground detonation flashes
+      // 2. Render high-impact kinetic shockwaves, EMP rings, and ground craters
       const activeShockwaves: ImpactShockwave[] = [];
 
       for (const shk of shockwavesRef.current) {
@@ -947,50 +975,103 @@ export function BallisticEngine({
           if (distFromCenter <= 88) {
             try {
               const p = map.project([shk.lon, shk.lat]);
-              const radius = 3 + progress * (36 + shk.severity * 10);
+              const maxRadius = 42 + shk.severity * 16;
+              const radius = 3 + Math.pow(progress, 0.65) * maxRadius;
               const alpha = 1 - progress;
 
               ctx.save();
               ctx.globalCompositeOperation = "lighter";
 
-              // Concentric expanding ring 1 (primary high-energy shockwave)
-              ctx.lineWidth = 2.4;
+              // A. Hypersonic Anamorphic Lens Flare & Diffraction Spikes on initial detonation (0 - 180ms)
+              if (progress < 0.12) {
+                const spikeAlpha = (1 - progress / 0.12) * 0.95;
+                const spikeLen = (18 + shk.severity * 10) * (1 - progress * 2);
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 1.6;
+                ctx.globalAlpha = spikeAlpha;
+                ctx.beginPath();
+                // Horizontal flare beam
+                ctx.moveTo(p.x - spikeLen * 1.6, p.y);
+                ctx.lineTo(p.x + spikeLen * 1.6, p.y);
+                // Vertical flare beam
+                ctx.moveTo(p.x, p.y - spikeLen);
+                ctx.lineTo(p.x, p.y + spikeLen);
+                // Diagonal cross
+                ctx.moveTo(p.x - spikeLen * 0.7, p.y - spikeLen * 0.7);
+                ctx.lineTo(p.x + spikeLen * 0.7, p.y + spikeLen * 0.7);
+                ctx.moveTo(p.x + spikeLen * 0.7, p.y - spikeLen * 0.7);
+                ctx.lineTo(p.x - spikeLen * 0.7, p.y + spikeLen * 0.7);
+                ctx.stroke();
+              }
+
+              // B. Concentric expanding EMP shockwave ring 1 (primary high-energy wave)
+              ctx.lineWidth = 2.6 * (1 - progress * 0.6);
               ctx.strokeStyle = shk.color;
               ctx.globalAlpha = alpha * 0.95;
               ctx.beginPath();
               ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
               ctx.stroke();
 
-              // Secondary inner ring
-              if (progress > 0.08) {
+              // C. Chromatic aberration secondary EMP ring (cyan/white fringe)
+              if (progress > 0.05) {
                 ctx.lineWidth = 1.4;
-                ctx.globalAlpha = alpha * 0.8;
+                ctx.strokeStyle = "#22d3ee";
+                ctx.globalAlpha = alpha * 0.75;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, radius * 0.62, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, radius * 0.82, 0, Math.PI * 2);
                 ctx.stroke();
               }
 
-              // Tertiary outer ripple ring
-              if (progress > 0.18) {
+              // D. Tertiary outer atmospheric ripple
+              if (progress > 0.14) {
                 ctx.lineWidth = 0.9;
-                ctx.globalAlpha = alpha * 0.55;
+                ctx.strokeStyle = shk.color;
+                ctx.globalAlpha = alpha * 0.45;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, radius * 1.25, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, radius * 1.22, 0, Math.PI * 2);
                 ctx.stroke();
               }
 
-              // Ground flash core on initial impact
-              if (progress < 0.28) {
-                const flashAlpha = 1 - progress / 0.28;
-                const flashGrad = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 18);
-                flashGrad.addColorStop(0, `rgba(255, 255, 255, ${flashAlpha})`);
-                flashGrad.addColorStop(0.35, shk.color);
-                flashGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-                ctx.fillStyle = flashGrad;
+              // E. Lingering thermal crater burn ring (slow cooling from hot white to ember)
+              const craterRadius = 7 + shk.severity * 3;
+              const craterAlpha = Math.max(0, 1 - progress * 1.2);
+              if (craterAlpha > 0) {
+                const craterGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, craterRadius);
+                craterGrad.addColorStop(0, `rgba(255, 255, 255, ${craterAlpha * 0.9})`);
+                craterGrad.addColorStop(0.35, shk.color);
+                craterGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+                ctx.fillStyle = craterGrad;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, craterRadius, 0, Math.PI * 2);
                 ctx.fill();
               }
+
+              // F. Render spark ejecta debris flying outward with physical drag
+              for (const part of shk.ejecta) {
+                part.x += part.vx;
+                part.y += part.vy;
+                part.vx *= 0.93; // Air resistance deceleration
+                part.vy *= 0.93;
+                part.alpha -= 0.024;
+                if (part.alpha > 0) {
+                  ctx.fillStyle = part.color;
+                  ctx.globalAlpha = part.alpha * alpha;
+                  ctx.beginPath();
+                  ctx.arc(p.x + part.x, p.y + part.y, part.size, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+              }
+
+              // G. Tactical Impact Callout Tag on high-severity strikes
+              if (shk.severity >= 3 && progress > 0.08 && progress < 0.65) {
+                const tagAlpha = progress < 0.2 ? progress / 0.2 : (0.65 - progress) / 0.45;
+                ctx.font = "bold 8.5px 'Martian Mono', monospace";
+                ctx.fillStyle = shk.color;
+                ctx.globalAlpha = tagAlpha * 0.95;
+                ctx.textAlign = "center";
+                ctx.fillText(`KINETIC IMPACT // SEV-${shk.severity}`, p.x, p.y - radius - 6);
+              }
+
               ctx.restore();
             } catch {
               // Ignore projection edge
