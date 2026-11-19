@@ -31,6 +31,7 @@ const LAYERS = [
   { id: "cables", label: "Subsea fiber optic cables" },
   { id: "ballistics", label: "Kinetic ballistic laser tracers" },
   { id: "botnets", label: "Botnet C2 command servers" },
+  { id: "satellites", label: "Orbital spy satellites & constellations" },
   { id: "grid", label: "Tactical cyber graticule" },
 ] as const;
 

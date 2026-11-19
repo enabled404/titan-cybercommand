@@ -20,6 +20,8 @@ const SHORTCUTS = [
   { key: "V", desc: "Watch master demo briefing video & export artifacts" },
   { key: "P / C", desc: "Toggle Cinematic Auto-Patrol / Panoramic view" },
   { key: "T", desc: "Toggle Live Combat Intercept Telemetry drawer" },
+  { key: "O", desc: "Toggle orbital spy satellites & constellation tracking layer" },
+  { key: "S", desc: "Toggle subsea fiber optic cable routes and packet velocity" },
   { key: "M", desc: "Toggle procedural DEFCON sound engine" },
   { key: "J / K", desc: "Step forward / backward through live incidents" },
   { key: "+ / -", desc: "Precision zoom globe in / out" },
