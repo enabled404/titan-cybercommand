@@ -497,7 +497,11 @@ export function SituationRoom({ snapshot }: { snapshot: Snapshot }) {
             onHover={onHover}
             onCluster={onCluster}
           />
-          <SubseaCablesPulse />
+          <SubseaCablesPulse
+            hudLeft={patchInsetLeft}
+            hudBottom={patchDockOpen && patchDockFits ? 236 : patchDockFits ? 56 : 16}
+            showHud={!mobile && !cinema && patchAvailableWidth >= 1150}
+          />
           <OrbitalHud />
           <OrbitalSurveillance
             incidents={filtered}

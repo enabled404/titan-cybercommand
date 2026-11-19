@@ -109,14 +109,14 @@ export const useSituation = create<SituationState>((set, get) => ({
   // Opening a dossier checks the free allowance: a few a day without an account, then Titan Cyber Command asks for a Valyu sign-in.
   select: (id) => {
     if (id && id !== get().selectedId && !useAccess.getState().allowOpen(`i:${id}`)) return;
-    set({ selectedId: id, selectedCve: null, selectedActor: null, selectedC2Id: null });
+    set({ selectedId: id, selectedCve: null, selectedActor: null, selectedC2Id: null, selectedSatellite: null });
   },
   selectCve: (cve) => {
     if (cve && cve !== get().selectedCve && !useAccess.getState().allowOpen(`cve:${cve}`)) return;
-    set({ selectedCve: cve, selectedId: null, selectedActor: null, selectedC2Id: null });
+    set({ selectedCve: cve, selectedId: null, selectedActor: null, selectedC2Id: null, selectedSatellite: null });
   },
   selectActor: (actor) => set({ selectedActor: actor }),
-  selectC2: (c2Id) => set({ selectedC2Id: c2Id, selectedId: null, selectedCve: null }),
+  selectC2: (c2Id) => set({ selectedC2Id: c2Id, selectedId: null, selectedCve: null, selectedSatellite: null }),
   setActorFilter: (actor) => set({ actorFilter: actor }),
   hover: (id) => set({ hoveredId: id }),
   setWindow: (window) => set({ window }),
@@ -143,7 +143,8 @@ export const useSituation = create<SituationState>((set, get) => ({
   setAmIAffectedTarget: (target) => set({ amIAffectedTarget: target }),
   setThreatRadarOpen: (open) => set({ threatRadarOpen: open }),
   setThreatMatrixOpen: (open) => set({ threatMatrixOpen: open }),
-  selectSatellite: (satellite) => set({ selectedSatellite: satellite }),
+  selectSatellite: (satellite) =>
+    set({ selectedSatellite: satellite, selectedId: null, selectedCve: null, selectedActor: null, selectedC2Id: null }),
 }));
 
 export const WINDOW_MS: Record<TimeWindow, number> = {

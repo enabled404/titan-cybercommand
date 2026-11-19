@@ -267,61 +267,71 @@ export function OrbitalSurveillance({
   const [hoveredSat, setHoveredSat] = useState<SatelliteRecord | null>(null);
   const [hoveredPos, setHoveredPos] = useState<{ x: number; y: number; alt: number; vel: number } | null>(null);
   const lastScanSoundRef = useRef<number>(0);
+  const currentElapsedSecRef = useRef<number>(0);
   const animFrameRef = useRef<number | null>(null);
   const satScreenPositionsRef = useRef<Map<string, { x: number; y: number; sat: SatelliteRecord; alt: number; vel: number }>>(new Map());
 
-  // Handle click on canvas to select satellite
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+  // Attach non-blocking MapLibre click and hover event listeners so the globe remains fully draggable
+  useEffect(() => {
+    if (!ready || !map || !layers.satellites) return;
 
-    let clickedSat: SatelliteRecord | null = null;
-    let closestDist = 22; // 22px click radius
+    const onMapClick = (e: { point: { x: number; y: number } }) => {
+      let clickedSat: SatelliteRecord | null = null;
+      let closestDist = 22;
 
-    for (const [, pos] of satScreenPositionsRef.current) {
-      const d = Math.hypot(pos.x - clickX, pos.y - clickY);
-      if (d < closestDist) {
-        closestDist = d;
-        clickedSat = pos.sat;
+      for (const [, pos] of satScreenPositionsRef.current) {
+        const d = Math.hypot(pos.x - e.point.x, pos.y - e.point.y);
+        if (d < closestDist) {
+          closestDist = d;
+          clickedSat = pos.sat;
+        }
       }
-    }
 
-    if (clickedSat) {
-      soundEngine.playClick();
-      soundEngine.playOrbitalScan();
-      selectSatellite(clickedSat.id === selectedSatellite ? null : clickedSat.id);
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    let nearest: { sat: SatelliteRecord; x: number; y: number; alt: number; vel: number } | null = null;
-    let closestDist = 20;
-
-    for (const [, pos] of satScreenPositionsRef.current) {
-      const d = Math.hypot(pos.x - mouseX, pos.y - mouseY);
-      if (d < closestDist) {
-        closestDist = d;
-        nearest = pos;
+      if (clickedSat) {
+        soundEngine.playClick();
+        soundEngine.playOrbitalScan();
+        const currentSelected = useSituation.getState().selectedSatellite;
+        selectSatellite(clickedSat.id === currentSelected ? null : clickedSat.id);
       }
-    }
+    };
 
-    if (nearest) {
-      setHoveredSat(nearest.sat);
-      setHoveredPos({ x: nearest.x, y: nearest.y, alt: nearest.alt, vel: nearest.vel });
-    } else if (hoveredSat) {
+    const onMapMouseMove = (e: { point: { x: number; y: number } }) => {
+      let nearest: { sat: SatelliteRecord; x: number; y: number; alt: number; vel: number } | null = null;
+      let closestDist = 20;
+
+      for (const [, pos] of satScreenPositionsRef.current) {
+        const d = Math.hypot(pos.x - e.point.x, pos.y - e.point.y);
+        if (d < closestDist) {
+          closestDist = d;
+          nearest = pos;
+        }
+      }
+
+      if (nearest) {
+        setHoveredSat(nearest.sat);
+        setHoveredPos({ x: nearest.x, y: nearest.y, alt: nearest.alt, vel: nearest.vel });
+        map.getCanvas().style.cursor = "crosshair";
+      } else {
+        setHoveredSat((prev) => (prev ? null : null));
+        setHoveredPos((prev) => (prev ? null : null));
+      }
+    };
+
+    const onMapMouseOut = () => {
       setHoveredSat(null);
       setHoveredPos(null);
-    }
-  };
+    };
+
+    map.on("click", onMapClick);
+    map.on("mousemove", onMapMouseMove);
+    map.on("mouseout", onMapMouseOut);
+
+    return () => {
+      map.off("click", onMapClick);
+      map.off("mousemove", onMapMouseMove);
+      map.off("mouseout", onMapMouseOut);
+    };
+  }, [ready, map, layers.satellites, selectSatellite]);
 
   useEffect(() => {
     if (!ready || !map || !layers.satellites) {
@@ -376,6 +386,7 @@ export function OrbitalSurveillance({
 
       const now = performance.now();
       const elapsedSec = reduced ? 3600 : (now - startTime) * 0.001 * 8.0; // 8x real-time scale for visible tactical orbital motion
+      currentElapsedSecRef.current = elapsedSec;
       const center = map.getCenter();
       const centerProj = map.project(center);
       const zoom = map.getZoom();
@@ -522,13 +533,69 @@ export function OrbitalSurveillance({
               ctx.restore();
 
               // Check if sensor cone intersects any cyber incident
-              if (incidents.length > 0 && now - lastScanSoundRef.current > 4500) {
+              const scannedIncidents: Incident[] = [];
+              if (incidents.length > 0) {
+                const scanAngleRadius = (sat.scanRadiusKm || 600) / 111.0;
                 for (const inc of incidents) {
                   const d = angularDistance(lon, lat, inc.lon, inc.lat);
-                  if (d < (sat.scanRadiusKm || 600) / 111.0) {
-                    lastScanSoundRef.current = now;
-                    soundEngine.playOrbitalScan();
-                    break;
+                  if (d < scanAngleRadius) {
+                    scannedIncidents.push(inc);
+                    if (now - lastScanSoundRef.current > 4500) {
+                      lastScanSoundRef.current = now;
+                      soundEngine.playOrbitalScan();
+                    }
+                  }
+                }
+              }
+
+              // Render orbital target acquisition lock reticle on any scanned incident
+              for (const inc of scannedIncidents) {
+                if (angularDistance(center.lng, center.lat, inc.lon, inc.lat) <= 88) {
+                  try {
+                    const ip = map.project([inc.lon, inc.lat]);
+                    const lockPulse = (Math.sin(now * 0.008) + 1) * 0.5;
+                    const lockR = 14 + lockPulse * 5;
+
+                    ctx.save();
+                    ctx.globalCompositeOperation = "lighter";
+
+                    // Uplink line from satellite ground nadir to incident
+                    ctx.strokeStyle = sat.color;
+                    ctx.lineWidth = 1;
+                    ctx.globalAlpha = 0.6;
+                    ctx.setLineDash([2, 2]);
+                    ctx.beginPath();
+                    ctx.moveTo(groundProj.x, groundProj.y);
+                    ctx.lineTo(ip.x, ip.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Cyber target acquisition ring
+                    ctx.strokeStyle = sat.color;
+                    ctx.lineWidth = 1.6;
+                    ctx.globalAlpha = 0.85;
+                    ctx.beginPath();
+                    ctx.arc(ip.x, ip.y, lockR, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Corner brackets
+                    const bSize = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(ip.x - lockR - 2, ip.y - bSize);
+                    ctx.lineTo(ip.x - lockR - 2, ip.y + bSize);
+                    ctx.moveTo(ip.x + lockR + 2, ip.y - bSize);
+                    ctx.lineTo(ip.x + lockR + 2, ip.y + bSize);
+                    ctx.stroke();
+
+                    // Orbital SIGINT acquisition text tag
+                    ctx.font = "bold 7.5px 'Martian Mono', monospace";
+                    ctx.fillStyle = sat.color;
+                    ctx.globalAlpha = 0.95;
+                    ctx.fillText(`SIGINT ACQUIRED // ${sat.callsign}`, ip.x + lockR + 5, ip.y - 2);
+
+                    ctx.restore();
+                  } catch {
+                    // Coordinate projection safety
                   }
                 }
               }
@@ -660,14 +727,8 @@ export function OrbitalSurveillance({
     <>
       <canvas
         ref={canvasRef}
-        onClick={handleCanvasClick}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => {
-          setHoveredSat(null);
-          setHoveredPos(null);
-        }}
-        className="pointer-events-auto absolute inset-0 z-[7] cursor-crosshair"
-        aria-label="Orbital Satellite Constellation Surveillance Layer"
+        className="pointer-events-none absolute inset-0 z-[7]"
+        aria-hidden="true"
       />
 
       {/* Floating Hover Card */}
@@ -762,7 +823,7 @@ export function OrbitalSurveillance({
               type="button"
               onClick={() => {
                 soundEngine.playOrbitalScan();
-                const pos = calculateSatellitePosition(selectedSatObj, 0);
+                const pos = calculateSatellitePosition(selectedSatObj, currentElapsedSecRef.current);
                 if (map) {
                   map.easeTo({
                     center: [pos.lon, pos.lat],
