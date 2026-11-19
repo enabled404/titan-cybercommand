@@ -123,7 +123,15 @@ function interpolateCablePoint(cable: CableSegment, progress: number): [number, 
   return [lon, lat];
 }
 
-export function SubseaCablesPulse() {
+export function SubseaCablesPulse({
+  hudLeft = 452,
+  hudBottom = 236,
+  showHud = true,
+}: {
+  hudLeft?: number;
+  hudBottom?: number;
+  showHud?: boolean;
+} = {}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const map = useMapInstance((s) => s.map);
   const ready = useMapInstance((s) => s.ready);
@@ -133,6 +141,44 @@ export function SubseaCablesPulse() {
   const packetsRef = useRef<DataPacket[]>([]);
   const animFrameRef = useRef<number | null>(null);
   const lastChirpRef = useRef<number>(0);
+  const [hoveredTerminal, setHoveredTerminal] = useState<{ x: number; y: number; terminal: LandingTerminal } | null>(null);
+  const terminalPositionsRef = useRef<Map<string, { x: number; y: number; terminal: LandingTerminal }>>(new Map());
+
+  // Attach non-blocking mousemove listener for terminal hover tooltips
+  useEffect(() => {
+    if (!ready || !map || !layers.cables) return;
+
+    const onMapMouseMove = (e: { point: { x: number; y: number } }) => {
+      let nearest: { x: number; y: number; terminal: LandingTerminal } | null = null;
+      let closestDist = 18;
+
+      for (const [, pos] of terminalPositionsRef.current) {
+        const d = Math.hypot(pos.x - e.point.x, pos.y - e.point.y);
+        if (d < closestDist) {
+          closestDist = d;
+          nearest = pos;
+        }
+      }
+
+      if (nearest) {
+        setHoveredTerminal(nearest);
+      } else {
+        setHoveredTerminal((prev) => (prev ? null : null));
+      }
+    };
+
+    const onMapMouseOut = () => {
+      setHoveredTerminal(null);
+    };
+
+    map.on("mousemove", onMapMouseMove);
+    map.on("mouseout", onMapMouseOut);
+
+    return () => {
+      map.off("mousemove", onMapMouseMove);
+      map.off("mouseout", onMapMouseOut);
+    };
+  }, [ready, map, layers.cables]);
 
   // Initialize packet photon swarm
   useEffect(() => {
@@ -225,11 +271,13 @@ export function SubseaCablesPulse() {
       const zoom = map.getZoom();
 
       // 1. Draw Subsea Landing Terminals with gentle status beacons
+      const updatedTerminalPositions = new Map<string, { x: number; y: number; terminal: LandingTerminal }>();
       for (const terminal of LANDING_TERMINALS) {
         const dist = angularDistance(center.lng, center.lat, terminal.lon, terminal.lat);
         if (dist <= 88) {
           try {
             const p = map.project([terminal.lon, terminal.lat]);
+            updatedTerminalPositions.set(terminal.name, { x: p.x, y: p.y, terminal });
             const pulse = (Math.sin(now * 0.003 + terminal.lat) + 1) * 0.5;
 
             ctx.save();
@@ -264,6 +312,7 @@ export function SubseaCablesPulse() {
           }
         }
       }
+      terminalPositionsRef.current = updatedTerminalPositions;
 
       // 2. Animate Optical Data Packets along Subsea Cable routes
       for (const pkt of packetsRef.current) {
@@ -288,7 +337,7 @@ export function SubseaCablesPulse() {
             ctx.save();
             ctx.globalCompositeOperation = "lighter";
 
-            // Draw trailing optical motion trail along cable route
+            // Draw trailing optical motion trail along cable route without antimeridian artifacts
             const trailStep = pkt.direction === 1 ? -0.018 : 0.018;
             const trailPoints: { x: number; y: number }[] = [];
             for (let i = 1; i <= 4; i++) {
@@ -302,8 +351,14 @@ export function SubseaCablesPulse() {
             if (trailPoints.length > 0) {
               ctx.beginPath();
               ctx.moveTo(p.x, p.y);
+              let prev: { x: number; y: number } = p;
               for (const tp of trailPoints) {
-                ctx.lineTo(tp.x, tp.y);
+                if (Math.hypot(tp.x - prev.x, tp.y - prev.y) > 180) {
+                  ctx.moveTo(tp.x, tp.y);
+                } else {
+                  ctx.lineTo(tp.x, tp.y);
+                }
+                prev = tp;
               }
               ctx.strokeStyle = pkt.color;
               ctx.lineWidth = 1.4;
@@ -373,10 +428,46 @@ export function SubseaCablesPulse() {
   }, [ready, map, layers.cables, cables]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="pointer-events-none absolute inset-0 z-[5]"
-      aria-hidden="true"
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="pointer-events-none absolute inset-0 z-[5]"
+        aria-hidden="true"
+      />
+
+      {/* Landing Terminal Hover Card */}
+      {hoveredTerminal && (
+        <div
+          style={{
+            left: Math.max(16, Math.min(window.innerWidth - 240, hoveredTerminal.x + 14)),
+            top: Math.max(70, Math.min(window.innerHeight - 100, hoveredTerminal.y - 35)),
+          }}
+          className="pointer-events-none fixed z-30 rounded-[10px] border border-cyan-500/40 bg-surface-2/95 p-2 font-mono text-[10.5px] shadow-2xl backdrop-blur-xl"
+        >
+          <div className="flex items-center gap-1.5 font-bold text-cyan-300">
+            <span className="size-1.5 rounded-full bg-cyan-400 motion-safe:animate-ping" />
+            <span>SUBSEA LANDING TERMINAL</span>
+          </div>
+          <div className="mt-1 font-bold text-ink">{hoveredTerminal.terminal.name}</div>
+          <div className="mt-0.5 text-[9.5px] text-ink-3">
+            CABLES: {hoveredTerminal.terminal.cables.join(", ")}
+          </div>
+        </div>
+      )}
+
+      {/* Subsea Cable Telemetry Indicator */}
+      {ready && layers.cables && showHud && (
+        <div
+          style={{ left: hudLeft + 475, bottom: hudBottom }}
+          className="pointer-events-none absolute z-20 hidden items-center gap-2 rounded-full border border-cyan-500/30 bg-surface-2/80 px-3 py-1 font-mono text-[10px] tracking-wider text-ink-3 backdrop-blur 2xl:flex"
+        >
+          <span className="size-1.5 rounded-full bg-cyan-400 motion-safe:animate-pulse" />
+          <span>SUBSEA FIBER:</span>
+          <span className="font-bold text-cyan-200">
+            {cables.length} TRANSOCEANIC ROUTES ACTIVE
+          </span>
+        </div>
+      )}
+    </>
   );
 }

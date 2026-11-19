@@ -104,4 +104,30 @@ describe("Tactical Map & Combat Telemetry", () => {
     useSituation.getState().toggleLayer("satellites");
     expect(useSituation.getState().layers.satellites).toBe(initial);
   });
+
+  it("enforces mutual exclusivity between satellite selection and incident selection", () => {
+    // Selecting a satellite clears incident and CVE selection
+    useSituation.getState().selectSatellite("usa-326");
+    expect(useSituation.getState().selectedSatellite).toBe("usa-326");
+    expect(useSituation.getState().selectedId).toBeNull();
+    expect(useSituation.getState().selectedCve).toBeNull();
+
+    // Deselecting satellite
+    useSituation.getState().selectSatellite(null);
+    expect(useSituation.getState().selectedSatellite).toBeNull();
+  });
+
+  it("verifies continuous orbital propagation over time steps", () => {
+    const sat = SATELLITE_CONSTELLATION[0];
+    const pos0 = calculateSatellitePosition(sat, 0);
+    const pos100 = calculateSatellitePosition(sat, 100);
+    const pos500 = calculateSatellitePosition(sat, 500);
+
+    // Positions should advance over time
+    expect(pos100.lat !== pos0.lat || pos100.lon !== pos0.lon).toBe(true);
+    expect(pos500.lat !== pos100.lat || pos500.lon !== pos100.lon).toBe(true);
+
+    // Velocities should remain constant for circular orbits
+    expect(pos0.velocityKms).toBeCloseTo(pos100.velocityKms, 4);
+  });
 });
