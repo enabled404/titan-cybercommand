@@ -28,7 +28,7 @@ Every breach, every threat actor, and every critical vulnerability, playing out 
 
 ---
 
-## Breakthrough Capabilities
+## Core Capabilities
 
 - **True Great-Circle Ballistic Particle Engine**: Real-time laser trajectories calculated using spherical geodesics (`@turf/great-circle`) arcing through the exosphere from global threat actor command hubs (APT28, Volt Typhoon, Lazarus, Charming Kitten) to victim targets. Features chromatic plasma comet heads, drifting spark particles, and concentric ground shockwaves with detonation flashes.
 - **Live Combat Intercept Feed (`T`)**: Collapsible real-time telemetry drawer streaming incoming intercepts, origin vectors, victim organizations, severity ratings, and live velocity calculations (e.g. `18.4+ ATK/S`).
